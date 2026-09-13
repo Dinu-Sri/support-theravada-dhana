@@ -116,6 +116,27 @@ chmod 755 backup/
 
 `config/database.php`, `config/email.php`, live SQL dumps, receipt uploads, and backup files are gitignored and must stay on the server only.
 
+### Updating cPanel from GitHub
+
+The two configuration files above are deliberately absent from GitHub. A first checkout will return HTTP 500 until both server-only files have been created with valid production values.
+
+Before the first pull, move any old WordPress/SpeedyCache `.htaccess` out of the document root. This repository includes its own `.htaccess`; the old rewrite rules do not belong to this application.
+
+After every checkout or pull, run the preflight from cPanel Terminal:
+
+```bash
+php tools/deployment-preflight.php
+```
+
+It checks the PHP version and extensions, server-only configuration, writable upload/backup directories, and the root `.htaccess`. Do not test the public site until it reports `Deployment preflight passed.`
+
+A safe update sequence is:
+
+1. Preserve `config/database.php`, `config/email.php`, uploaded receipts, and backups.
+2. Pull `main` from GitHub.
+3. Run the deployment preflight and correct every reported error.
+4. Test the donor and admin login pages.
+
 ## ⚙️ Configuration
 
 ### Backup Settings

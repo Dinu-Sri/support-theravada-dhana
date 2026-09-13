@@ -29,6 +29,7 @@ cron/logs/
 
 # cPanel leftover
 cgi-bin/
+hidden/
 
 # OS / editor
 .DS_Store

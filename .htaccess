@@ -1,0 +1,30 @@
+# Support Theravada runs as direct PHP files, not WordPress.
+DirectoryIndex index.php
+
+<IfModule mod_autoindex.c>
+    Options -Indexes
+</IfModule>
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Keep certificate validation reachable.
+    RewriteRule ^\.well-known/acme-challenge/ - [L]
+
+    # Server configuration, database scripts, backups, and cron entry points
+    # must never be served over HTTP.
+    RewriteRule ^(?:config|database|backup|cron)(?:/|$) - [F,L,NC]
+
+    # Deny dotfiles while allowing the ACME directory handled above.
+    RewriteRule (^|/)\. - [F,L]
+</IfModule>
+
+<FilesMatch "^(?:AGENTS\.md|CLAUDE\.md|README\.md|.*\.example\.php|.*\.(?:sql|bak|log))$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
