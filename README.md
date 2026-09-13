@@ -76,8 +76,8 @@ Production: [supporttheravada.org](https://supporttheravada.org). PHP/MySQL on c
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/Dinu-Sri/dhana-booking-system.git
-cd dhana-booking-system
+git clone https://github.com/Dinu-Sri/support-theravada-dhana.git
+cd support-theravada-dhana
 ```
 
 ### 2. Configure Database
