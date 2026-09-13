@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Background circle -->
+  <circle cx="50" cy="50" r="48" fill="#FF8C00" stroke="#D97706" stroke-width="2"/>
+  
+  <!-- Offering bowl (dhana bowl) -->
+  <g transform="translate(50, 50)">
+    <!-- Bowl base -->
+    <ellipse cx="0" cy="15" rx="22" ry="6" fill="#8B4513" opacity="0.3"/>
+    
+    <!-- Bowl body -->
+    <path d="M -20 10 Q -22 20, -18 25 L 18 25 Q 22 20, 20 10 Z" 
+          fill="#CD853F" stroke="#8B4513" stroke-width="1.5"/>
+    
+    <!-- Bowl rim highlight -->
+    <ellipse cx="0" cy="10" rx="20" ry="4" fill="#DEB887" opacity="0.6"/>
+    
+    <!-- Rice/food in bowl -->
+    <ellipse cx="0" cy="8" rx="16" ry="5" fill="#FFFAF0"/>
+    <ellipse cx="-3" cy="6" rx="4" ry="3" fill="#FFF8DC" opacity="0.8"/>
+    <ellipse cx="4" cy="6" rx="3" ry="2.5" fill="#FFF8DC" opacity="0.8"/>
+    
+    <!-- Lotus petals around the bowl -->
+    <!-- Top petal -->
+    <ellipse cx="0" cy="-18" rx="6" ry="12" fill="#FFE4B5" opacity="0.9" 
+             transform="rotate(0 0 -18)"/>
+    
+    <!-- Right petals -->
+    <ellipse cx="15" cy="-10" rx="6" ry="12" fill="#FFE4B5" opacity="0.9" 
+             transform="rotate(60 15 -10)"/>
+    <ellipse cx="18" cy="5" rx="6" ry="12" fill="#FFE4B5" opacity="0.9" 
+             transform="rotate(120 18 5)"/>
+    
+    <!-- Bottom right petal -->
+    <ellipse cx="10" cy="18" rx="6" ry="12" fill="#FFE4B5" opacity="0.9" 
+             transform="rotate(160 10 18)"/>
+    
+    <!-- Bottom left petal -->
+    <ellipse cx="-10" cy="18" rx="6" ry="12" fill="#FFE4B5" opacity="0.9" 
+             transform="rotate(-160 -10 18)"/>
+    
+    <!-- Left petals -->
+    <ellipse cx="-18" cy="5" rx="6" ry="12" fill="#FFE4B5" opacity="0.9" 
+             transform="rotate(-120 -18 5)"/>
+    <ellipse cx="-15" cy="-10" rx="6" ry="12" fill="#FFE4B5" opacity="0.9" 
+             transform="rotate(-60 -15 -10)"/>
+    
+    <!-- Center highlight on bowl -->
+    <ellipse cx="0" cy="12" rx="8" ry="3" fill="#F4A460" opacity="0.4"/>
+  </g>
+</svg>
+

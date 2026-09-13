@@ -1,0 +1,541 @@
+/* Calendar Styles for Dhana Booking System */
+
+.calendar-container {
+    background: white;
+    border-radius: 15px;
+    padding: 30px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    margin-bottom: 30px;
+}
+
+.calendar-header {
+    margin-bottom: 30px;
+}
+
+.calendar-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 30px;
+    margin-bottom: 20px;
+}
+
+.calendar-nav h2 {
+    color: #333;
+    font-size: 1.8rem;
+    margin: 0;
+    min-width: 250px;
+    text-align: center;
+}
+
+.nav-btn {
+    background: #d4822a;
+    color: white;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.nav-btn:hover {
+    background: #b8860b;
+    transform: scale(1.1);
+}
+
+/* Calendar Legend */
+.calendar-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: center;
+    margin-bottom: 30px;
+    padding: 20px;
+    background: #f5f5f5;
+    border-radius: 10px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.legend-color {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+}
+
+.legend-color.available {
+    background: #28a745;
+}
+
+.legend-color.partially-booked {
+    background: #ffc107;
+}
+
+.legend-color.fully-booked {
+    background: #dc3545;
+}
+
+.legend-color.blocked {
+    background: #6c757d;
+}
+
+.legend-color.whole-day-blocked {
+    background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+    border: 1px solid #dc3545;
+}
+
+/* Calendar Grid */
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+    background: #e9ecef;
+    border-radius: 10px;
+    padding: 2px;
+}
+
+.day-header {
+    background: #d4822a;
+    color: white;
+    padding: 15px 10px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.day-header:first-child {
+    border-top-left-radius: 8px;
+}
+
+.day-header:last-child {
+    border-top-right-radius: 8px;
+}
+
+.day-cell {
+    background: white;
+    min-height: 80px;
+    padding: 8px;
+    position: relative;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.day-cell:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.day-cell.empty {
+    background: #f5f5f5;
+    cursor: default;
+}
+
+.day-cell.empty:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+.day-number {
+    font-weight: 600;
+    font-size: 1.1rem;
+    margin-bottom: 5px;
+}
+
+.availability-indicator {
+    margin-top: auto;
+    color: #28a745;
+    font-size: 1.2rem;
+}
+
+.whole-day-indicator {
+    margin-top: auto;
+    color: #dc3545;
+    font-size: 1.1rem;
+    opacity: 0.8;
+}
+
+.annual-event-badge {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    z-index: 2;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.whole-day-blocked {
+    background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+    border-color: #dc3545;
+}
+
+.whole-day-blocked:hover {
+    background: linear-gradient(135deg, #f5c6cb 0%, #f1b0b7 100%);
+    transform: translateY(-1px);
+}
+
+/* Day cell states */
+.day-cell.past {
+    background: #f5f5f5;
+    color: #adb5bd;
+    cursor: not-allowed;
+}
+
+.day-cell.past:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+.day-cell.today {
+    border: 2px solid #d4822a;
+    font-weight: bold;
+}
+
+.day-cell.available {
+    background: #d4edda;
+    border-left: 4px solid #28a745;
+}
+
+.day-cell.available:hover {
+    background: #c3e6cb;
+}
+
+.day-cell.partially-booked {
+    background: #fff3cd;
+    border-left: 4px solid #ffc107;
+}
+
+.day-cell.partially-booked:hover {
+    background: #ffeaa7;
+}
+
+.day-cell.fully-booked {
+    background: #f8d7da;
+    border-left: 4px solid #dc3545;
+    cursor: not-allowed;
+}
+
+.day-cell.fully-booked:hover {
+    transform: none;
+    background: #f5c6cb;
+}
+
+.day-cell.blocked {
+    background: #e2e3e5;
+    border-left: 4px solid #6c757d;
+    cursor: not-allowed;
+}
+
+.day-cell.blocked:hover {
+    transform: none;
+    background: #d6d8db;
+}
+
+/* Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal-content {
+    background-color: white;
+    margin: 5% auto;
+    padding: 0;
+    border-radius: 15px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-50px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.modal-header {
+    background: linear-gradient(135deg, #d4822a 0%, #b8860b 100%);
+    color: white;
+    padding: 20px 30px;
+    border-radius: 15px 15px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.3rem;
+}
+
+.close {
+    color: white;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.close:hover {
+    opacity: 0.7;
+}
+
+.modal-body {
+    padding: 30px;
+}
+
+.modal-footer {
+    padding: 20px 30px;
+    border-top: 1px solid #e9ecef;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+}
+
+/* Modal footer button styles for consistent equal sizing */
+.modal-footer .btn {
+    /* Equal button sizing using flexbox */
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 180px !important;
+    height: 45px !important;
+    min-width: 180px !important;
+    max-width: 180px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+    border-radius: 8px !important;
+    cursor: pointer !important;
+    font-size: 0.9rem !important;
+    font-weight: 500 !important;
+    transition: all 0.2s ease !important;
+    flex: none !important;
+    text-align: center !important;
+    text-decoration: none !important;
+    white-space: nowrap !important;
+    line-height: 1.2 !important;
+}
+
+/* Dhana type availability list */
+.dhana-availability {
+    margin-bottom: 20px;
+}
+
+.dhana-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    margin-bottom: 10px;
+    background: #f5f5f5;
+    border-radius: 8px;
+    border-left: 4px solid #d4822a;
+}
+
+.dhana-item.available {
+    border-left-color: #28a745;
+    background: #d4edda;
+}
+
+.dhana-item.booked {
+    border-left-color: #dc3545;
+    background: #f8d7da;
+}
+
+.dhana-item.blocked {
+    border-left-color: #6c757d;
+    background: #e9ecef;
+    opacity: 0.8;
+}
+
+.dhana-item.partially-booked {
+    border-left-color: #ffc107;
+    background: #fff3cd;
+}
+
+.dhana-info h4 {
+    margin: 0 0 5px 0;
+    color: #333;
+}
+
+.dhana-info p {
+    margin: 0;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.dhana-status {
+    font-weight: 600;
+    padding: 5px 10px;
+    border-radius: 15px;
+    font-size: 0.8rem;
+}
+
+.dhana-status.available {
+    background: #28a745;
+    color: white;
+}
+
+.dhana-status.booked {
+    background: #dc3545;
+    color: white;
+}
+
+.dhana-status.blocked {
+    background: #6c757d;
+    color: white;
+}
+
+.dhana-status.partially-booked {
+    background: #ffc107;
+    color: #212529;
+}
+
+/* Alternative styling for "Not Available" to distinguish from "Blocked" */
+.dhana-item.blocked .dhana-status {
+    background: #6c757d;
+    color: white;
+}
+
+.dhana-item.blocked small {
+    color: #6c757d;
+    font-style: italic;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .calendar-container {
+        padding: 20px;
+    }
+    
+    .calendar-nav h2 {
+        font-size: 1.4rem;
+    }
+    
+    .calendar-legend {
+        gap: 15px;
+    }
+    
+    .legend-item {
+        font-size: 0.8rem;
+    }
+    
+    .day-cell {
+        min-height: 60px;
+        padding: 5px;
+    }
+    
+    .day-number {
+        font-size: 1rem;
+    }
+    
+    .availability-indicator {
+        font-size: 1rem;
+    }
+
+    .whole-day-indicator {
+        font-size: 0.95rem;
+    }
+    
+    .modal-content {
+        width: 95%;
+        margin: 10% auto;
+    }
+    
+    .modal-header,
+    .modal-body,
+    .modal-footer {
+        padding: 20px;
+    }
+    
+    .modal-footer {
+        flex-direction: column;
+        gap: 10px;
+        align-items: stretch;
+    }
+
+    .modal-footer .btn {
+        width: 100% !important;
+        min-width: auto;
+        height: 44px;
+    }
+    
+    .dhana-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .day-cell {
+        min-height: 50px;
+        padding: 3px;
+    }
+    
+    .day-number {
+        font-size: 0.9rem;
+    }
+    
+    .availability-indicator {
+        font-size: 0.9rem;
+    }
+
+    .whole-day-indicator {
+        font-size: 0.85rem;
+    }
+
+    .annual-event-badge {
+        width: 14px;
+        height: 14px;
+        font-size: 0.6rem;
+        top: 2px;
+        left: 2px;
+    }
+    
+    .calendar-legend {
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+    }
+}

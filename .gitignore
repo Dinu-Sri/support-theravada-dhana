@@ -1,0 +1,40 @@
+# Local secrets — keep example files only
+config/database.php
+config/email.php
+config/config.php
+
+# Production / local dumps with personal data
+supporttheravada_dhana_booking.sql
+*.sql.gz
+*.sql.zip
+
+# Receipts and other user uploads (keep folder + blocker)
+uploads/receipts/*
+!uploads/receipts/index.php
+!uploads/receipts/.gitkeep
+admin/uploads/receipts/*
+
+# Backup payloads
+backup/daily/*
+backup/monthly/*
+backup/receipts/*
+!backup/**/.gitkeep
+!backup/**/.htaccess
+
+# Logs
+error_log
+**/error_log
+*.log
+cron/logs/
+
+# cPanel leftover
+cgi-bin/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+*~

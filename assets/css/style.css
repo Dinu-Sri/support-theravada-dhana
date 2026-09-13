@@ -1,0 +1,1136 @@
+/* Dhana Reservation System - Main Styles */
+
+/* Reset and Base Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
+    color: #333;
+    background: #f5f5f5;
+    min-height: 100vh;
+}
+
+/* Login Page Styles */
+.login-page {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.login-container {
+    width: 100%;
+    max-width: 450px;
+}
+
+.login-card {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    animation: slideUp 0.6s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.login-header {
+    background: linear-gradient(135deg, #d4822a 0%, #b8860b 100%);
+    color: white;
+    text-align: center;
+    padding: 30px 20px;
+}
+
+.login-header h1 {
+    font-size: 2rem;
+    margin-bottom: 10px;
+}
+
+.login-header i {
+    margin-right: 10px;
+    color: #ffd700;
+}
+
+.login-header p {
+    opacity: 0.9;
+    font-size: 0.95rem;
+}
+
+/* Form Styles */
+.auth-form {
+    padding: 30px;
+    display: none;
+}
+
+.auth-form.active {
+    display: block;
+}
+
+.auth-form h2 {
+    text-align: center;
+    margin-bottom: 25px;
+    color: #333;
+    font-size: 1.5rem;
+}
+
+.form-row {
+    display: flex;
+    gap: 15px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+    flex: 1;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #555;
+}
+
+.form-group label i {
+    margin-right: 8px;
+    color: #d4822a;
+    width: 16px;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 12px 15px;
+    border: 2px solid #e1e5e9;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #d4822a;
+    box-shadow: 0 0 0 3px rgba(212, 130, 42, 0.1);
+}
+
+/* Button Styles */
+.btn {
+    display: inline-block;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #d4822a 0%, #b8860b 100%);
+    color: white;
+    width: 100%;
+    margin-bottom: 20px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    padding: 16px 24px;
+    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+    animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.btn-primary:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(40, 167, 69, 0.5);
+    background: linear-gradient(135deg, #218838 0%, #1ea87a 100%);
+}
+
+@keyframes pulse-glow {
+    0%, 100% {
+        box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+    }
+    50% {
+        box-shadow: 0 4px 20px rgba(40, 167, 69, 0.6);
+    }
+}
+
+.btn-secondary {
+    background: #f8f9fa;
+    color: #333;
+    border: 2px solid #e1e5e9;
+}
+
+.btn-secondary:hover {
+    background: #e9ecef;
+    border-color: #adb5bd;
+}
+
+/* Error Messages */
+.error-message {
+    background: #fee;
+    color: #c33;
+    padding: 12px 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border-left: 4px solid #c33;
+}
+
+.error-message ul {
+    list-style: none;
+    margin: 0;
+}
+
+.error-message li {
+    margin-bottom: 5px;
+}
+
+.success-message {
+    background: #efe;
+    color: #363;
+    padding: 12px 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border-left: 4px solid #363;
+}
+
+/* Auth Switch */
+.auth-switch {
+    text-align: center;
+    color: #666;
+}
+
+.auth-switch a {
+    color: #d4822a;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.auth-switch a:hover {
+    text-decoration: underline;
+}
+
+/* Dashboard Styles */
+.dashboard {
+    max-width: 100vw;
+    height: 100vh;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.dashboard-header {
+    background: linear-gradient(135deg, #d4822a 0%, #b8860b 100%);
+    color: white;
+    padding: 0 25px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    flex-shrink: 0;
+    height: 80px;
+    box-sizing: border-box;
+}
+
+.dashboard-header .user-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    margin: 0;
+    background: rgba(255, 255, 255, 0.2);
+    padding: 8px 15px;
+    border-radius: 8px;
+    backdrop-filter: blur(10px);
+    max-width: 300px;
+}
+
+.dashboard-header .user-info p {
+    margin: 2px 0;
+    font-size: 0.85rem;
+    color: white;
+}
+
+.welcome-content {
+    flex: 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.welcome-content h1 {
+    margin: 0;
+    font-size: 1.6rem;
+    white-space: nowrap;
+}
+
+.user-actions {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.logout-form {
+    margin: 0;
+}
+
+.settings-btn,
+.logout-btn {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.9rem;
+}
+
+.settings-btn:hover,
+.logout-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-1px);
+    color: white;
+}
+
+/* Dashboard Content Layout */
+.dashboard-content {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    gap: 0;
+    height: calc(100vh - 80px); /* Subtract header height */
+}
+
+.dashboard-panel {
+    display: flex;
+    flex-direction: column;
+    background: white;
+    overflow: hidden;
+}
+
+.left-panel {
+    flex: 0 0 640px;
+    border-right: 1px solid #e9ecef;
+}
+
+.middle-panel {
+    flex: 1;
+    border-right: 1px solid #e9ecef;
+    min-width: 300px;
+}
+
+.right-panel {
+    flex: 0 0 640px;
+}
+
+.panel-header {
+    background: #f5f5f5;
+    padding: 15px 20px;
+    border-bottom: 1px solid #e9ecef;
+    flex-shrink: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.panel-header h2 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #333;
+    font-weight: 600;
+    flex: 1;
+}
+
+.panel-content {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.user-info {
+    color: #666;
+    margin-bottom: 20px;
+}
+
+.logout-btn {
+    background: #dc3545;
+    color: white;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    text-decoration: none;
+    font-size: 0.9rem;
+}
+
+.logout-btn:hover {
+    background: #c82333;
+}
+
+/* Left Panel Styles */
+.guide-intro {
+    text-align: center;
+    color: #666;
+    margin-bottom: 25px;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.steps-compact {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.step-compact {
+    display: flex;
+    align-items: flex-start;
+    gap: 18px;
+    padding: 18px;
+    background: #f5f5f5;
+    border-radius: 12px;
+    border-left: 4px solid #d4822a;
+}
+
+.step-compact .step-number {
+    background: #d4822a;
+    color: white;
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.step-compact .step-content h4 {
+    margin: 0 0 10px 0;
+    font-size: 1.1rem;
+    color: #333;
+    font-weight: 600;
+}
+
+.step-compact .step-content p {
+    margin: 0 0 10px 0;
+    font-size: 0.95rem;
+    color: #666;
+    line-height: 1.4;
+}
+
+.dhana-types-list {
+    margin: 10px 0 0 0;
+    padding-left: 18px;
+    font-size: 0.9rem;
+}
+
+.dhana-types-list li {
+    margin-bottom: 6px;
+    color: #555;
+    line-height: 1.3;
+}
+
+/* Middle Panel Styles */
+.middle-panel .panel-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 30px;
+}
+
+.action-buttons-vertical {
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+    align-items: center;
+    width: 100%;
+    max-width: 350px;
+}
+
+.action-btn-large {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 35px 25px;
+    background: white;
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    text-decoration: none;
+    color: #333;
+    transition: all 0.3s ease;
+    width: 100%;
+    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
+}
+
+.action-btn-large:hover {
+    border-color: #d4822a;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(212, 130, 42, 0.2);
+    color: #d4822a;
+}
+
+.action-btn-large i {
+    font-size: 2.5rem;
+    margin-bottom: 12px;
+    color: #d4822a;
+}
+
+.action-btn-large span {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.action-btn-large small {
+    font-size: 0.85rem;
+    color: #666;
+    text-align: center;
+    line-height: 1.3;
+}
+
+/* Right Panel Styles */
+.no-bookings {
+    text-align: center;
+    padding: 40px 20px;
+    color: #666;
+}
+
+.no-bookings i {
+    font-size: 3rem;
+    margin-bottom: 20px;
+    opacity: 0.5;
+    color: #ccc;
+}
+
+.no-bookings p {
+    margin: 8px 0;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.bookings-list-compact {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.booking-item-compact {
+    background: #f5f5f5;
+    border-radius: 12px;
+    padding: 18px;
+    border-left: 4px solid #d4822a;
+}
+
+.booking-item-compact .booking-info h4 {
+    margin: 0 0 10px 0;
+    font-size: 1.1rem;
+    color: #333;
+    font-weight: 600;
+}
+
+.booking-item-compact .booking-info p {
+    margin: 6px 0;
+    font-size: 0.95rem;
+    color: #666;
+}
+
+.booking-item-compact .booking-info i {
+    width: 18px;
+    margin-right: 8px;
+    color: #d4822a;
+    font-size: 0.9rem;
+}
+
+.booking-status {
+    margin-top: 12px;
+}
+
+.status-badge {
+    padding: 6px 10px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+.status-pending {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.status-confirmed {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-cancelled {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.view-all-bookings {
+    text-align: center;
+    margin-top: 20px;
+    padding-top: 18px;
+    border-top: 1px solid #e9ecef;
+}
+
+.btn-small {
+    padding: 8px 16px;
+    font-size: 0.9rem;
+}
+
+/* Step Guide Styles */
+.step-guide {
+    background: white;
+    border-radius: 15px;
+    padding: 30px;
+    margin-bottom: 30px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.step-guide h2 {
+    text-align: center;
+    margin-bottom: 30px;
+    color: #333;
+}
+
+.steps {
+    display: grid;
+    gap: 20px;
+}
+
+.step {
+    display: flex;
+    align-items: center;
+    padding: 20px;
+    background: #f5f5f5;
+    border-radius: 10px;
+    border-left: 4px solid #d4822a;
+}
+
+.step-number {
+    background: #d4822a;
+    color: white;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    margin-right: 20px;
+    flex-shrink: 0;
+}
+
+.step-content h3 {
+    margin-bottom: 5px;
+    color: #333;
+}
+
+.step-content p {
+    color: #666;
+    margin: 0;
+}
+
+/* Action Buttons */
+.action-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-top: 30px;
+}
+
+.action-btn {
+    background: white;
+    border: 2px solid #d4822a;
+    color: #d4822a;
+    padding: 20px;
+    border-radius: 10px;
+    text-decoration: none;
+    text-align: center;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.action-btn:hover {
+    background: #d4822a;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(212, 130, 42, 0.3);
+}
+
+.action-btn i {
+    font-size: 2rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .login-container {
+        max-width: 100%;
+        margin: 0 10px;
+    }
+    
+    .login-card {
+        border-radius: 10px;
+    }
+    
+    .login-header {
+        padding: 20px;
+    }
+    
+    .login-header h1 {
+        font-size: 1.5rem;
+    }
+    
+    .auth-form {
+        padding: 20px;
+    }
+    
+    .form-row {
+        flex-direction: column;
+        gap: 0;
+    }
+    
+    /* Mobile Dashboard Layout */
+    .dashboard {
+        height: auto;
+        min-height: 100vh;
+    }
+
+    .dashboard-header {
+        flex-direction: column;
+        gap: 15px;
+        text-align: center;
+        padding: 15px;
+        height: auto;
+        min-height: auto;
+    }
+
+    .dashboard-header .user-info {
+        max-width: 100%;
+        order: 1;
+    }
+
+    .welcome-content {
+        order: 2;
+        flex: none;
+    }
+
+    .welcome-content h1 {
+        font-size: 1.4rem;
+        white-space: normal;
+    }
+
+    .user-actions {
+        order: 3;
+        flex: none;
+        justify-content: center;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .settings-btn,
+    .logout-btn {
+        font-size: 0.85rem;
+        padding: 6px 12px;
+    }
+
+    .dashboard-content {
+        flex-direction: column;
+        height: auto;
+    }
+
+    .dashboard-panel {
+        flex: none;
+        border-right: none;
+        border-bottom: 1px solid #e9ecef;
+    }
+
+    .left-panel,
+    .right-panel {
+        flex: none;
+    }
+
+    .panel-header {
+        flex-direction: column;
+        gap: 10px;
+        text-align: center;
+    }
+
+    .panel-header h2 {
+        flex: none;
+    }
+
+    .panel-content {
+        overflow-y: visible;
+        max-height: none;
+    }
+
+    .action-buttons-vertical {
+        gap: 20px;
+    }
+
+    .action-btn-large {
+        padding: 30px 20px;
+    }
+
+    .action-btn-large i {
+        font-size: 2.5rem;
+    }
+
+    .action-btn-large span {
+        font-size: 1.1rem;
+    }
+    
+    .action-buttons {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    .step {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .step-number {
+        margin-right: 0;
+        margin-bottom: 15px;
+    }
+}
+
+/* Booking List Styles */
+.bookings-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.booking-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    background: #f5f5f5;
+    border-radius: 10px;
+    border-left: 4px solid #d4822a;
+}
+
+.booking-info h4 {
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.booking-info p {
+    margin: 5px 0;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.booking-info i {
+    margin-right: 8px;
+    color: #d4822a;
+    width: 16px;
+}
+
+.status-badge {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+.status-pending {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.status-receipt_submitted {
+    background: #cfe2ff;
+    color: #084298;
+}
+
+.status-payment_pending {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.status-confirmed {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-completed {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+.status-cancelled {
+    background: #f5c6cb;
+    color: #721c24;
+}
+
+/* Annual Event Badge */
+.annual-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+    font-size: 0.75rem;
+    padding: 2px 8px;
+    border-radius: 12px;
+    margin-left: 8px;
+    font-weight: 500;
+    vertical-align: middle;
+}
+
+.annual-badge i {
+    margin-right: 3px;
+    font-size: 0.7rem;
+}
+
+@media (max-width: 480px) {
+    .login-header h1 {
+        font-size: 1.3rem;
+    }
+
+    .auth-form h2 {
+        font-size: 1.3rem;
+    }
+
+    .form-group input {
+        padding: 10px 12px;
+    }
+
+    .btn {
+        padding: 10px 20px;
+    }
+
+    .booking-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+
+    .booking-status {
+        align-self: flex-end;
+    }
+}
+
+/* User Settings Page Styles */
+.settings-main {
+    padding: 30px;
+    background: #f5f5f5;
+    min-height: calc(100vh - 80px);
+}
+
+.settings-container {
+    display: grid;
+    grid-template-columns: 1fr !important;
+    gap: 25px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.settings-section {
+    background: white;
+    border-radius: 12px;
+    padding: 25px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e9ecef;
+    height: fit-content;
+}
+
+.settings-section h2 {
+    color: #333;
+    margin-bottom: 25px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #e9ecef;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.4rem;
+}
+
+.settings-section h2 i {
+    color: #d4822a;
+}
+
+.settings-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.settings-form .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.settings-form label {
+    font-weight: 500;
+    color: #333;
+    font-size: 0.95rem;
+}
+
+.settings-form input {
+    padding: 12px 15px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+}
+
+.settings-form input:focus {
+    outline: none;
+    border-color: #d4822a;
+    box-shadow: 0 0 0 3px rgba(212, 130, 42, 0.1);
+}
+
+.settings-form small {
+    color: #6c757d;
+    font-size: 0.85rem;
+}
+
+.settings-form .btn {
+    align-self: flex-start;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+}
+
+.settings-form .btn-primary {
+    background: linear-gradient(135deg, #d4822a 0%, #b8860b 100%);
+    color: white;
+}
+
+.settings-form .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.5);
+}
+
+.settings-form .btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.settings-form .btn-secondary:hover {
+    background: #5a6268;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(108, 117, 125, 0.4);
+}
+
+.info-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.info-item label {
+    font-weight: 500;
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.info-item span {
+    font-size: 1rem;
+    color: #333;
+}
+
+.status-active {
+    color: #28a745;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.success-message,
+.error-message {
+    padding: 15px 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 500;
+    transition: opacity 0.3s ease;
+    max-width: 1400px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.success-message {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.error-message {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+/* Settings Page Responsive */
+@media (max-width: 768px) {
+    .settings-main {
+        padding: 15px;
+    }
+
+    .settings-section {
+        padding: 20px;
+    }
+
+    .settings-section h2 {
+        font-size: 1.2rem;
+    }
+
+    .user-actions {
+        flex-direction: column;
+        gap: 10px;
+    }
+}

@@ -1,0 +1,74 @@
+/* Professional Review Section Enhancements - Clean Version */
+
+/* Icon styling for section headers */
+.review-section h4 i {
+    color: #d4822a;
+    margin-right: 8px;
+    font-size: 1.1em;
+}
+
+/* Remove the step number from the header */
+.step-header h3 {
+    padding-left: 0 !important;
+}
+
+.step-header h3::before {
+    display: none !important;
+}
+
+/* Enhanced focus states for accessibility */
+.review-navigation .btn:focus {
+    outline: 3px solid rgba(212, 130, 42, 0.3);
+    outline-offset: 2px;
+}
+
+/* Remove any dollar sign or emoji from total amount */
+.total-amount::after,
+.total-amount::before {
+    display: none !important;
+    content: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+}
+
+/* Ultra-specific overrides to prevent any dollar signs */
+.booking-review .review-section .total-amount::after,
+.booking-review .review-section .total-amount::before,
+.total-amount-section .total-amount::after,
+.total-amount-section .total-amount::before,
+div.total-amount::after,
+div.total-amount::before,
+span#review-total-amount::after,
+span#review-total-amount::before {
+    display: none !important;
+    content: "" !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    width: 0 !important;
+    height: 0 !important;
+}
+
+/* Print styles for review section */
+@media print {
+    .booking-review {
+        box-shadow: none;
+        border: 2px solid #333;
+        background: white !important;
+    }
+    
+    .review-section {
+        page-break-inside: avoid;
+        box-shadow: none;
+        border: 1px solid #ccc;
+    }
+    
+    .review-navigation {
+        display: none;
+    }
+    
+    .total-amount {
+        color: #000 !important;
+        background: #f0f0f0 !important;
+        border: 2px solid #333 !important;
+    }
+}
