@@ -292,27 +292,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// Add loading animation for navigation
-document.addEventListener('DOMContentLoaded', function() {
-    const navButtons = document.querySelectorAll('.nav-btn');
-    
-    navButtons.forEach(button => {
-        button.addEventListener('click', function(e) {
-            // Add loading state
-            const originalContent = this.innerHTML;
-            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-            this.style.pointerEvents = 'none';
-            
-            // The page will navigate, but if for some reason it doesn't,
-            // restore the button after 3 seconds
-            setTimeout(() => {
-                this.innerHTML = originalContent;
-                this.style.pointerEvents = 'auto';
-            }, 3000);
-        });
-    });
-});
-
 // Add smooth scrolling to calendar when page loads
 document.addEventListener('DOMContentLoaded', function() {
     const calendar = document.querySelector('.calendar-container');

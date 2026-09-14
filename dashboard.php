@@ -35,7 +35,7 @@ $dhanaTypes = $db->fetchAll("SELECT * FROM dhana_types WHERE is_active = 1 AND p
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Sinhala:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="assets/css/pro-ui.css?v=20260914">
+    <link rel="stylesheet" href="assets/css/pro-ui.css?v=20260915">
 </head>
 <body>
     <div class="dashboard">

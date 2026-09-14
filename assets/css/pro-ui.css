@@ -52,12 +52,13 @@ button, .btn, a.btn { min-height: 42px; }
 
 .dashboard { min-height: 100vh; height: auto; overflow: visible; }
 .dashboard-content {
-    width: min(1440px, 100%);
+    width: 100%;
+    max-width: none;
     height: auto;
-    margin: 0 auto;
-    padding: 20px clamp(14px, 2vw, 28px) 32px;
+    margin: 0;
+    padding: 20px clamp(18px, 4vw, 64px) 32px;
     display: grid;
-    grid-template-columns: minmax(0, 1.25fr) minmax(230px, .7fr) minmax(290px, 1fr);
+    grid-template-columns: minmax(0, 1.2fr) minmax(250px, .72fr) minmax(310px, .96fr);
     align-items: start;
     gap: 18px;
     overflow: visible;
@@ -193,6 +194,104 @@ input:not([type="checkbox"]):not([type="radio"]):focus, select:focus, textarea:f
 .bank-details-card { box-shadow: none; }
 .booking-summary-table { font-size: .9rem; }
 
+/* Booking selection: keep supporting copy readable on the active gold card. */
+.dhana-type-card input[type="radio"]:checked + .dhana-type-label .price-pending {
+    color: #fff !important;
+    opacity: 1 !important;
+}
+.dhana-type-card input[type="radio"]:checked + .dhana-type-label .price-pending i {
+    color: #fff3b8 !important;
+}
+
+/* Step 3: information stays centered vertically; the switch has a stable right column. */
+.form-step[data-step="3"] .toggle-group {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) 118px;
+    align-items: center !important;
+    gap: 24px !important;
+    padding: 22px 26px !important;
+}
+.form-step[data-step="3"] .toggle-content {
+    justify-self: stretch;
+    align-self: center;
+}
+.form-step[data-step="3"] .toggle-switch-container,
+.form-step[data-step="3"] .toggle-group .toggle-switch-container {
+    grid-column: 2;
+    justify-self: end !important;
+    align-self: center !important;
+    margin: 0 !important;
+}
+
+/* Step 4: give each review card comfortable breathing room around its heading. */
+.booking-review { padding: 48px 40px 36px; }
+.booking-review .review-section { padding: 32px 30px 28px; }
+.booking-review .review-section h4 { padding-top: 5px; }
+
+/* Calendar navigation and modal controls. */
+.calendar-window-note {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 9px 13px;
+    color: #5f4c37;
+    background: #fff8e8;
+    border: 1px solid #f0d49b;
+    border-radius: 9px;
+    font-size: .9rem;
+    text-align: center;
+}
+.calendar-window-note i { color: var(--ui-gold); margin-right: 5px; }
+.modal-header .close {
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    display: inline-grid;
+    place-items: center;
+    border: 1px solid rgba(255, 255, 255, .75);
+    border-radius: 9px;
+    background: #fff;
+    color: #7c4912;
+    font-size: 1.7rem;
+    font-weight: 700;
+    line-height: 1;
+    opacity: 1;
+}
+.modal-header .close:hover,
+.modal-header .close:focus-visible {
+    background: #fff4d9;
+    color: #48270d;
+    opacity: 1;
+}
+
+/* Payment: complete one clear action on the right, then see the account details. */
+.payment-side-panel { display: grid; gap: 16px; min-width: 0; }
+.payment-side-panel > .receipt-upload-form,
+.payment-side-panel > .existing-receipt { margin: 0; }
+.payment-bank-details { margin: 0; padding: 20px; border-color: #ead7a6; }
+.payment-bank-details .bank-details-header { gap: 12px; }
+.payment-bank-details .bank-details-header h3 {
+    margin: 0;
+    color: #624116;
+    font-size: 1.05rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.payment-bank-details .bank-details-header h3 i { color: var(--ui-gold); }
+.bank-details-intro { margin: 0 0 14px; color: #554735; line-height: 1.55; }
+.payment-bank-details .bank-details {
+    padding: 16px;
+    border-color: #ecd9a5;
+    border-left: 4px solid var(--ui-gold);
+    background: #fffaf0;
+    color: #30281f;
+    font-family: inherit;
+    font-size: .95rem;
+    font-weight: 600;
+    line-height: 1.7;
+    overflow-wrap: anywhere;
+}
+
 .settings-container { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 16px; align-items: start; }
 .settings-section { padding: 20px; margin: 0; }
 .settings-section:first-child { grid-column: 1 / -1; }
@@ -244,6 +343,13 @@ input:not([type="checkbox"]):not([type="radio"]):focus, select:focus, textarea:f
     .auth-container { width: calc(100% - 18px); min-height: 0; }
     .dhana-types-grid { grid-template-columns: 1fr; }
     .settings-section .info-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .form-step[data-step="3"] .toggle-group { grid-template-columns: 1fr; text-align: center; }
+    .form-step[data-step="3"] .toggle-content h4 { justify-content: center; }
+    .form-step[data-step="3"] .toggle-switch-container,
+    .form-step[data-step="3"] .toggle-group .toggle-switch-container { grid-column: 1; justify-self: center !important; }
+    .booking-review { padding: 30px 16px 24px; }
+    .booking-review .review-section { padding: 24px 18px; }
+    .payment-bank-details .bank-details-header { align-items: flex-start; flex-direction: column; }
 }
 
 @media (max-height: 680px) {

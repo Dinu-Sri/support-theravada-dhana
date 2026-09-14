@@ -62,7 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['token'], $_POST['pass
     <?php include 'includes/favicon.php'; ?>
     <link rel="stylesheet" href="assets/css/style.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="assets/css/pro-ui.css?v=20260914">
+    <link rel="stylesheet" href="assets/css/pro-ui.css?v=20260915">
     <style>
         .login-page {
             background-image: url('uploads/bck.webp');

@@ -64,7 +64,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'register') {
     <?php include 'includes/favicon.php'; ?>
     <link rel="stylesheet" href="assets/css/style.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="assets/css/pro-ui.css?v=20260914">
+    <link rel="stylesheet" href="assets/css/pro-ui.css?v=20260915">
     <style>
         .login-page {
             background-image: url('uploads/bck.webp');

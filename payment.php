@@ -176,7 +176,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['receipt'])) {
     <link rel="stylesheet" href="assets/css/style.css?v=20260913">
     <link rel="stylesheet" href="assets/css/payment.css?v=20260913">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="assets/css/pro-ui.css?v=20260914">
+    <link rel="stylesheet" href="assets/css/pro-ui.css?v=20260915">
 </head>
 <body>
     <div class="dashboard">
@@ -387,7 +387,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['receipt'])) {
                 </button>
             </div>
 
-            <!-- Column 2: Receipt Upload Form (MOVED TO MIDDLE) -->
+            <!-- Right panel: receipt upload followed by clear bank details -->
+            <aside class="payment-side-panel" aria-label="Payment submission">
             <?php if (($booking['status'] === 'pending' || $booking['status'] === 'payment_pending') && !$paymentExpired && !$existingReceipt): ?>
                 <div class="receipt-upload-form">
                     <h3><i class="fas fa-upload"></i> Upload Payment Receipt</h3>
@@ -499,50 +500,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['receipt'])) {
                 </div>
             <?php endif; ?>
 
-            <!-- Column 3: Payment Instructions (MOVED TO RIGHT) -->
-            <div class="payment-instructions">
-                <h3><i class="fas fa-university"></i> Payment Instructions</h3>
-
-                <div class="instruction-step">
-                    <div class="step-number">1</div>
-                    <div class="step-content">
-                        <h4>Transfer the Amount</h4>
-                        <p>Transfer <strong>Rs. <?php echo number_format($booking['total_amount']); ?></strong> to our bank account using the details below:</p>
-
-                        <div class="bank-details-card">
-                            <div class="bank-details-header">
-                                <h4><i class="fas fa-university"></i> Bank Details</h4>
-                                <button class="copy-bank-details" onclick="copyBankDetails()">
-                                    <i class="fas fa-copy"></i> Copy Details
-                                </button>
-                            </div>
-                            <div class="bank-details" id="bankDetailsText">
-                                <?php if ($bankDetails): ?>
-                                    <?php echo nl2br(htmlspecialchars($bankDetails['setting_value'])); ?>
-                                <?php else: ?>
-                                    <p>Bank details will be provided via email.</p>
-                                <?php endif; ?>
-                            </div>
-                        </div>
+                <section class="bank-details-card payment-bank-details">
+                    <div class="bank-details-header">
+                        <h3><i class="fas fa-university"></i> Bank Transfer Details</h3>
+                        <button type="button" class="copy-bank-details" onclick="copyBankDetails()">
+                            <i class="fas fa-copy"></i> Copy Details
+                        </button>
                     </div>
-                </div>
-
-                <div class="instruction-step">
-                    <div class="step-number">2</div>
-                    <div class="step-content">
-                        <h4>Upload Receipt</h4>
-                        <p>After making the payment, upload your receipt or transaction screenshot using the form in the middle.</p>
+                    <p class="bank-details-intro">
+                        Transfer exactly <strong>Rs. <?php echo number_format($booking['total_amount']); ?></strong>, then return to the form above and upload the receipt.
+                    </p>
+                    <div class="bank-details" id="bankDetailsText" aria-label="Bank account details">
+                        <?php if ($bankDetails): ?>
+                            <?php echo nl2br(htmlspecialchars($bankDetails['setting_value'])); ?>
+                        <?php else: ?>
+                            <p>Bank details will be provided by the administration.</p>
+                        <?php endif; ?>
                     </div>
-                </div>
-
-                <div class="instruction-step">
-                    <div class="step-number">3</div>
-                    <div class="step-content">
-                        <h4>Wait for Confirmation</h4>
-                        <p>We'll verify your payment and send you a confirmation email within 24 hours.</p>
-                    </div>
-                </div>
-            </div>
+                </section>
+            </aside>
         </div> <!-- Close payment-container -->
     </div> <!-- Close dashboard -->
 

@@ -45,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
     <link rel="stylesheet" href="assets/css/booking-steps.css?v=20260913">
     <link rel="stylesheet" href="assets/css/review-enhancements.css?v=20260913">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="assets/css/pro-ui.css?v=20260914">
+    <link rel="stylesheet" href="assets/css/pro-ui.css?v=20260915">
     <style>
         .review-navigation .btn:first-child {
             margin-right: auto !important;
@@ -1467,6 +1467,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
         let disclaimerAccepted = false;
 
         function showPriceDisclaimerModal() {
+            const existingModal = document.getElementById('priceDisclaimerModal');
+            if (existingModal) {
+                existingModal.querySelector('#disclaimerCheckbox')?.focus();
+                return;
+            }
+
             // Create modal
             const modal = document.createElement('div');
             modal.className = 'price-disclaimer-modal';
@@ -1529,22 +1535,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
             });
         }
 
-        function closePriceDisclaimerModal() {
+        function closePriceDisclaimerModal(resetAcceptance = true) {
             const modal = document.getElementById('priceDisclaimerModal');
             if (modal) {
                 modal.remove();
             }
-            disclaimerAccepted = false;
+            if (resetAcceptance) disclaimerAccepted = false;
         }
 
         function acceptDisclaimerAndSubmit() {
-            disclaimerAccepted = true;
-            closePriceDisclaimerModal();
+            const checkbox = document.getElementById('disclaimerCheckbox');
+            if (!checkbox?.checked) return;
 
-            // Now submit the form
+            disclaimerAccepted = true;
+            closePriceDisclaimerModal(false);
+
+            // Use requestSubmit so normal client-side availability validation
+            // still runs. The accepted state remains true for that submission.
             const form = document.getElementById('bookingForm');
             if (form) {
-                form.submit();
+                form.requestSubmit();
             }
         }
 

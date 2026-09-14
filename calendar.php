@@ -13,11 +13,12 @@ $db = getDB();
 $advanceDays = bookingSettingInt($db, 'booking_advance_days', 30, 1, 730);
 $calendarMinDate = new DateTime('today');
 $calendarMaxDate = (clone $calendarMinDate)->modify('+' . $advanceDays . ' days');
+$calendarViewMaxDate = (clone $calendarMinDate)->modify('+12 months');
 $currentMonth = isset($_GET['month']) ? (int)$_GET['month'] : date('n');
 $currentYear = isset($_GET['year']) ? (int)$_GET['year'] : date('Y');
 $requestedMonth = DateTime::createFromFormat('!Y-n-j', $currentYear . '-' . $currentMonth . '-1');
 $minMonth = new DateTime('first day of this month');
-$maxMonth = (clone $calendarMaxDate)->modify('first day of this month');
+$maxMonth = (clone $calendarViewMaxDate)->modify('first day of this month');
 if (!$requestedMonth || $requestedMonth < $minMonth || $requestedMonth > $maxMonth) {
     $requestedMonth = clone $minMonth;
 }
@@ -108,7 +109,7 @@ $nextMonth = (clone $requestedMonth)->modify('+1 month');
     <link rel="stylesheet" href="assets/css/style.css">
     <link rel="stylesheet" href="assets/css/calendar.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="assets/css/pro-ui.css?v=20260914">
+    <link rel="stylesheet" href="assets/css/pro-ui.css?v=20260915">
 </head>
 <body>
     <div class="dashboard">
@@ -137,6 +138,11 @@ $nextMonth = (clone $requestedMonth)->modify('+1 month');
                         <span class="nav-btn disabled" aria-hidden="true"><i class="fas fa-chevron-right"></i></span>
                     <?php endif; ?>
                 </div>
+                <p class="calendar-window-note">
+                    <i class="fas fa-info-circle" aria-hidden="true"></i>
+                    You can browse the next 12 months. Reservations are currently open through
+                    <strong><?php echo $calendarMaxDate->format('F j, Y'); ?></strong>.
+                </p>
             </div>
 
             <!-- Legend -->
