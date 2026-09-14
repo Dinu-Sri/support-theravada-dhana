@@ -61,23 +61,30 @@ class BackupManager {
                 $filepath = $this->dailyDir . '/' . $filename;
             }
             
-            // Get database credentials from config
-            $dbConfig = require __DIR__ . '/config.php';
-            $dbName = $dbConfig['db_name'];
-            $dbUser = $dbConfig['db_user'];
-            $dbPass = $dbConfig['db_pass'];
-            $dbHost = $dbConfig['db_host'];
-            
-            // Build mysqldump command
-            $mysqlDumpPath = 'C:\\xampp\\mysql\\bin\\mysqldump.exe';
-            
-            // Escape password for command line
-            $escapedPass = escapeshellarg($dbPass);
-            
-            $command = "\"{$mysqlDumpPath}\" --user={$dbUser} --password={$escapedPass} --host={$dbHost} {$dbName} > \"{$filepath}\" 2>&1";
-            
-            // Execute backup
-            exec($command, $output, $returnCode);
+            $mysqlDumpPath = defined('MYSQLDUMP_PATH') && MYSQLDUMP_PATH !== ''
+                ? MYSQLDUMP_PATH
+                : 'mysqldump';
+            $credentialsFile = tempnam($this->backupDir, 'mysql-');
+            if ($credentialsFile === false) {
+                throw new RuntimeException('Could not create a temporary database credentials file.');
+            }
+            $credentials = "[client]\nhost=" . DB_HOST . "\nuser=" . DB_USER . "\npassword=" . DB_PASS . "\ndefault-character-set=utf8mb4\n";
+            if (file_put_contents($credentialsFile, $credentials, LOCK_EX) === false) {
+                throw new RuntimeException('Could not write the temporary database credentials file.');
+            }
+            @chmod($credentialsFile, 0600);
+
+            $command = escapeshellarg($mysqlDumpPath)
+                . ' ' . escapeshellarg('--defaults-extra-file=' . $credentialsFile)
+                . ' --single-transaction --skip-lock-tables --routines --triggers '
+                . escapeshellarg(DB_NAME)
+                . ' > ' . escapeshellarg($filepath) . ' 2>&1';
+
+            try {
+                exec($command, $output, $returnCode);
+            } finally {
+                if (is_file($credentialsFile)) unlink($credentialsFile);
+            }
             
             if ($returnCode === 0 && file_exists($filepath) && filesize($filepath) > 0) {
                 // Update last backup time in settings
@@ -369,4 +376,3 @@ class BackupManager {
         }
     }
 }
-

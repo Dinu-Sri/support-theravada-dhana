@@ -21,6 +21,10 @@ $errorMessage = '';
 
 // Handle logout
 if (isset($_POST['action']) && $_POST['action'] === 'logout') {
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? null)) {
+        http_response_code(400);
+        exit('Invalid request');
+    }
     $auth->logout();
     header('Location: index.php');
     exit;
@@ -28,15 +32,19 @@ if (isset($_POST['action']) && $_POST['action'] === 'logout') {
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (isset($_POST['update_profile'])) {
-        $firstName = trim($_POST['first_name']);
-        $lastName = trim($_POST['last_name']);
-        $email = trim($_POST['email']);
-        $contactNumber = trim($_POST['contact_number']);
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? null)) {
+        $errorMessage = 'Your session expired. Please refresh and try again.';
+    } elseif (isset($_POST['update_profile'])) {
+        $firstName = trim($_POST['first_name'] ?? '');
+        $lastName = trim($_POST['last_name'] ?? '');
+        $email = strtolower(trim($_POST['email'] ?? ''));
+        $contactNumber = trim($_POST['contact_number'] ?? '');
         
         // Validation
         if (empty($firstName) || empty($lastName) || empty($email) || empty($contactNumber)) {
             $errorMessage = 'All fields are required.';
+        } elseif (strlen($firstName) > 50 || strlen($lastName) > 50 || strlen($email) > 100 || strlen($contactNumber) > 20) {
+            $errorMessage = 'One or more fields are too long.';
         } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $errorMessage = 'Please enter a valid email address.';
         } else {
@@ -65,15 +73,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     );
                 }
             } catch (Exception $e) {
-                $errorMessage = 'Error updating profile: ' . $e->getMessage();
+                error_log('Profile update error: ' . $e->getMessage());
+                $errorMessage = 'Unable to update your profile right now. Please try again.';
             }
         }
     }
     
-    if (isset($_POST['change_password'])) {
-        $currentPassword = $_POST['current_password'];
-        $newPassword = $_POST['new_password'];
-        $confirmPassword = $_POST['confirm_password'];
+    elseif (isset($_POST['change_password'])) {
+        $currentPassword = $_POST['current_password'] ?? '';
+        $newPassword = $_POST['new_password'] ?? '';
+        $confirmPassword = $_POST['confirm_password'] ?? '';
         
         // Validation
         if (empty($currentPassword) || empty($newPassword) || empty($confirmPassword)) {
@@ -93,8 +102,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 );
                 
                 $successMessage = 'Password changed successfully!';
+                $_SESSION['password_version'] = $newPasswordHash;
+                session_regenerate_id(true);
             } catch (Exception $e) {
-                $errorMessage = 'Error changing password: ' . $e->getMessage();
+                error_log('Password change error: ' . $e->getMessage());
+                $errorMessage = 'Unable to change your password right now. Please try again.';
             }
         }
     }
@@ -109,6 +121,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <?php include 'includes/favicon.php'; ?>
     <link rel="stylesheet" href="assets/css/style.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/pro-ui.css?v=20260914">
 </head>
 <body>
     <div class="dashboard">
@@ -126,6 +139,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <i class="fas fa-arrow-left"></i> Back to Dashboard
                 </a>
                 <form method="POST" class="logout-form">
+                    <?php echo csrfInput(); ?>
                     <input type="hidden" name="action" value="logout">
                     <button type="submit" class="logout-btn">
                         <i class="fas fa-sign-out-alt"></i> Logout
@@ -175,7 +189,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             </span>
                         </div>
                         <div class="info-item">
-                            <label>Last Updated</label>
+                            <label>Profile Last Updated</label>
                             <span><?php echo date('F j, Y g:i A', strtotime($user['updated_at'])); ?></span>
                         </div>
                     </div>
@@ -185,27 +199,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="settings-section">
                     <h2><i class="fas fa-user"></i> Profile Settings</h2>
                     <form method="POST" class="settings-form">
+                        <?php echo csrfInput(); ?>
                         <div class="form-group">
                             <label for="first_name">First Name</label>
-                            <input type="text" id="first_name" name="first_name" 
+                            <input type="text" id="first_name" name="first_name" autocomplete="given-name" maxlength="50"
                                    value="<?php echo htmlspecialchars($user['first_name']); ?>" required>
                         </div>
 
                         <div class="form-group">
                             <label for="last_name">Last Name</label>
-                            <input type="text" id="last_name" name="last_name" 
+                            <input type="text" id="last_name" name="last_name" autocomplete="family-name" maxlength="50"
                                    value="<?php echo htmlspecialchars($user['last_name']); ?>" required>
                         </div>
 
                         <div class="form-group">
                             <label for="email">Email Address</label>
-                            <input type="email" id="email" name="email" 
+                            <input type="email" id="email" name="email" autocomplete="email" maxlength="100"
                                    value="<?php echo htmlspecialchars($user['email']); ?>" required>
                         </div>
 
                         <div class="form-group">
                             <label for="contact_number">Contact Number</label>
-                            <input type="tel" id="contact_number" name="contact_number" 
+                            <input type="tel" id="contact_number" name="contact_number" autocomplete="tel" maxlength="20"
                                    value="<?php echo htmlspecialchars($user['contact_number']); ?>" required>
                         </div>
 
@@ -219,21 +234,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="settings-section">
                     <h2><i class="fas fa-lock"></i> Change Password</h2>
                     <form method="POST" class="settings-form">
+                        <?php echo csrfInput(); ?>
                         <div class="form-group">
                             <label for="current_password">Current Password</label>
-                            <input type="password" id="current_password" name="current_password" required>
+                            <input type="password" id="current_password" name="current_password" autocomplete="current-password" required>
                         </div>
 
                         <div class="form-group">
                             <label for="new_password">New Password</label>
-                            <input type="password" id="new_password" name="new_password" 
+                            <input type="password" id="new_password" name="new_password" autocomplete="new-password"
                                    minlength="6" required>
                             <small>Minimum 6 characters</small>
                         </div>
 
                         <div class="form-group">
                             <label for="confirm_password">Confirm New Password</label>
-                            <input type="password" id="confirm_password" name="confirm_password" 
+                            <input type="password" id="confirm_password" name="confirm_password" autocomplete="new-password"
                                    minlength="6" required>
                         </div>
 

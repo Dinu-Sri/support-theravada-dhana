@@ -134,8 +134,11 @@ A safe update sequence is:
 
 1. Preserve `config/database.php`, `config/email.php`, uploaded receipts, and backups.
 2. Pull `main` from GitHub.
-3. Run the deployment preflight and correct every reported error.
-4. Test the donor and admin login pages.
+3. Run each newly added file in `database/migrations/` once through phpMyAdmin. For this release, run `database/migrations/2026-09-13-booking-integrity.sql` before reopening reservations.
+4. Run the deployment preflight and correct every reported error.
+5. Test the donor and admin login pages.
+
+The first deployment of this release also requires refreshing the server-only `config/database.php` from the current example (then restoring its real credentials). The preflight detects the legacy template and explains this rather than allowing a raw database error to reach visitors.
 
 ## ⚙️ Configuration
 
@@ -161,6 +164,13 @@ Set up the following cron jobs for automation:
 ```bash
 0 1 * * * /usr/bin/php /path/to/project/cron/auto-cancel-pending-bookings.php
 ```
+
+**Auto-cancel Unconfirmed Near-date Bookings** (Daily at midnight):
+```bash
+0 0 * * * /usr/bin/php /path/to/project/cron/auto-cancel-before-dhana.php
+```
+
+Cron scripts are command-line only. If `mysqldump` is not on the hosting command path, set `MYSQLDUMP_PATH` in the untracked server `config/database.php`.
 
 **Auto-append Pricing Months** (Monthly on 1st at 4:00 AM):
 ```bash
@@ -193,10 +203,10 @@ dhana-booking-system/
 - **Password hashing** with PHP's password_hash()
 - **SQL injection protection** with PDO prepared statements
 - **XSS protection** with htmlspecialchars()
-- **Session management** with timeout
-- **File upload validation** (type, size, extension)
+- **Session management** with timeout, ID rotation, and active-account checks
+- **File upload validation** (content type, size, and extension) with authenticated receipt viewing
 - **Role-based access control**
-- **CSRF protection** (recommended to implement)
+- **CSRF protection** on donor state-changing forms
 
 ## License
 

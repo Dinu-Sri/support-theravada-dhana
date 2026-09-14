@@ -36,18 +36,32 @@ $bankDetails = $db->fetchOne(
     "SELECT setting_value FROM settings WHERE setting_key = 'bank_details'"
 );
 
+$timeoutSetting = $db->fetchOne("SELECT setting_value FROM settings WHERE setting_key = 'pending_booking_timeout_hours'");
+$timeoutHours = $timeoutSetting ? max(0, (int)$timeoutSetting['setting_value']) : 48;
+$paymentDeadlineTimestamp = strtotime($booking['created_at'] . ' +' . $timeoutHours . ' hours');
+$paymentExpired = $timeoutHours > 0 && time() > $paymentDeadlineTimestamp;
+$existingReceipt = $db->fetchOne(
+    "SELECT * FROM payment_receipts WHERE booking_id = ? ORDER BY upload_date DESC, id DESC LIMIT 1",
+    [$bookingId]
+);
+
 // Handle receipt upload
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['receipt'])) {
     $errors = [];
-    
-    $paymentMethod = trim($_POST['payment_method']);
-    $paymentReference = trim($_POST['payment_reference']);
-    
-    if (empty($paymentMethod)) {
+
+    $paymentMethod = trim($_POST['payment_method'] ?? '');
+    $paymentReference = trim($_POST['payment_reference'] ?? '');
+    $allowedPaymentMethods = ['bank_transfer', 'online_banking', 'mobile_banking', 'cash_deposit'];
+
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? null)) {
+        $errors[] = 'Your session expired. Please refresh and try again.';
+    } elseif (!in_array($booking['status'], ['pending', 'payment_pending'], true) || $paymentExpired || $existingReceipt) {
+        $errors[] = 'This reservation is no longer eligible for a receipt upload.';
+    }
+    if (!in_array($paymentMethod, $allowedPaymentMethods, true)) {
         $errors[] = 'Please select a payment method';
     }
-    
-    if (empty($paymentReference)) {
+    if (empty($paymentReference) || strlen($paymentReference) > 100) {
         $errors[] = 'Please enter payment reference/transaction ID';
     }
     
@@ -60,6 +74,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['receipt'])) {
         $fileName = $file['name'];
         $fileTmpName = $file['tmp_name'];
         $fileType = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+        $mimeType = (new finfo(FILEINFO_MIME_TYPE))->file($fileTmpName);
+        $allowedMimes = [
+            'jpg' => ['image/jpeg'], 'jpeg' => ['image/jpeg'],
+            'png' => ['image/png'], 'pdf' => ['application/pdf']
+        ];
         
         // Check file size (5MB max)
         if ($fileSize > MAX_FILE_SIZE) {
@@ -67,7 +86,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['receipt'])) {
         }
         
         // Check file type
-        if (!in_array($fileType, ALLOWED_FILE_TYPES)) {
+        if (!isset($allowedMimes[$fileType]) || !in_array($mimeType, $allowedMimes[$fileType], true)) {
             $errors[] = 'Only JPG, JPEG, PNG, and PDF files are allowed';
         }
     }
@@ -75,23 +94,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['receipt'])) {
     if (empty($errors)) {
         try {
             // Generate unique filename
-            $newFileName = 'receipt_' . $bookingId . '_' . time() . '.' . $fileType;
+            $newFileName = 'receipt_' . $bookingId . '_' . bin2hex(random_bytes(16)) . '.' . $fileType;
             $uploadPath = UPLOAD_DIR . $newFileName;
             
             // Move uploaded file
             if (move_uploaded_file($fileTmpName, $uploadPath)) {
-                // Save receipt record
-                $db->query(
-                    "INSERT INTO payment_receipts (booking_id, receipt_filename, payment_method, payment_reference) 
-                     VALUES (?, ?, ?, ?)",
-                    [$bookingId, $newFileName, $paymentMethod, $paymentReference]
-                );
-                
-                // Update reservation status to receipt_submitted
-                $db->query(
-                    "UPDATE bookings SET status = 'receipt_submitted' WHERE id = ?",
-                    [$bookingId]
-                );
+                $connection = $db->getConnection();
+                try {
+                    $connection->beginTransaction();
+                    $db->fetchOne(
+                        "SELECT id FROM bookings WHERE id = ? AND user_id = ? FOR UPDATE",
+                        [$bookingId, $user['id']]
+                    );
+                    if ($db->fetchOne("SELECT id FROM payment_receipts WHERE booking_id = ? LIMIT 1", [$bookingId])) {
+                        throw new RuntimeException('A receipt has already been uploaded for this reservation.');
+                    }
+                    $db->query(
+                        "INSERT INTO payment_receipts (booking_id, receipt_filename, payment_method, payment_reference) VALUES (?, ?, ?, ?)",
+                        [$bookingId, $newFileName, $paymentMethod, $paymentReference]
+                    );
+                    $updated = $db->query(
+                        "UPDATE bookings SET status = 'receipt_submitted' WHERE id = ? AND user_id = ? AND status IN ('pending', 'payment_pending')",
+                        [$bookingId, $user['id']]
+                    );
+                    if ($updated->rowCount() !== 1) throw new RuntimeException('Reservation status changed before upload completed.');
+                    $connection->commit();
+                } catch (Throwable $writeError) {
+                    if ($connection->inTransaction()) $connection->rollBack();
+                    if (is_file($uploadPath)) unlink($uploadPath);
+                    throw $writeError;
+                }
                 
                 $successMessage = 'Receipt uploaded successfully! Your dāna reservation is now pending payment verification.';
 
@@ -126,18 +158,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['receipt'])) {
             } else {
                 $errors[] = 'Failed to upload receipt. Please try again.';
             }
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             error_log("Receipt upload error: " . $e->getMessage());
             $errors[] = 'An error occurred while uploading the receipt. Please try again.';
         }
     }
 }
 
-// Get existing receipt if any
-$existingReceipt = $db->fetchOne(
-    "SELECT * FROM payment_receipts WHERE booking_id = ? ORDER BY upload_date DESC LIMIT 1",
-    [$bookingId]
-);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -146,9 +173,10 @@ $existingReceipt = $db->fetchOne(
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Payment - Dāna Reservation System</title>
     <?php include 'includes/favicon.php'; ?>
-    <link rel="stylesheet" href="assets/css/style.css?v=<?php echo time(); ?>">
-    <link rel="stylesheet" href="assets/css/payment.css?v=<?php echo time(); ?>">
+    <link rel="stylesheet" href="assets/css/style.css?v=20260913">
+    <link rel="stylesheet" href="assets/css/payment.css?v=20260913">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/pro-ui.css?v=20260914">
 </head>
 <body>
     <div class="dashboard">
@@ -167,8 +195,6 @@ $existingReceipt = $db->fetchOne(
             <div class="booking-summary-card" id="printableSummary">
                 <?php
                 // Calculate payment deadline (72 hours from creation by default)
-                $timeoutSetting = $db->fetchOne("SELECT setting_value FROM settings WHERE setting_key = 'pending_booking_timeout_hours'");
-                $timeoutHours = $timeoutSetting ? (int)$timeoutSetting['setting_value'] : 72;
                 $paymentDeadline = date('F j, Y h:i A', strtotime($booking['created_at'] . ' +' . $timeoutHours . ' hours'));
 
                 // Get time slot display
@@ -212,8 +238,8 @@ $existingReceipt = $db->fetchOne(
                         <tr>
                             <td class="label-cell">Current Status</td>
                             <td class="value-cell">
-                                <span class="status-badge status-<?php echo $booking['status']; ?>">
-                                    <?php echo ucfirst(str_replace('_', ' ', $booking['status'])); ?>
+                                <span class="status-badge status-<?php echo $paymentExpired && $booking['status'] === 'pending' ? 'cancelled' : $booking['status']; ?>">
+                                    <?php echo $paymentExpired && $booking['status'] === 'pending' ? 'Expired' : ucfirst(str_replace('_', ' ', $booking['status'])); ?>
                                 </span>
                             </td>
                         </tr>
@@ -332,9 +358,9 @@ $existingReceipt = $db->fetchOne(
                         <?php if (!$existingReceipt && $timeoutHours > 0): ?>
                         <tr>
                             <td class="label-cell">Payment Deadline</td>
-                            <td class="value-cell deadline-warning">
+                            <td class="value-cell <?php echo $paymentExpired ? 'status-error' : 'deadline-warning'; ?>">
                                 <strong><?php echo $paymentDeadline; ?></strong>
-                                <br><small>Receipt must be uploaded before this deadline</small>
+                                <br><small><?php echo $paymentExpired ? 'This payment window has expired' : 'Receipt must be uploaded before this deadline'; ?></small>
                             </td>
                         </tr>
                         <?php endif; ?>
@@ -348,7 +374,7 @@ $existingReceipt = $db->fetchOne(
                         <li><strong>Temporary Reservation:</strong> This is a temporary booking until confirmed by staff.</li>
                         <li><strong>Not a Guarantee:</strong> This receipt does not guarantee that your reservation is confirmed until the status is marked as "Confirmed" by authorized staff members.</li>
                         <?php if (!$existingReceipt && $timeoutHours > 0): ?>
-                        <li><strong>Payment Deadline:</strong> Payment receipt must be uploaded before <strong><?php echo $paymentDeadline; ?></strong>. Failure to upload will result in automatic cancellation of this reservation.</li>
+                        <li><strong>Payment Deadline:</strong> <?php echo $paymentExpired ? 'The receipt deadline was' : 'Payment receipt must be uploaded before'; ?> <strong><?php echo $paymentDeadline; ?></strong><?php echo $paymentExpired ? '.' : '. Failure to upload will result in automatic cancellation of this reservation.'; ?></li>
                         <?php endif; ?>
                         <li><strong>Verification Required:</strong> All payment receipts are subject to verification by administration.</li>
                         <li><strong>Contact Us:</strong> For any questions or concerns, please contact the administration.</li>
@@ -362,7 +388,7 @@ $existingReceipt = $db->fetchOne(
             </div>
 
             <!-- Column 2: Receipt Upload Form (MOVED TO MIDDLE) -->
-            <?php if ($booking['status'] === 'pending' || $booking['status'] === 'payment_pending'): ?>
+            <?php if (($booking['status'] === 'pending' || $booking['status'] === 'payment_pending') && !$paymentExpired && !$existingReceipt): ?>
                 <div class="receipt-upload-form">
                     <h3><i class="fas fa-upload"></i> Upload Payment Receipt</h3>
 
@@ -385,6 +411,7 @@ $existingReceipt = $db->fetchOne(
                     <?php endif; ?>
 
                     <form method="POST" enctype="multipart/form-data" class="upload-form">
+                        <?php echo csrfInput(); ?>
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="payment_method">Payment Method</label>
@@ -399,7 +426,7 @@ $existingReceipt = $db->fetchOne(
 
                             <div class="form-group">
                                 <label for="payment_reference">Transaction ID / Reference</label>
-                                <input type="text" id="payment_reference" name="payment_reference"
+                                <input type="text" id="payment_reference" name="payment_reference" maxlength="100"
                                        placeholder="Enter transaction ID or reference number" required>
                             </div>
                         </div>
@@ -456,13 +483,19 @@ $existingReceipt = $db->fetchOne(
 
                         <div class="receipt-item">
                             <label>File:</label>
-                            <a href="<?php echo UPLOAD_DIR . $existingReceipt['receipt_filename']; ?>"
-                               target="_blank" class="receipt-link">
+                            <a href="receipt.php?id=<?php echo (int)$existingReceipt['id']; ?>"
+                               target="_blank" rel="noopener" class="receipt-link">
                                 <i class="fas fa-external-link-alt"></i>
                                 View Receipt
                             </a>
                         </div>
                     </div>
+                </div>
+            <?php elseif ($paymentExpired): ?>
+                <div class="existing-receipt payment-expired-notice" role="status">
+                    <h3><i class="fas fa-clock"></i> Payment Window Expired</h3>
+                    <p>This temporary reservation can no longer accept a receipt. Please create a new reservation or contact the administration if you already made the payment.</p>
+                    <a href="booking-new.php" class="btn btn-primary"><i class="fas fa-plus-circle"></i> Make a New Reservation</a>
                 </div>
             <?php endif; ?>
 

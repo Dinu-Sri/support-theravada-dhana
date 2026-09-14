@@ -2,6 +2,13 @@
  * Calendar JavaScript for Dhana Booking System
  */
 
+let calendarReturnFocus = null;
+
+function openCalendarModal(modal) {
+    modal.style.display = 'block';
+    modal.querySelector('.modal-content')?.focus();
+}
+
 // Show date details modal
 function showDateDetails(date) {
     const modal = document.getElementById('dateModal');
@@ -9,6 +16,8 @@ function showDateDetails(date) {
     const modalContent = document.getElementById('modalContent');
     const bookNowBtn = document.getElementById('bookNowBtn');
     
+    calendarReturnFocus = document.activeElement;
+
     // Check if date is in the past
     if (date < today) {
         return;
@@ -25,7 +34,7 @@ function showDateDetails(date) {
             </div>
         `;
         bookNowBtn.style.display = 'none';
-        modal.style.display = 'block';
+        openCalendarModal(modal);
         return;
     }
     
@@ -118,7 +127,7 @@ function showDateDetails(date) {
         content += `
             <div class="dhana-item ${statusClass}">
                 <div class="dhana-info">
-                    <h4>${dhanaType.name}</h4>
+                    <h4>${escapeHtml(dhanaType.name)}</h4>
                     <p>Rs. ${formatPrice(dhanaType.price)}</p>
                     ${timeSlotInfo}
                 </div>
@@ -176,13 +185,20 @@ function showDateDetails(date) {
     }
     
     modalContent.innerHTML = content;
-    modal.style.display = 'block';
+    openCalendarModal(modal);
+}
+
+function escapeHtml(value) {
+    const element = document.createElement('div');
+    element.textContent = String(value ?? '');
+    return element.innerHTML;
 }
 
 // Close date modal
 function closeDateModal() {
     const modal = document.getElementById('dateModal');
     modal.style.display = 'none';
+    calendarReturnFocus?.focus();
 }
 
 // Format date for display
@@ -248,14 +264,6 @@ document.addEventListener('keydown', function(event) {
             const downIndex = Array.from(focusedCell.parentNode.children).indexOf(focusedCell) + 7;
             if (downIndex < focusedCell.parentNode.children.length) {
                 nextCell = focusedCell.parentNode.children[downIndex];
-            }
-            break;
-        case 'Enter':
-        case ' ':
-            const date = focusedCell.getAttribute('data-date');
-            if (date) {
-                event.preventDefault();
-                showDateDetails(date);
             }
             break;
     }
@@ -385,6 +393,9 @@ function createQuickJump() {
     const monthYear = calendarNav.querySelector('h2');
 
     monthYear.style.cursor = 'pointer';
+    monthYear.setAttribute('role', 'button');
+    monthYear.setAttribute('tabindex', '0');
+    monthYear.setAttribute('aria-label', 'Choose a month and year');
     monthYear.title = 'Click to jump to a specific month';
 
     // Add a subtle hover effect
@@ -398,6 +409,12 @@ function createQuickJump() {
 
     monthYear.addEventListener('click', function() {
         openMonthYearModal();
+    });
+    monthYear.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            openMonthYearModal();
+        }
     });
 }
 

@@ -8,6 +8,7 @@ console.log('✅ System ready with enhanced features and visibility fixes');
 
 let currentStep = 1;
 const totalSteps = 4;
+let stepTransitionPending = false;
 
 // Safe function to check if element exists before accessing
 function safeGetElement(id) {
@@ -59,11 +60,15 @@ document.addEventListener('DOMContentLoaded', function() {
             // 4. Update progress bar
             safeUpdateProgressBar();
 
-            // 5. Set up form validation
+            // 5. Clear an old validation message once the user edits a field.
+            // Full validation belongs to navigation/submission; running it on
+            // every change produced false errors while dependent fields were
+            // still being auto-selected or checked.
             try {
                 document.querySelectorAll('input, select, textarea').forEach(element => {
-                    if (element && typeof validateCurrentStep === 'function') {
-                        element.addEventListener('change', validateCurrentStep);
+                    if (element) {
+                        element.addEventListener('input', hideValidationErrors);
+                        element.addEventListener('change', hideValidationErrors);
                     }
                 });
                 console.log('✅ Enhanced booking system ready');
@@ -1372,6 +1377,13 @@ function showStep(step) {
 }
 
 async function nextStep() {
+    if (stepTransitionPending) return;
+
+    stepTransitionPending = true;
+    const nextButton = document.getElementById('nextBtn');
+    if (nextButton) nextButton.disabled = true;
+
+    try {
     console.log('=== NEXT STEP DEBUG ===');
     console.log('Current step:', currentStep);
     console.log('Total steps:', totalSteps);
@@ -1388,12 +1400,13 @@ async function nextStep() {
         const bookingDate = bookingDateElement ? bookingDateElement.value : '';
         const timeSlot = timeSlotElement ? timeSlotElement.value : '';
 
-        // If all fields are filled but availability hasn't been checked, check it now
-        if (selectedDhanaType && bookingDate && timeSlot && currentAvailabilityStatus === null) {
+        const selectionKey = getAvailabilitySelectionKey();
+        if (selectedDhanaType && bookingDate && timeSlot &&
+            (!currentAvailabilityStatus || currentAvailabilityStatus.selectionKey !== selectionKey)) {
             console.log('Checking availability before proceeding...');
             if (typeof checkAvailability === 'function') {
                 const availabilityResult = await checkAvailability();
-                if (!availabilityResult || !availabilityResult.available) {
+                if (!availabilityResult || !availabilityResult.available || availabilityResult.selectionKey !== selectionKey) {
                     console.log('Cannot proceed - slot not available');
                     return; // Don't proceed if not available
                 }
@@ -1417,6 +1430,10 @@ async function nextStep() {
         }
     } else {
         console.log('Cannot move to next step. Valid:', isValid, 'Current step:', currentStep, 'Total steps:', totalSteps);
+    }
+    } finally {
+        stepTransitionPending = false;
+        if (nextButton) nextButton.disabled = false;
     }
 }
 
@@ -1503,18 +1520,17 @@ function validateCurrentStep() {
             if (bookingDate && timeSlot) {
                 console.log('✅ Both date and time slot selected');
 
-                // If availability has been checked and it's not available
-                if (currentAvailabilityStatus !== null && !currentAvailabilityStatus.available) {
+                const selectionKey = getAvailabilitySelectionKey();
+                if (!currentAvailabilityStatus || currentAvailabilityStatus.selectionKey !== selectionKey) {
+                    // Availability checks run asynchronously. Keep the inline status
+                    // visible instead of showing a transient error toast.
+                    isValid = false;
+                } else if (!currentAvailabilityStatus.available) {
                     console.log('❌ Slot not available:', currentAvailabilityStatus.reason);
                     errors.push(currentAvailabilityStatus.reason || 'Selected slot is not available. Please choose a different date or time.');
                     isValid = false;
                 } else {
                     console.log('✅ Step 2 validation passed');
-                    // If availability hasn't been checked, trigger it but don't block proceeding
-                    if (currentAvailabilityStatus === null && typeof autoCheckAvailability === 'function') {
-                        console.log('🔄 Triggering availability check in background...');
-                        autoCheckAvailability();
-                    }
                 }
             }
             break;
@@ -1524,7 +1540,8 @@ function validateCurrentStep() {
             break;
 
         case 4:
-            // Additional info step - no validation required
+            isValid = validateAllSteps();
+            if (!isValid) errors.push('Please return to the date step and verify your selection.');
             break;
 
         case 5:
@@ -1547,7 +1564,12 @@ function validateAllSteps() {
     const bookingDate = document.getElementById('booking_date').value;
     const timeSlot = document.getElementById('booking_time_slot').value;
 
-    return selectedDhanaType && bookingDate && timeSlot;
+    return Boolean(
+        selectedDhanaType && bookingDate && timeSlot &&
+        currentAvailabilityStatus &&
+        currentAvailabilityStatus.available &&
+        currentAvailabilityStatus.selectionKey === getAvailabilitySelectionKey()
+    );
 }
 
 function showValidationErrors(errors) {
@@ -1560,12 +1582,15 @@ function showValidationErrors(errors) {
     // Create error message
     const errorDiv = document.createElement('div');
     errorDiv.className = 'error-message js-step-validation-error';
-    errorDiv.innerHTML = `
-        <i class="fas fa-exclamation-circle"></i>
-        <ul>
-            ${errors.map(error => `<li>${error}</li>`).join('')}
-        </ul>
-    `;
+    const icon = document.createElement('i');
+    icon.className = 'fas fa-exclamation-circle';
+    const list = document.createElement('ul');
+    errors.forEach((error) => {
+        const item = document.createElement('li');
+        item.textContent = String(error);
+        list.appendChild(item);
+    });
+    errorDiv.append(icon, list);
 
     // Insert into document body (not current step) to avoid layout impact
     document.body.appendChild(errorDiv);
@@ -1685,8 +1710,18 @@ function updateTimeSlotOptions() {
 
 
 
-// Global variable to track availability status
+// Availability is tied to the exact current selection. Stale responses are ignored.
 let currentAvailabilityStatus = null;
+let availabilityTimer = null;
+let availabilityController = null;
+let availabilityRequestId = 0;
+
+function getAvailabilitySelectionKey() {
+    const type = document.querySelector('input[name="dhana_type_id"]:checked');
+    const date = document.getElementById('booking_date');
+    const slot = document.getElementById('booking_time_slot');
+    return type && date && slot ? `${type.value}|${date.value}|${slot.value}` : '';
+}
 
 async function checkAvailability() {
     const selectedDhanaType = document.querySelector('input[name="dhana_type_id"]:checked');
@@ -1703,6 +1738,11 @@ async function checkAvailability() {
         currentAvailabilityStatus = null;
         return null;
     }
+
+    const selectionKey = getAvailabilitySelectionKey();
+    const requestId = ++availabilityRequestId;
+    if (availabilityController) availabilityController.abort();
+    availabilityController = new AbortController();
 
     try {
         // Show loading
@@ -1723,25 +1763,15 @@ async function checkAvailability() {
                 date: bookingDate,
                 dhana_type_id: selectedDhanaType.value,
                 time_slot: timeSlot
-            })
+            }),
+            signal: availabilityController.signal
         });
 
-        console.log('Response status:', response.status);
-        console.log('Response headers:', response.headers);
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Availability check failed');
+        if (requestId !== availabilityRequestId || selectionKey !== getAvailabilitySelectionKey()) return null;
 
-        const responseText = await response.text();
-        console.log('Raw response:', responseText);
-
-        let result;
-        try {
-            result = JSON.parse(responseText);
-        } catch (parseError) {
-            console.error('JSON parse error:', parseError);
-            console.error('Response text:', responseText);
-            throw new Error('Invalid JSON response from server');
-        }
-
-        currentAvailabilityStatus = result;
+        currentAvailabilityStatus = { ...result, selectionKey };
 
         if (result.available) {
             resultDiv.innerHTML = `
@@ -1751,22 +1781,24 @@ async function checkAvailability() {
             resultDiv.className = 'availability-result available';
         } else {
             const reason = result.reason || 'Sorry, this slot is already booked. Please choose a different date or time.';
-            resultDiv.innerHTML = `
-                <i class="fas fa-times-circle"></i>
-                ` + reason;
+            resultDiv.replaceChildren();
+            const icon = document.createElement('i');
+            icon.className = 'fas fa-times-circle';
+            resultDiv.append(icon, document.createTextNode(` ${reason}`));
             resultDiv.className = 'availability-result unavailable';
         }
 
-        return result;
+        return currentAvailabilityStatus;
     } catch (error) {
+        if (error.name === 'AbortError') return null;
         console.error('Error checking availability:', error);
         resultDiv.innerHTML = `
             <i class="fas fa-exclamation-triangle"></i>
             Unable to check availability. Please try again.
         `;
         resultDiv.className = 'availability-result unavailable';
-        currentAvailabilityStatus = { available: false, reason: 'Network error' };
-        return { available: false, reason: 'Network error' };
+        currentAvailabilityStatus = { available: false, reason: 'Network error', selectionKey };
+        return currentAvailabilityStatus;
     }
 }
 
@@ -1788,11 +1820,13 @@ async function autoCheckAvailability() {
         resultDiv.style.display = 'block';
         currentAvailabilityStatus = null;
 
-        // Small delay to avoid too many rapid requests
-        setTimeout(async () => {
+        clearTimeout(availabilityTimer);
+        availabilityTimer = setTimeout(async () => {
             await checkAvailability();
-        }, 500);
+        }, 350);
     } else {
+        clearTimeout(availabilityTimer);
+        if (availabilityController) availabilityController.abort();
         // Clear results if not all fields are filled
         resultDiv.style.display = 'none';
         currentAvailabilityStatus = null;
@@ -1820,6 +1854,7 @@ function updateReviewSection() {
 
             // Fetch dynamic price from API
             if (reviewTotalAmount && dhanaTypeData) {
+                reviewTotalAmount.textContent = 'Calculating…';
                 fetch(`api/get-monthly-price.php?dhana_type_id=${selectedDhanaType.value}&date=${bookingDate}`)
                     .then(response => response.json())
                     .then(data => {
@@ -1922,13 +1957,6 @@ function updateReviewSection() {
 
 // Keyboard navigation
 document.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
-        e.preventDefault();
-        if (currentStep < totalSteps) {
-            nextStep();
-        }
-    }
-
     if (e.key === 'Escape') {
         if (currentStep > 1) {
             prevStep();
@@ -1936,37 +1964,30 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
+// Recheck the exact selection immediately before the final form submission.
+const bookingForm = document.getElementById('bookingForm');
+let bookingSubmitApproved = false;
+if (bookingForm) {
+    bookingForm.addEventListener('submit', async function(event) {
+        if (bookingSubmitApproved) return;
+        event.preventDefault();
+        const result = await checkAvailability();
+        if (!result || !result.available || result.selectionKey !== getAvailabilitySelectionKey()) {
+            showValidationErrors([result?.reason || 'This reservation can no longer be submitted. Please verify the date and time.']);
+            return;
+        }
+        bookingSubmitApproved = true;
+        bookingForm.requestSubmit();
+    });
+}
+
 // Auto-save form data
 function saveFormData() {
-    try {
-        console.log('saveFormData called');
-
-        const selectedDhanaType = document.querySelector('input[name="dhana_type_id"]:checked');
-        const bookingDateElement = document.getElementById('booking_date');
-        const bookingTimeSlotElement = document.getElementById('booking_time_slot');
-        const travelSupportElement = document.getElementById('travel_support');
-        const annualEventElement = document.getElementById('is_annual_event');
-
-        const formData = {
-            dhana_type_id: selectedDhanaType ? selectedDhanaType.value : '',
-            booking_date: bookingDateElement ? bookingDateElement.value : '',
-            booking_time_slot: bookingTimeSlotElement ? bookingTimeSlotElement.value : '',
-            travel_support: travelSupportElement ? travelSupportElement.checked : false,
-            is_annual_event: annualEventElement ? annualEventElement.checked : false,
-            current_step: currentStep
-        };
-
-        localStorage.setItem('dhana_booking_steps', JSON.stringify(formData));
-        console.log('Form data saved successfully');
-    } catch (error) {
-        console.error('Error in saveFormData:', error);
-    }
+    // Keep reservation details out of persistent browser storage.
 }
 
 function loadFormData() {
-    console.log('loadFormData called - SAFE VERSION');
-
-    // Temporarily disable loadFormData to prevent errors
+    localStorage.removeItem('dhana_booking_steps');
     return;
 
     const savedData = localStorage.getItem('dhana_booking_steps');
@@ -2040,21 +2061,14 @@ function enhanceDatePicker() {
     const dateInput = document.getElementById('booking_date');
     if (!dateInput) return;
 
-    // Set minimum date to tomorrow - TIMEZONE SAFE
+    // Set minimum date to today - TIMEZONE SAFE
     const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
     const minYear = tomorrow.getFullYear();
     const minMonth = String(tomorrow.getMonth() + 1).padStart(2, '0');
     const minDay = String(tomorrow.getDate()).padStart(2, '0');
     dateInput.min = `${minYear}-${minMonth}-${minDay}`;
 
-    // Set maximum date to 10 years from now (as per user preference) - TIMEZONE SAFE
-    const maxDate = new Date();
-    maxDate.setFullYear(maxDate.getFullYear() + 10);
-    const maxYear = maxDate.getFullYear();
-    const maxMonth = String(maxDate.getMonth() + 1).padStart(2, '0');
-    const maxDay = String(maxDate.getDate()).padStart(2, '0');
-    dateInput.max = `${maxYear}-${maxMonth}-${maxDay}`;
+    dateInput.max = window.BOOKING_MAX_DATE || dateInput.max;
 
     // Add custom styling wrapper
     const dateWrapper = document.createElement('div');
@@ -2307,7 +2321,7 @@ async function showAnnualPriceBreakdown() {
         if (data.success) {
             displayAnnualPriceInline(data);
         } else {
-            summaryContainer.innerHTML = `<div class="error-inline"><i class="fas fa-exclamation-triangle"></i> ${data.error}</div>`;
+            summaryContainer.innerHTML = `<div class="error-inline"><i class="fas fa-exclamation-triangle"></i> ${escapeHtml(data.error || 'Unable to load prices.')}</div>`;
         }
     } catch (error) {
         console.error('Error fetching annual prices:', error);
@@ -2325,7 +2339,7 @@ function displayAnnualPriceInline(data) {
 
     let html = `
         <div class="annual-inline-header">
-            <i class="fas fa-calendar-check"></i>${data.dhana_type_name} - ${data.annual_years} Years
+            <i class="fas fa-calendar-check"></i>${escapeHtml(data.dhana_type_name)} - ${Number(data.annual_years)} Years
         </div>
         <div class="annual-inline-stats">
             <div class="stat-item confirmed">
@@ -2375,7 +2389,7 @@ function displayAnnualPriceInline(data) {
         html += `
             <tr>
                 <td>Year ${yearData.year_number}</td>
-                <td>${yearData.display_date}</td>
+                <td>${escapeHtml(yearData.display_date)}</td>
                 <td>${priceDisplay}</td>
             </tr>
         `;

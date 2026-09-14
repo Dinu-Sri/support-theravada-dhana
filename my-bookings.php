@@ -1,5 +1,6 @@
 <?php
 require_once 'includes/auth.php';
+require_once 'includes/booking-rules.php';
 
 // Require user to be logged in
 requireLogin();
@@ -7,11 +8,32 @@ requireLogin();
 $auth = getAuth();
 $user = $auth->getCurrentUser();
 $db = getDB();
+$paymentTimeoutHours = max(0, bookingSettingInt($db, 'pending_booking_timeout_hours', 48));
+$activePendingSql = $paymentTimeoutHours === 0
+    ? "status = 'pending'"
+    : "status = 'pending' AND created_at >= DATE_SUB(NOW(), INTERVAL {$paymentTimeoutHours} HOUR)";
+$page = max(1, (int)($_GET['page'] ?? 1));
+$perPage = 12;
+$offset = ($page - 1) * $perPage;
+$bookingSummary = $db->fetchOne(
+    "SELECT COUNT(*) AS total,
+            SUM(status = 'confirmed') AS confirmed,
+            SUM(status IN ('receipt_submitted','payment_pending') OR ({$activePendingSql})) AS pending,
+            COALESCE(SUM(CASE
+                WHEN booking_date >= CURDATE()
+                 AND (status IN ('confirmed','receipt_submitted','payment_pending') OR ({$activePendingSql}))
+                THEN total_amount ELSE 0 END), 0) AS active_value
+     FROM bookings WHERE user_id = ?",
+    [$user['id']]
+);
+$totalPages = max(1, (int)ceil(((int)$bookingSummary['total']) / $perPage));
+$page = min($page, $totalPages);
+$offset = ($page - 1) * $perPage;
 
 // Get user's bookings including annual event information
 $bookings = $db->fetchAll(
     "SELECT b.*, dt.name as dhana_type_name, dt.price,
-            pr.receipt_filename, pr.verified as receipt_verified, pr.upload_date,
+            pr.id as receipt_id, pr.receipt_filename, pr.verified as receipt_verified, pr.upload_date,
             ab.year_start, ab.year_end,
             CASE
                 WHEN b.is_annual_event = 1 AND b.parent_booking_id IS NULL THEN 'main_annual'
@@ -21,11 +43,15 @@ $bookings = $db->fetchAll(
             parent.booking_date as parent_booking_date
      FROM bookings b
      JOIN dhana_types dt ON b.dhana_type_id = dt.id
-     LEFT JOIN payment_receipts pr ON b.id = pr.booking_id
+     LEFT JOIN payment_receipts pr ON pr.id = (
+         SELECT pr2.id FROM payment_receipts pr2 WHERE pr2.booking_id = b.id
+         ORDER BY pr2.upload_date DESC, pr2.id DESC LIMIT 1
+     )
      LEFT JOIN annual_bookings ab ON (b.id = ab.booking_id OR b.parent_booking_id = ab.booking_id)
      LEFT JOIN bookings parent ON b.parent_booking_id = parent.id
      WHERE b.user_id = ?
-     ORDER BY b.is_annual_event DESC, b.created_at DESC, b.booking_date ASC",
+     ORDER BY b.created_at DESC, b.booking_date ASC
+     LIMIT {$perPage} OFFSET {$offset}",
     [$user['id']]
 );
 ?>
@@ -38,6 +64,7 @@ $bookings = $db->fetchAll(
     <?php include 'includes/favicon.php'; ?>
     <link rel="stylesheet" href="assets/css/style.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/pro-ui.css?v=20260914">
 </head>
 <body>
     <div class="dashboard">
@@ -46,7 +73,7 @@ $bookings = $db->fetchAll(
             <h1><i class="fas fa-list"></i> My Dāna Reservations</h1>
             <p>View all your dāna reservations and their status
                 <?php if (!empty($bookings)): ?>
-                    (<?php echo count($bookings); ?> total reservation<?php echo count($bookings) !== 1 ? 's' : ''; ?>)
+                    (<?php echo (int)$bookingSummary['total']; ?> total reservation<?php echo (int)$bookingSummary['total'] !== 1 ? 's' : ''; ?>)
                 <?php endif; ?>
             </p>
             <a href="dashboard.php" class="btn btn-secondary">
@@ -56,10 +83,6 @@ $bookings = $db->fetchAll(
 
         <!-- Dāna Reservations Summary -->
         <?php if (!empty($bookings)): ?>
-            <?php
-            $statusCounts = array_count_values(array_column($bookings, 'status'));
-            $totalAmount = array_sum(array_column($bookings, 'total_amount'));
-            ?>
             <div class="reservations-summary-container">
                 <div class="reservations-summary">
                     <div class="summary-card">
@@ -67,7 +90,7 @@ $bookings = $db->fetchAll(
                             <i class="fas fa-calendar-check"></i>
                         </div>
                         <div class="summary-info">
-                            <h3><?php echo count($bookings); ?></h3>
+                            <h3><?php echo (int)$bookingSummary['total']; ?></h3>
                             <p>Total Dāna Reservations</p>
                         </div>
                     </div>
@@ -77,7 +100,7 @@ $bookings = $db->fetchAll(
                             <i class="fas fa-check-circle"></i>
                         </div>
                         <div class="summary-info">
-                            <h3><?php echo $statusCounts['confirmed'] ?? 0; ?></h3>
+                            <h3><?php echo (int)$bookingSummary['confirmed']; ?></h3>
                             <p>Confirmed</p>
                         </div>
                     </div>
@@ -87,8 +110,8 @@ $bookings = $db->fetchAll(
                             <i class="fas fa-clock"></i>
                         </div>
                         <div class="summary-info">
-                            <h3><?php echo ($statusCounts['pending'] ?? 0) + ($statusCounts['receipt_submitted'] ?? 0) + ($statusCounts['payment_pending'] ?? 0); ?></h3>
-                            <p>Pending</p>
+                            <h3><?php echo (int)$bookingSummary['pending']; ?></h3>
+                            <p>Active Pending</p>
                         </div>
                     </div>
 
@@ -97,8 +120,8 @@ $bookings = $db->fetchAll(
                             <i class="fas fa-money-bill"></i>
                         </div>
                         <div class="summary-info">
-                            <h3>Rs. <?php echo number_format($totalAmount); ?></h3>
-                            <p>Total Amount</p>
+                            <h3>Rs. <?php echo number_format($bookingSummary['active_value']); ?></h3>
+                            <p>Upcoming Active Value</p>
                         </div>
                     </div>
                 </div>
@@ -124,14 +147,18 @@ $bookings = $db->fetchAll(
             <?php else: ?>
                 <div class="reservations-grid">
                     <?php foreach ($bookings as $booking): ?>
+                        <?php
+                        $paymentDeadlineTs = strtotime($booking['created_at'] . ' +' . $paymentTimeoutHours . ' hours');
+                        $paymentWindowExpired = $paymentTimeoutHours > 0 && time() > $paymentDeadlineTs;
+                        ?>
                         <div class="reservation-card">
                             <div class="reservation-header">
                                 <div class="reservation-id">
                                     <strong>#<?php echo str_pad($booking['id'], 6, '0', STR_PAD_LEFT); ?></strong>
                                 </div>
                                 <div class="reservation-status">
-                                    <span class="status-badge status-<?php echo $booking['status']; ?>">
-                                        <?php echo ucfirst(str_replace('_', ' ', $booking['status'])); ?>
+                                    <span class="status-badge status-<?php echo $paymentWindowExpired && $booking['status'] === 'pending' ? 'cancelled' : $booking['status']; ?>">
+                                        <?php echo $paymentWindowExpired && $booking['status'] === 'pending' ? 'Expired' : ucfirst(str_replace('_', ' ', $booking['status'])); ?>
                                     </span>
                                 </div>
                             </div>
@@ -190,19 +217,23 @@ $bookings = $db->fetchAll(
                                             <span style="color: #ffc107;">Receipt Pending Verification</span>
                                         <?php endif; ?>
                                     </div>
-                                    <a href="<?php echo UPLOAD_DIR . $booking['receipt_filename']; ?>" 
-                                       target="_blank" class="receipt-link">
+                                    <a href="receipt.php?id=<?php echo (int)$booking['receipt_id']; ?>"
+                                       target="_blank" rel="noopener" class="receipt-link">
                                         <i class="fas fa-external-link-alt"></i> View Receipt
                                     </a>
                                 </div>
                             <?php endif; ?>
                             
                             <div class="reservation-actions">
-                                <?php if ($booking['status'] === 'pending'): ?>
+                                <?php if ($booking['status'] === 'pending' && !$paymentWindowExpired): ?>
                                     <a href="payment.php?booking_id=<?php echo $booking['id']; ?>"
                                        class="btn btn-primary btn-sm">
                                         <i class="fas fa-credit-card"></i> Complete Payment
                                     </a>
+                                <?php elseif ($booking['status'] === 'pending' && $paymentWindowExpired): ?>
+                                    <span class="status-text cancelled">
+                                        <i class="fas fa-clock"></i> Payment window expired
+                                    </span>
                                 <?php elseif ($booking['status'] === 'receipt_submitted' || $booking['status'] === 'payment_pending'): ?>
                                     <span class="status-text">
                                         <i class="fas fa-hourglass-half"></i> Awaiting Payment Verification
@@ -224,6 +255,14 @@ $bookings = $db->fetchAll(
                         </div>
                     <?php endforeach; ?>
                 </div>
+
+                <?php if ($totalPages > 1): ?>
+                    <nav class="pagination" aria-label="Reservation pages">
+                        <?php if ($page > 1): ?><a class="btn btn-secondary btn-sm" href="?page=<?php echo $page - 1; ?>">Previous</a><?php endif; ?>
+                        <span>Page <?php echo $page; ?> of <?php echo $totalPages; ?></span>
+                        <?php if ($page < $totalPages): ?><a class="btn btn-secondary btn-sm" href="?page=<?php echo $page + 1; ?>">Next</a><?php endif; ?>
+                    </nav>
+                <?php endif; ?>
                 
                 <div style="text-align: center; margin-top: 40px;">
                     <a href="booking-new.php" class="btn btn-primary">

@@ -9,17 +9,12 @@
  * 1. Run this script via cron job every hour:
  *    0 * * * * /usr/bin/php /path/to/your/site/cron/auto-cancel-pending-bookings.php
  * 
- * 2. Or run manually from browser (for testing):
- *    http://yourdomain.com/cron/auto-cancel-pending-bookings.php?key=YOUR_SECRET_KEY
+ * This task intentionally has no browser entry point.
  */
 
-// Security: Only allow execution from command line or with secret key
-$isCommandLine = (php_sapi_name() === 'cli');
-$hasValidKey = isset($_GET['key']) && $_GET['key'] === 'dhana_cron_2024'; // Change this secret key!
-
-if (!$isCommandLine && !$hasValidKey) {
+if (PHP_SAPI !== 'cli') {
     http_response_code(403);
-    die('Access denied. This script can only be run from command line or with valid key.');
+    exit('This maintenance task is available from the command line only.');
 }
 
 // Load database configuration
@@ -81,10 +76,15 @@ try {
             echo "  - Created: {$createdAt} ({$hoursOld} hours ago)\n";
             
             // Cancel the booking
-            $db->query(
-                "UPDATE bookings SET status = 'cancelled', updated_at = NOW() WHERE id = ?",
+            $updated = $db->query(
+                "UPDATE bookings SET status = 'cancelled', updated_at = NOW()
+                 WHERE id = ? AND status = 'pending' AND (on_hold IS NULL OR on_hold = 0)",
                 [$bookingId]
             );
+            if ($updated->rowCount() !== 1) {
+                echo "  - Status changed during cleanup; skipped\n\n";
+                continue;
+            }
             
             echo "  - Status: CANCELLED ✓\n";
             $cancelledCount++;
@@ -128,4 +128,3 @@ try {
     error_log("Auto-cancel cron error: " . $e->getMessage());
     exit(1);
 }
-

@@ -386,7 +386,7 @@ ALTER TABLE `blocked_dates`
 --
 ALTER TABLE `bookings`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `unique_booking_date_slot` (`booking_date`,`dhana_type_id`,`booking_time_slot`),
+  ADD KEY `idx_booking_date_type_slot` (`booking_date`,`dhana_type_id`,`booking_time_slot`),
   ADD KEY `user_id` (`user_id`),
   ADD KEY `dhana_type_id` (`dhana_type_id`),
   ADD KEY `parent_booking_id` (`parent_booking_id`),

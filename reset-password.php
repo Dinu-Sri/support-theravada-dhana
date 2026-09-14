@@ -34,7 +34,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['token'], $_POST['pass
     $password = $_POST['password'];
     $confirmPassword = $_POST['confirm_password'];
     
-    if (empty($password) || empty($confirmPassword)) {
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? null)) {
+        $errorMessage = 'Your session expired. Please refresh and try again.';
+    } elseif (empty($password) || empty($confirmPassword)) {
         $errorMessage = 'Please fill in all fields.';
     } elseif ($password !== $confirmPassword) {
         $errorMessage = 'Passwords do not match.';
@@ -60,6 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['token'], $_POST['pass
     <?php include 'includes/favicon.php'; ?>
     <link rel="stylesheet" href="assets/css/style.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/pro-ui.css?v=20260914">
     <style>
         .login-page {
             background-image: url('uploads/bck.webp');
@@ -255,6 +258,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['token'], $_POST['pass
                 <?php endif; ?>
 
                 <form method="POST" id="resetPasswordForm">
+                    <?php echo csrfInput(); ?>
                     <input type="hidden" name="token" value="<?php echo htmlspecialchars($token); ?>">
 
                     <div class="form-group">
@@ -262,7 +266,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['token'], $_POST['pass
                             <i class="fas fa-lock"></i> New Password
                         </label>
                         <div class="password-toggle">
-                            <input type="password" id="password" name="password" required 
+                            <input type="password" id="password" name="password" autocomplete="new-password" required
                                    placeholder="Enter new password">
                             <i class="fas fa-eye toggle-icon" onclick="togglePassword('password')"></i>
                         </div>
@@ -276,7 +280,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['token'], $_POST['pass
                             <i class="fas fa-lock"></i> Confirm New Password
                         </label>
                         <div class="password-toggle">
-                            <input type="password" id="confirm_password" name="confirm_password" required 
+                            <input type="password" id="confirm_password" name="confirm_password" autocomplete="new-password" required
                                    placeholder="Confirm new password">
                             <i class="fas fa-eye toggle-icon" onclick="togglePassword('confirm_password')"></i>
                         </div>
@@ -330,4 +334,3 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['token'], $_POST['pass
     </script>
 </body>
 </html>
-

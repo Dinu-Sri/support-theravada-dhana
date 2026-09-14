@@ -9,10 +9,13 @@
  */
 
 // Database configuration
+define('DATABASE_CONFIG_VERSION', 2);
 define('DB_HOST', 'localhost');
 define('DB_NAME', 'your_database_name');
 define('DB_USER', 'your_database_user');
 define('DB_PASS', 'your_database_password');
+// Usually just "mysqldump" on cPanel. Set an absolute path only if your host requires it.
+define('MYSQLDUMP_PATH', 'mysqldump');
 
 // Site configuration
 define('SITE_URL', 'https://yourdomain.com');
@@ -45,7 +48,8 @@ class Database {
                 ]
             );
         } catch (PDOException $e) {
-            die("Database connection failed: " . $e->getMessage());
+            error_log('Database connection failed: ' . $e->getMessage());
+            throw new RuntimeException('Database service is temporarily unavailable.', 0, $e);
         }
     }
     
@@ -105,4 +109,3 @@ function getDB() {
     return Database::getInstance();
 }
 ?>
-

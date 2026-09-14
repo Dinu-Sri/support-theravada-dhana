@@ -10,8 +10,9 @@
  */
 
 // Prevent direct browser access
-if (php_sapi_name() !== 'cli' && !isset($_GET['manual_run'])) {
-    die('This script can only be run from command line or with manual_run parameter.');
+if (PHP_SAPI !== 'cli') {
+    http_response_code(403);
+    exit('This maintenance task is available from the command line only.');
 }
 
 require_once __DIR__ . '/../config/backup.php';
@@ -82,4 +83,3 @@ try {
 }
 
 exit(0);
-

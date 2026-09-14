@@ -40,6 +40,25 @@ if (!is_readable($databaseConfig)) {
     if (defined('DB_NAME') && DB_NAME === 'your_database_name') {
         $errors[] = 'config/database.php still contains example database credentials.';
     }
+    if (!defined('DATABASE_CONFIG_VERSION') || DATABASE_CONFIG_VERSION < 2) {
+        $errors[] = 'config/database.php uses the legacy template. Copy the current database.example.php, restore the server credentials, and rerun preflight.';
+    }
+
+    if (empty($errors)) {
+        try {
+            $db = getDB();
+            $legacyIndex = $db->fetchOne("SHOW INDEX FROM bookings WHERE Key_name = 'unique_booking_date_slot'");
+            if ($legacyIndex) {
+                $errors[] = 'Pending database migration: run database/migrations/2026-09-13-booking-integrity.sql in phpMyAdmin.';
+            }
+            $conflictIndex = $db->fetchOne("SHOW INDEX FROM bookings WHERE Key_name = 'idx_booking_date_type_slot'");
+            if (!$conflictIndex) {
+                $errors[] = 'Booking conflict index is missing: run database/migrations/2026-09-13-booking-integrity.sql in phpMyAdmin.';
+            }
+        } catch (Throwable $error) {
+            $errors[] = 'Database connection or schema check failed. Verify the server credentials and imported schema.';
+        }
+    }
 }
 
 if (!is_readable($emailConfig)) {

@@ -21,15 +21,17 @@ class EmailService {
         $this->smtpSecure = SMTP_SECURE;
         $this->smtpUsername = SMTP_USERNAME;
         $this->smtpPassword = SMTP_PASSWORD;
-        $this->fromEmail = SMTP_FROM_EMAIL;
-        $this->fromName = SMTP_FROM_NAME;
+        $this->fromEmail = filter_var(SMTP_FROM_EMAIL, FILTER_VALIDATE_EMAIL) ? SMTP_FROM_EMAIL : SMTP_USERNAME;
+        $this->fromName = trim(str_replace(["\r", "\n"], '', SMTP_FROM_NAME));
     }
     
-    /**
-     * Send email using PHP mail() with SMTP headers
-     */
+    /** Send through configured SMTP, with PHP mail() as a hosting fallback. */
     public function sendEmail($to, $subject, $htmlBody, $plainTextBody = '') {
         try {
+            if (!filter_var($to, FILTER_VALIDATE_EMAIL)) {
+                return ['success' => false, 'error' => 'Invalid recipient address'];
+            }
+            $subject = str_replace(["\r", "\n"], '', (string)$subject);
             // If plain text not provided, strip HTML tags
             if (empty($plainTextBody)) {
                 $plainTextBody = strip_tags($htmlBody);
@@ -59,8 +61,12 @@ class EmailService {
             
             $message .= "--{$boundary}--";
             
-            // Send email
-            $result = mail($to, $subject, $message, implode("\r\n", $headers));
+            $smtpConfigured = filter_var($this->smtpUsername, FILTER_VALIDATE_EMAIL)
+                && $this->smtpPassword !== ''
+                && strpos($this->smtpPassword, 'your-') !== 0;
+            $result = $smtpConfigured
+                ? $this->sendViaSmtp($to, $subject, $headers, $message)
+                : mail($to, $subject, $message, implode("\r\n", $headers));
             
             if ($result) {
                 return ['success' => true, 'message' => 'Email sent successfully'];
@@ -69,10 +75,73 @@ class EmailService {
                 return ['success' => false, 'error' => 'Failed to send email'];
             }
             
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             error_log("Email error: " . $e->getMessage());
-            return ['success' => false, 'error' => 'Email sending failed: ' . $e->getMessage()];
+            return ['success' => false, 'error' => 'Email sending failed'];
         }
+    }
+
+    private function sendViaSmtp($to, $subject, array $headers, $message) {
+        $transport = strtolower($this->smtpSecure) === 'ssl' ? 'ssl' : 'tcp';
+        $socket = @stream_socket_client(
+            $transport . '://' . $this->smtpHost . ':' . (int)$this->smtpPort,
+            $errorNumber,
+            $errorMessage,
+            15,
+            STREAM_CLIENT_CONNECT
+        );
+        if (!$socket) throw new RuntimeException('SMTP connection failed.');
+        stream_set_timeout($socket, 15);
+
+        try {
+            $this->expectSmtp($socket, [220]);
+            $hostName = preg_replace('/[^A-Za-z0-9.-]/', '', $_SERVER['SERVER_NAME'] ?? 'localhost') ?: 'localhost';
+            $this->smtpCommand($socket, 'EHLO ' . $hostName, [250]);
+
+            if (strtolower($this->smtpSecure) === 'tls') {
+                $this->smtpCommand($socket, 'STARTTLS', [220]);
+                if (!stream_socket_enable_crypto($socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT)) {
+                    throw new RuntimeException('SMTP encryption failed.');
+                }
+                $this->smtpCommand($socket, 'EHLO ' . $hostName, [250]);
+            }
+
+            $this->smtpCommand($socket, 'AUTH LOGIN', [334]);
+            $this->smtpCommand($socket, base64_encode($this->smtpUsername), [334]);
+            $this->smtpCommand($socket, base64_encode($this->smtpPassword), [235]);
+            $this->smtpCommand($socket, 'MAIL FROM:<' . $this->fromEmail . '>', [250]);
+            $this->smtpCommand($socket, 'RCPT TO:<' . $to . '>', [250, 251]);
+            $this->smtpCommand($socket, 'DATA', [354]);
+
+            $encodedSubject = '=?UTF-8?B?' . base64_encode($subject) . '?=';
+            $payload = 'To: <' . $to . ">\r\nSubject: " . $encodedSubject . "\r\n"
+                . implode("\r\n", $headers) . "\r\n\r\n" . $message;
+            $payload = preg_replace('/(?m)^\./', '..', $payload);
+            fwrite($socket, $payload . "\r\n.\r\n");
+            $this->expectSmtp($socket, [250]);
+            $this->smtpCommand($socket, 'QUIT', [221]);
+            return true;
+        } finally {
+            fclose($socket);
+        }
+    }
+
+    private function smtpCommand($socket, $command, array $expectedCodes) {
+        fwrite($socket, $command . "\r\n");
+        return $this->expectSmtp($socket, $expectedCodes);
+    }
+
+    private function expectSmtp($socket, array $expectedCodes) {
+        $response = '';
+        while (($line = fgets($socket, 515)) !== false) {
+            $response .= $line;
+            if (strlen($line) >= 4 && $line[3] === ' ') break;
+        }
+        $code = (int)substr($response, 0, 3);
+        if (!in_array($code, $expectedCodes, true)) {
+            throw new RuntimeException('SMTP server rejected the request (code ' . $code . ').');
+        }
+        return $response;
     }
     
     /**
@@ -400,4 +469,3 @@ function getEmailService() {
     return new EmailService();
 }
 ?>
-

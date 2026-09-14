@@ -11,7 +11,11 @@ if ($auth->isLoggedIn()) {
 
 // Handle login form submission
 if (isset($_POST['action']) && $_POST['action'] === 'login') {
-    $result = $auth->login($_POST['email'], $_POST['password']);
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? null)) {
+        $result = ['success' => false, 'error' => 'Your session expired. Please refresh and try again.'];
+    } else {
+        $result = $auth->login($_POST['email'] ?? '', $_POST['password'] ?? '');
+    }
     if ($result['success']) {
         header('Location: dashboard.php');
         exit;
@@ -23,14 +27,22 @@ if (isset($_POST['action']) && $_POST['action'] === 'login') {
 // Handle registration form submission
 if (isset($_POST['action']) && $_POST['action'] === 'register') {
     $isMonk = isset($_POST['is_monk']) ? 1 : 0;
-    $result = $auth->register(
-        $_POST['first_name'],
-        $_POST['last_name'],
-        $_POST['email'],
-        $_POST['contact_number'],
-        $_POST['password'],
-        $isMonk
-    );
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? null)) {
+        $result = ['success' => false, 'errors' => ['Your session expired. Please refresh and try again.']];
+    } elseif (($_POST['password'] ?? '') !== ($_POST['confirm_password'] ?? '')) {
+        $result = ['success' => false, 'errors' => ['Passwords do not match.']];
+    } elseif ($isMonk && ($_POST['vinaya_accepted'] ?? '') !== '1') {
+        $result = ['success' => false, 'errors' => ['Please read and accept the Vinaya guidance before registering as a monk.']];
+    } else {
+        $result = $auth->register(
+            $_POST['first_name'] ?? '',
+            $_POST['last_name'] ?? '',
+            $_POST['email'] ?? '',
+            $_POST['contact_number'] ?? '',
+            $_POST['password'] ?? '',
+            $isMonk
+        );
+    }
 
     if ($result['success']) {
         // Store success message in session and redirect
@@ -52,6 +64,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'register') {
     <?php include 'includes/favicon.php'; ?>
     <link rel="stylesheet" href="assets/css/style.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/pro-ui.css?v=20260914">
     <style>
         .login-page {
             background-image: url('uploads/bck.webp');
@@ -251,6 +264,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'register') {
 
             <!-- Login Form -->
             <form id="loginForm" class="auth-form <?php echo !isset($registerErrors) ? 'active' : ''; ?>" method="POST">
+                <?php echo csrfInput(); ?>
                 <input type="hidden" name="action" value="login">
 
                 <h2>Sign In</h2>
@@ -267,7 +281,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'register') {
                         <i class="fas fa-envelope"></i>
                         Email Address
                     </label>
-                    <input type="email" id="loginEmail" name="email" required>
+                    <input type="email" id="loginEmail" name="email" autocomplete="email" maxlength="100" required>
                 </div>
                 
                 <div class="form-group">
@@ -275,7 +289,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'register') {
                         <i class="fas fa-lock"></i>
                         Password
                     </label>
-                    <input type="password" id="loginPassword" name="password" required>
+                    <input type="password" id="loginPassword" name="password" autocomplete="current-password" required>
                 </div>
 
                 <div style="text-align: right; margin-bottom: 15px;">
@@ -291,12 +305,13 @@ if (isset($_POST['action']) && $_POST['action'] === 'register') {
 
                 <p class="auth-switch">
                     Don't have an account?
-                    <a href="#" onclick="showRegisterForm()">Create Account</a>
+                    <a href="#registerForm" onclick="showRegisterForm(); return false;">Create Account</a>
                 </p>
             </form>
 
             <!-- Registration Form -->
             <form id="registerForm" class="auth-form <?php echo isset($registerErrors) ? 'active' : ''; ?>" method="POST">
+                <?php echo csrfInput(); ?>
                 <input type="hidden" name="action" value="register">
 
                 <h2>Create Account</h2>
@@ -318,7 +333,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'register') {
                             <i class="fas fa-user"></i>
                             First Name
                         </label>
-                        <input type="text" id="firstName" name="first_name" required>
+                        <input type="text" id="firstName" name="first_name" autocomplete="given-name" maxlength="50" required>
                     </div>
                     
                     <div class="form-group">
@@ -326,7 +341,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'register') {
                             <i class="fas fa-user"></i>
                             Last Name
                         </label>
-                        <input type="text" id="lastName" name="last_name" required>
+                        <input type="text" id="lastName" name="last_name" autocomplete="family-name" maxlength="50" required>
                     </div>
                 </div>
                 
@@ -335,7 +350,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'register') {
                         <i class="fas fa-envelope"></i>
                         Email Address
                     </label>
-                    <input type="email" id="registerEmail" name="email" required>
+                    <input type="email" id="registerEmail" name="email" autocomplete="email" maxlength="100" required>
                 </div>
                 
                 <div class="form-group">
@@ -343,7 +358,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'register') {
                         <i class="fas fa-phone"></i>
                         Contact Number
                     </label>
-                    <input type="tel" id="contactNumber" name="contact_number" required>
+                    <input type="tel" id="contactNumber" name="contact_number" autocomplete="tel" inputmode="tel" maxlength="20" required>
                 </div>
                 
                 <div class="form-group">
@@ -351,13 +366,19 @@ if (isset($_POST['action']) && $_POST['action'] === 'register') {
                         <i class="fas fa-lock"></i>
                         Password
                     </label>
-                    <input type="password" id="registerPassword" name="password" required>
+                    <input type="password" id="registerPassword" name="password" autocomplete="new-password" minlength="<?php echo PASSWORD_MIN_LENGTH; ?>" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="confirmPassword"><i class="fas fa-lock"></i> Confirm Password</label>
+                    <input type="password" id="confirmPassword" name="confirm_password" autocomplete="new-password" minlength="<?php echo PASSWORD_MIN_LENGTH; ?>" required>
                 </div>
                 
                 <!-- Monk Status Checkbox -->
                 <div class="form-group monk-checkbox-group">
                     <div class="checkbox-wrapper">
                         <input type="checkbox" id="isMonk" name="is_monk" value="1">
+                        <input type="hidden" id="vinayaAccepted" name="vinaya_accepted" value="0">
                         <label for="isMonk" class="checkbox-label">
                             <i class="fas fa-temple"></i>
                             I am a monk (Bhikkhu)
@@ -375,17 +396,17 @@ if (isset($_POST['action']) && $_POST['action'] === 'register') {
                 
                 <p class="auth-switch">
                     Already have an account? 
-                    <a href="#" onclick="showLoginForm()">Sign In</a>
+                    <a href="#loginForm" onclick="showLoginForm(); return false;">Sign In</a>
                 </p>
             </form>
         </div>
     </div>
 
     <!-- Monk Vinaya Disclosure Modal -->
-    <div id="monkModal" class="modal-overlay" style="display: none;">
+    <div id="monkModal" class="modal-overlay" style="display: none;" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="monkModalTitle">
         <div class="modal-container">
             <div class="modal-header">
-                <h3><i class="fas fa-temple"></i> Important Vinaya Disclosure</h3>
+                <h3 id="monkModalTitle"><i class="fas fa-temple"></i> Important Vinaya Disclosure</h3>
             </div>
             <div class="modal-content">
                 <div class="vinaya-text">
@@ -418,81 +439,6 @@ if (isset($_POST['action']) && $_POST['action'] === 'register') {
         </div>
     </div>
 
-    <script src="assets/js/auth.js"></script>
-    
-    <!-- Debug script to check function availability - runs after auth.js loads -->
-    <script>
-        // Define monk modal functions inline to ensure they're available
-        window.isMonkConfirmed = false;
-        
-        window.showMonkModal = function() {
-            const modal = document.getElementById('monkModal');
-            if (modal) {
-                modal.style.display = 'flex';
-                document.body.style.overflow = 'hidden';
-            }
-        }
-        
-        window.closeMonkModal = function() {
-            const modal = document.getElementById('monkModal');
-            if (modal) {
-                modal.style.display = 'none';
-                document.body.style.overflow = 'auto';
-            }
-        }
-        
-        window.cancelMonkRegistration = function() {
-            const monkCheckbox = document.getElementById('isMonk');
-            if (monkCheckbox) {
-                monkCheckbox.checked = false;
-            }
-            window.isMonkConfirmed = false;
-            window.closeMonkModal();
-        }
-        
-        window.acceptMonkTerms = function() {
-            window.isMonkConfirmed = true;
-            window.closeMonkModal();
-            
-            // Show success message
-            showSuccessMessage('Monk registration terms accepted. You can now proceed with creating your account.');
-        }
-        
-        function showSuccessMessage(message) {
-            // Remove existing messages
-            const existingMessages = document.querySelectorAll('.js-success-message, .js-error-message');
-            existingMessages.forEach(msg => msg.remove());
-            
-            // Create new success message
-            const successDiv = document.createElement('div');
-            successDiv.className = 'success-message js-success-message';
-            successDiv.style.cssText = 'background: #d4edda; color: #155724; padding: 15px; margin: 15px 0; border: 1px solid #c3e6cb; border-radius: 4px; display: flex; align-items: center; gap: 10px;';
-            successDiv.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`;
-            
-            // Insert success message in the registration form
-            const registerForm = document.getElementById('registerForm');
-            const formTitle = registerForm.querySelector('h2');
-            formTitle.insertAdjacentElement('afterend', successDiv);
-            
-            // Auto-remove success message after 5 seconds
-            setTimeout(() => {
-                if (successDiv.parentNode) {
-                    successDiv.remove();
-                }
-            }, 5000);
-        }
-        
-        // Set up checkbox listener when DOM is ready
-        document.addEventListener('DOMContentLoaded', function() {
-            const monkCheckbox = document.getElementById('isMonk');
-            if (monkCheckbox) {
-                monkCheckbox.addEventListener('change', function() {
-                    if (this.checked && !window.isMonkConfirmed) {
-                        window.showMonkModal();
-                    }
-                });
-            }
-        });
-    </script>
+    <script src="assets/js/auth.js?v=20260913"></script>
 </body>
 </html>

@@ -1,5 +1,6 @@
 <?php
 require_once 'includes/auth.php';
+require_once 'includes/booking-rules.php';
 
 // Require user to be logged in
 requireLogin();
@@ -8,73 +9,43 @@ $auth = getAuth();
 $user = $auth->getCurrentUser();
 $db = getDB();
 
-// Get current month and year
+// Get current month and year within the configured reservation window.
+$advanceDays = bookingSettingInt($db, 'booking_advance_days', 30, 1, 730);
+$calendarMinDate = new DateTime('today');
+$calendarMaxDate = (clone $calendarMinDate)->modify('+' . $advanceDays . ' days');
 $currentMonth = isset($_GET['month']) ? (int)$_GET['month'] : date('n');
 $currentYear = isset($_GET['year']) ? (int)$_GET['year'] : date('Y');
-
-// Ensure valid month/year
-if ($currentMonth < 1 || $currentMonth > 12) $currentMonth = date('n');
-if ($currentYear < date('Y') || $currentYear > date('Y') + 2) $currentYear = date('Y');
+$requestedMonth = DateTime::createFromFormat('!Y-n-j', $currentYear . '-' . $currentMonth . '-1');
+$minMonth = new DateTime('first day of this month');
+$maxMonth = (clone $calendarMaxDate)->modify('first day of this month');
+if (!$requestedMonth || $requestedMonth < $minMonth || $requestedMonth > $maxMonth) {
+    $requestedMonth = clone $minMonth;
+}
+$currentMonth = (int)$requestedMonth->format('n');
+$currentYear = (int)$requestedMonth->format('Y');
 
 // Get dhana types
-$dhanaTypes = $db->fetchAll("SELECT * FROM dhana_types WHERE is_active = 1 ORDER BY price DESC");
+$dhanaTypes = $db->fetchAll("SELECT * FROM dhana_types WHERE is_active = 1 AND price > 0 ORDER BY price DESC");
 
 // Get reservations for the current month with time slot information (including annual events)
 $bookings = $db->fetchAll(
     "SELECT booking_date, dhana_type_id, booking_time_slot, COUNT(*) as booking_count,
             MAX(is_annual_event) as has_annual_event
      FROM bookings
-     WHERE MONTH(booking_date) = ? AND YEAR(booking_date) = ?
+     WHERE booking_date >= ? AND booking_date < ?
      AND status NOT IN ('cancelled')
      GROUP BY booking_date, dhana_type_id, booking_time_slot",
-    [$currentMonth, $currentYear]
+    [$requestedMonth->format('Y-m-01'), (clone $requestedMonth)->modify('+1 month')->format('Y-m-01')]
 );
 
-// Get annual reservations that should appear in this month/year
-$annualBookings = $db->fetchAll(
-    "SELECT b.booking_date, b.dhana_type_id, b.booking_time_slot,
-            COUNT(*) as booking_count, 1 as is_annual
-     FROM bookings b
-     JOIN annual_bookings ab ON (b.id = ab.booking_id OR b.parent_booking_id = ab.booking_id)
-     WHERE MONTH(b.booking_date) = ?
-     AND ? BETWEEN ab.year_start AND ab.year_end
-     AND b.status NOT IN ('cancelled')
-     GROUP BY b.booking_date, b.dhana_type_id, b.booking_time_slot",
-    [$currentMonth, $currentYear]
-);
-
-// Merge annual reservations with regular reservations
-foreach ($annualBookings as $annualBooking) {
-    $found = false;
-    foreach ($bookings as &$booking) {
-        if ($booking['booking_date'] === $annualBooking['booking_date'] &&
-            $booking['dhana_type_id'] === $annualBooking['dhana_type_id'] &&
-            $booking['booking_time_slot'] === $annualBooking['booking_time_slot']) {
-            $booking['has_annual_event'] = 1;
-            $found = true;
-            break;
-        }
-    }
-    if (!$found) {
-        // Create a virtual reservation entry for the annual event
-        $virtualDate = $currentYear . '-' . str_pad($currentMonth, 2, '0', STR_PAD_LEFT) . '-' .
-                      str_pad(date('d', strtotime($annualBooking['booking_date'])), 2, '0', STR_PAD_LEFT);
-        $bookings[] = [
-            'booking_date' => $virtualDate,
-            'dhana_type_id' => $annualBooking['dhana_type_id'],
-            'booking_time_slot' => $annualBooking['booking_time_slot'],
-            'booking_count' => $annualBooking['booking_count'],
-            'has_annual_event' => 1
-        ];
-    }
-}
+// Annual instances are physical booking rows; do not synthesize ghost dates from metadata.
 
 // Get blocked dates
 $blockedDates = $db->fetchAll(
     "SELECT blocked_date 
      FROM blocked_dates 
-     WHERE MONTH(blocked_date) = ? AND YEAR(blocked_date) = ?",
-    [$currentMonth, $currentYear]
+     WHERE blocked_date >= ? AND blocked_date < ?",
+    [$requestedMonth->format('Y-m-01'), (clone $requestedMonth)->modify('+1 month')->format('Y-m-01')]
 );
 
 // Convert to arrays for easier access with time slot information
@@ -124,6 +95,8 @@ function getDaysInMonth($month, $year) {
 function getFirstDayOfWeek($month, $year) {
     return date('w', mktime(0, 0, 0, $month, 1, $year));
 }
+$previousMonth = (clone $requestedMonth)->modify('-1 month');
+$nextMonth = (clone $requestedMonth)->modify('+1 month');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -135,6 +108,7 @@ function getFirstDayOfWeek($month, $year) {
     <link rel="stylesheet" href="assets/css/style.css">
     <link rel="stylesheet" href="assets/css/calendar.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/pro-ui.css?v=20260914">
 </head>
 <body>
     <div class="dashboard">
@@ -151,13 +125,17 @@ function getFirstDayOfWeek($month, $year) {
         <div class="calendar-container">
             <div class="calendar-header">
                 <div class="calendar-nav">
-                    <a href="?month=<?php echo $currentMonth == 1 ? 12 : $currentMonth - 1; ?>&year=<?php echo $currentMonth == 1 ? $currentYear - 1 : $currentYear; ?>" class="nav-btn">
-                        <i class="fas fa-chevron-left"></i>
-                    </a>
+                    <?php if ($previousMonth >= $minMonth): ?>
+                        <a aria-label="Previous month" href="?month=<?php echo $previousMonth->format('n'); ?>&year=<?php echo $previousMonth->format('Y'); ?>" class="nav-btn"><i class="fas fa-chevron-left"></i></a>
+                    <?php else: ?>
+                        <span class="nav-btn disabled" aria-hidden="true"><i class="fas fa-chevron-left"></i></span>
+                    <?php endif; ?>
                     <h2 id="monthYearDisplay"><?php echo getMonthName($currentMonth) . ' ' . $currentYear; ?></h2>
-                    <a href="?month=<?php echo $currentMonth == 12 ? 1 : $currentMonth + 1; ?>&year=<?php echo $currentMonth == 12 ? $currentYear + 1 : $currentYear; ?>" class="nav-btn">
-                        <i class="fas fa-chevron-right"></i>
-                    </a>
+                    <?php if ($nextMonth <= $maxMonth): ?>
+                        <a aria-label="Next month" href="?month=<?php echo $nextMonth->format('n'); ?>&year=<?php echo $nextMonth->format('Y'); ?>" class="nav-btn"><i class="fas fa-chevron-right"></i></a>
+                    <?php else: ?>
+                        <span class="nav-btn disabled" aria-hidden="true"><i class="fas fa-chevron-right"></i></span>
+                    <?php endif; ?>
                 </div>
             </div>
 
@@ -216,6 +194,7 @@ function getFirstDayOfWeek($month, $year) {
                 for ($day = 1; $day <= $daysInMonth; $day++) {
                     $date = sprintf('%04d-%02d-%02d', $currentYear, $currentMonth, $day);
                     $isPast = $date < $today;
+                    $isOutsideWindow = $date > $calendarMaxDate->format('Y-m-d');
                     $isBlocked = in_array($date, $blockedDatesArray);
                     
                     // Calculate availability considering whole day reservations
@@ -224,7 +203,7 @@ function getFirstDayOfWeek($month, $year) {
                     $bookedTypes = isset($bookingsByDate[$date]) ? count($bookingsByDate[$date]) : 0;
 
                     $cssClass = 'day-cell';
-                    if ($isPast) {
+                    if ($isPast || $isOutsideWindow) {
                         $cssClass .= ' past';
                     } elseif ($isBlocked) {
                         $cssClass .= ' blocked';
@@ -243,7 +222,9 @@ function getFirstDayOfWeek($month, $year) {
                         $cssClass .= ' today';
                     }
                     
-                    echo '<div class="' . $cssClass . '" data-date="' . $date . '" onclick="showDateDetails(\'' . $date . '\')">';
+                    $dayLabel = date('l, F j, Y', strtotime($date));
+                    $disabled = ($isPast || $isOutsideWindow) ? ' disabled' : '';
+                    echo '<button type="button" class="' . $cssClass . '" data-date="' . $date . '" aria-label="' . htmlspecialchars($dayLabel) . '" onclick="showDateDetails(\'' . $date . '\')"' . $disabled . '>';
                     echo '<span class="day-number">' . $day . '</span>';
 
                     // Check if this date has annual events
@@ -269,7 +250,7 @@ function getFirstDayOfWeek($month, $year) {
                     }
 
                     // Show availability indicator only if not past, not blocked, and not fully blocked by whole day reservation
-                    if (!$isPast && !$isBlocked && !$hasWholeDayBooking && $bookedTypes < $totalDhanaTypes) {
+                    if (!$isPast && !$isOutsideWindow && !$isBlocked && !$hasWholeDayBooking && $bookedTypes < $totalDhanaTypes) {
                         echo '<div class="availability-indicator">';
                         echo '<i class="fas fa-plus-circle"></i>';
                         echo '</div>';
@@ -280,18 +261,18 @@ function getFirstDayOfWeek($month, $year) {
                         echo '</div>';
                     }
 
-                    echo '</div>';
+                    echo '</button>';
                 }
                 ?>
             </div>
         </div>
 
         <!-- Date Details Modal -->
-        <div id="dateModal" class="modal">
-            <div class="modal-content">
+        <div id="dateModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalDate">
+            <div class="modal-content" tabindex="-1">
                 <div class="modal-header">
                     <h3 id="modalDate"></h3>
-                    <span class="close" onclick="closeDateModal()">&times;</span>
+                    <button type="button" class="close" aria-label="Close date details" onclick="closeDateModal()">&times;</button>
                 </div>
                 <div class="modal-body">
                     <div id="modalContent"></div>
@@ -306,11 +287,11 @@ function getFirstDayOfWeek($month, $year) {
         </div>
 
         <!-- Month/Year Picker Modal -->
-        <div id="monthYearModal" class="modal">
-            <div class="modal-content" style="max-width: 400px;">
+        <div id="monthYearModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="monthPickerTitle">
+            <div class="modal-content" style="max-width: 400px;" tabindex="-1">
                 <div class="modal-header">
-                    <h3><i class="fas fa-calendar-alt"></i> Jump to Month</h3>
-                    <span class="close" onclick="closeMonthYearModal()">&times;</span>
+                    <h3 id="monthPickerTitle"><i class="fas fa-calendar-alt"></i> Jump to Month</h3>
+                    <button type="button" class="close" aria-label="Close month picker" onclick="closeMonthYearModal()">&times;</button>
                 </div>
                 <div class="modal-body">
                     <div style="padding: 20px;">
@@ -339,8 +320,8 @@ function getFirstDayOfWeek($month, $year) {
                             </label>
                             <select id="jumpYear" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px;">
                                 <?php
-                                $currentYearNow = date('Y');
-                                for ($y = $currentYearNow; $y <= $currentYearNow + 2; $y++) {
+                                $currentYearNow = (int)date('Y');
+                                for ($y = $currentYearNow; $y <= (int)$maxMonth->format('Y'); $y++) {
                                     echo "<option value='$y'>$y</option>";
                                 }
                                 ?>
@@ -359,8 +340,8 @@ function getFirstDayOfWeek($month, $year) {
     </div>
 
     <script>
-        const dhanaTypes = <?php echo json_encode($dhanaTypes); ?>;
-        const bookingsByDate = <?php echo json_encode($bookingsByDate); ?>;
+        const dhanaTypes = <?php echo json_encode($dhanaTypes, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+        const bookingsByDate = <?php echo json_encode($bookingsByDate, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
         const blockedDates = <?php echo json_encode($blockedDatesArray); ?>;
         const wholeDayBookings = <?php echo json_encode($wholeDayBookings); ?>;
         const today = '<?php echo $today; ?>';

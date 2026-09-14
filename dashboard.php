@@ -9,6 +9,10 @@ $user = $auth->getCurrentUser();
 
 // Handle logout
 if (isset($_POST['action']) && $_POST['action'] === 'logout') {
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? null)) {
+        http_response_code(400);
+        exit('Invalid request');
+    }
     $auth->logout();
     header('Location: index.php');
     exit;
@@ -16,7 +20,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'logout') {
 
 // Get dhana types for pricing display
 $db = getDB();
-$dhanaTypes = $db->fetchAll("SELECT * FROM dhana_types WHERE is_active = 1 ORDER BY price DESC");
+$dhanaTypes = $db->fetchAll("SELECT * FROM dhana_types WHERE is_active = 1 AND price > 0 ORDER BY price DESC");
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -31,6 +35,7 @@ $dhanaTypes = $db->fetchAll("SELECT * FROM dhana_types WHERE is_active = 1 ORDER
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Sinhala:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/pro-ui.css?v=20260914">
 </head>
 <body>
     <div class="dashboard">
@@ -66,6 +71,7 @@ $dhanaTypes = $db->fetchAll("SELECT * FROM dhana_types WHERE is_active = 1 ORDER
                     <i class="fas fa-cog"></i> Settings
                 </a>
                 <form method="POST" class="logout-form">
+                    <?php echo csrfInput(); ?>
                     <input type="hidden" name="action" value="logout">
                     <button type="submit" class="logout-btn">
                         <i class="fas fa-sign-out-alt"></i> Logout
@@ -218,17 +224,17 @@ $dhanaTypes = $db->fetchAll("SELECT * FROM dhana_types WHERE is_active = 1 ORDER
                 </div>
             </div>
 
-            <!-- Right Panel: Recent Reservations -->
+            <!-- Right Panel: Upcoming Reservations -->
             <div class="dashboard-panel right-panel">
                 <div class="panel-header">
-                    <h2><i class="fas fa-history"></i> Your Recent Reservations</h2>
+                    <h2><i class="fas fa-calendar-check"></i> Your Upcoming Reservations</h2>
                     <a href="my-bookings.php" class="btn btn-secondary btn-small">
                         <i class="fas fa-list"></i> View All Reservations
                     </a>
                 </div>
                 <div class="panel-content">
                     <?php
-                    // Get user's recent reservations including annual events
+                    // Show upcoming, actionable reservations rather than old history.
                     $recentBookings = $db->fetchAll(
                         "SELECT b.*, dt.name as dhana_type_name, dt.price,
                                 ab.year_start, ab.year_end,
@@ -240,9 +246,9 @@ $dhanaTypes = $db->fetchAll("SELECT * FROM dhana_types WHERE is_active = 1 ORDER
                          FROM bookings b
                          JOIN dhana_types dt ON b.dhana_type_id = dt.id
                          LEFT JOIN annual_bookings ab ON (b.id = ab.booking_id OR b.parent_booking_id = ab.booking_id)
-                         WHERE b.user_id = ?
-                         ORDER BY b.created_at DESC, b.booking_date ASC
-                         LIMIT 10",
+                         WHERE b.user_id = ? AND b.booking_date >= CURDATE() AND b.status <> 'cancelled'
+                         ORDER BY b.booking_date ASC, b.created_at DESC
+                         LIMIT 6",
                         [$user['id']]
                     );
                     ?>

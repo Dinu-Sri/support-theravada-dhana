@@ -1,5 +1,6 @@
 <?php
 require_once 'includes/auth.php';
+require_once 'includes/process-booking.php';
 
 // Require user to be logged in
 requireLogin();
@@ -8,270 +9,30 @@ $auth = getAuth();
 $user = $auth->getCurrentUser();
 $db = getDB();
 
-// Get dhana types
-$dhanaTypes = $db->fetchAll("SELECT * FROM dhana_types WHERE is_active = 1 ORDER BY price DESC");
+// Only types that can actually be reserved are presented to donors.
+$dhanaTypes = $db->fetchAll("SELECT * FROM dhana_types WHERE is_active = 1 AND price > 0 ORDER BY price DESC");
 
-// Get pre-selected date from URL
-$selectedDate = isset($_GET['date']) ? $_GET['date'] : '';
+$bookingAdvanceDays = bookingSettingInt($db, 'booking_advance_days', 30, 1, 730);
+$maxBookingDate = (new DateTime('today'))->modify('+' . $bookingAdvanceDays . ' days');
 
-// Handle form submission
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
-    $dhanaTypeId = (int)$_POST['dhana_type_id'];
-    $reservationDate = $_POST['booking_date'];
-    $reservationTimeSlot = $_POST['booking_time_slot'];
-    $specialRequests = trim($_POST['special_requests']);
-    $travelSupport = isset($_POST['travel_support']) ? 1 : 0;
-    $isAnnualEvent = isset($_POST['is_annual_event']) ? 1 : 0;
-    $isMonk = $user['is_monk'] ?? 0;
-    
-    // Validate inputs
-    $errors = [];
-    
-    if (empty($dhanaTypeId)) {
-        $errors[] = 'Please select a dāna type';
-    }
-    
-    if (empty($reservationDate)) {
-        $errors[] = 'Please select a reservation date';
-    } else {
-        // Check if date is not in the past
-        if ($reservationDate < date('Y-m-d')) {
-            $errors[] = 'Reservation date cannot be in the past';
-        }
-    }
-    
-    if (empty($errors)) {
-        try {
-            // Check for reservation conflicts based on whole day logic
-            $conflictingReservations = [];
-
-            if ($reservationTimeSlot === 'whole_day') {
-                // Whole day reservation conflicts with ANY reservation on the same date
-                $conflictingReservations = $db->fetchAll(
-                    "SELECT id, booking_time_slot, dhana_type_id FROM bookings
-                     WHERE booking_date = ? AND status NOT IN ('cancelled')",
-                    [$reservationDate]
-                );
-            } else {
-                // Specific time slot conflicts with same time slot for same dhana type OR any whole day reservation
-                $conflictingReservations = $db->fetchAll(
-                    "SELECT id, booking_time_slot, dhana_type_id FROM bookings
-                     WHERE booking_date = ? AND status NOT IN ('cancelled')
-                     AND (
-                         (dhana_type_id = ? AND booking_time_slot = ?)
-                         OR booking_time_slot = 'whole_day'
-                     )",
-                    [$reservationDate, $dhanaTypeId, $reservationTimeSlot]
-                );
-            }
-
-            if (!empty($conflictingReservations)) {
-                // Determine specific error message
-                $hasWholeDayConflict = false;
-                foreach ($conflictingReservations as $conflict) {
-                    if ($conflict['booking_time_slot'] === 'whole_day') {
-                        $hasWholeDayConflict = true;
-                        break;
-                    }
-                }
-
-                if ($reservationTimeSlot === 'whole_day') {
-                    $errors[] = 'Cannot reserve whole day - there are existing reservations for this date';
-                } elseif ($hasWholeDayConflict) {
-                    $errors[] = 'This date is fully reserved (whole day reservation exists)';
-                } else {
-                    $errors[] = 'This dāna type and time slot is already reserved for the selected date';
-                }
-            } else {
-                // Get dhana type details for pricing
-                $dhanaType = $db->fetchOne(
-                    "SELECT * FROM dhana_types WHERE id = ? AND is_active = 1",
-                    [$dhanaTypeId]
-                );
-
-                if (!$dhanaType) {
-                    $errors[] = 'Invalid dāna type selected';
-                } else {
-                    // Get price from monthly pricing table
-                    $reservationDateObj = new DateTime($reservationDate);
-                    $year = (int)$reservationDateObj->format('Y');
-                    $month = (int)$reservationDateObj->format('n');
-
-                    // Try to get monthly price
-                    $monthlyPricing = $db->fetchOne(
-                        "SELECT price FROM monthly_pricing WHERE dhana_type_id = ? AND year = ? AND month = ?",
-                        [$dhanaTypeId, $year, $month]
-                    );
-
-                    // Use monthly price if available, otherwise use last available price
-                    if ($monthlyPricing && $monthlyPricing['price'] !== null) {
-                        $bookingPrice = (float)$monthlyPricing['price'];
-                    } else {
-                        // Get the most recent price before this date
-                        $lastAvailablePrice = $db->fetchOne(
-                            "SELECT price FROM monthly_pricing
-                             WHERE dhana_type_id = ?
-                             AND price IS NOT NULL
-                             AND (year < ? OR (year = ? AND month < ?))
-                             ORDER BY year DESC, month DESC
-                             LIMIT 1",
-                            [$dhanaTypeId, $year, $year, $month]
-                        );
-
-                        // If still no price found, use base price from dhana_types
-                        $bookingPrice = ($lastAvailablePrice && $lastAvailablePrice['price'] !== null)
-                            ? (float)$lastAvailablePrice['price']
-                            : (float)$dhanaType['price'];
-                    }
-
-                    // Ensure we have a valid price
-                    if (!$bookingPrice || $bookingPrice <= 0) {
-                        $bookingPrice = (float)$dhanaType['price'];
-                    }
-
-                    // Check if price is tentative (beyond pricing window)
-                    $windowSetting = $db->fetchOne("SELECT setting_value FROM settings WHERE setting_key = 'pricing_window_months'");
-                    $pricingWindowMonths = $windowSetting ? (int)$windowSetting['setting_value'] : 24;
-
-                    $currentDate = new DateTime();
-                    $currentDate->modify('first day of this month');
-                    $windowEndDate = clone $currentDate;
-                    $windowEndDate->modify("+{$pricingWindowMonths} months");
-
-                    $isPriceTentative = $reservationDateObj >= $windowEndDate ? 1 : 0;
-
-                    // Create the main booking
-                    $db->query(
-                        "INSERT INTO bookings (user_id, dhana_type_id, booking_date, booking_time_slot, special_requests, travel_support, is_annual_event, is_monk, total_amount, is_price_tentative, status)
-                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')",
-                        [$user['id'], $dhanaTypeId, $reservationDate, $reservationTimeSlot, $specialRequests, $travelSupport, $isAnnualEvent, $isMonk, $bookingPrice, $isPriceTentative]
-                    );
-
-                    $bookingId = $db->lastInsertId();
-
-                    // If annual event, create bookings for the configured number of years
-                    if ($isAnnualEvent) {
-                        // Get annual booking years setting from database
-                        $annualYearsSetting = $db->fetchOne(
-                            "SELECT setting_value FROM settings WHERE setting_key = 'annual_booking_years'"
-                        );
-                        $annualBookingYears = $annualYearsSetting ? (int)$annualYearsSetting['setting_value'] : 10;
-
-                        $currentYear = date('Y', strtotime($reservationDate));
-                        $baseDate = new DateTime($reservationDate);
-
-                        // Create annual booking record for tracking
-                        $db->query(
-                            "INSERT INTO annual_bookings (booking_id, year_start, year_end) VALUES (?, ?, ?)",
-                            [$bookingId, $currentYear, $currentYear + ($annualBookingYears - 1)]
-                        );
-
-                        // Create individual booking records for years 2-N (year 1 is already created above)
-                        for ($yearOffset = 1; $yearOffset <= ($annualBookingYears - 1); $yearOffset++) {
-                            $nextYearDate = clone $baseDate;
-                            $nextYearDate->modify("+{$yearOffset} year");
-
-                            // Check if this date would conflict with existing bookings
-                            $futureDate = $nextYearDate->format('Y-m-d');
-                            $conflictCheck = $db->fetchAll(
-                                "SELECT id FROM bookings
-                                 WHERE booking_date = ? AND status NOT IN ('cancelled')
-                                 AND ((dhana_type_id = ? AND booking_time_slot = ?) OR booking_time_slot = 'whole_day')",
-                                [$futureDate, $dhanaTypeId, $reservationTimeSlot]
-                            );
-
-                            // Only create if no conflicts (annual bookings take precedence for future years)
-                            if (empty($conflictCheck)) {
-                                // Get price for future date
-                                $futureDateObj = new DateTime($futureDate);
-                                $futureYear = (int)$futureDateObj->format('Y');
-                                $futureMonth = (int)$futureDateObj->format('n');
-
-                                $futureMonthlyPricing = $db->fetchOne(
-                                    "SELECT price FROM monthly_pricing WHERE dhana_type_id = ? AND year = ? AND month = ?",
-                                    [$dhanaTypeId, $futureYear, $futureMonth]
-                                );
-
-                                // If no price found for this specific month, use the last available price
-                                if ($futureMonthlyPricing && $futureMonthlyPricing['price'] !== null) {
-                                    $futureBookingPrice = (float)$futureMonthlyPricing['price'];
-                                } else {
-                                    // Get the most recent price before this date
-                                    $lastAvailablePrice = $db->fetchOne(
-                                        "SELECT price FROM monthly_pricing
-                                         WHERE dhana_type_id = ?
-                                         AND price IS NOT NULL
-                                         AND (year < ? OR (year = ? AND month < ?))
-                                         ORDER BY year DESC, month DESC
-                                         LIMIT 1",
-                                        [$dhanaTypeId, $futureYear, $futureYear, $futureMonth]
-                                    );
-
-                                    // If still no price found, use base price from dhana_types
-                                    $futureBookingPrice = ($lastAvailablePrice && $lastAvailablePrice['price'] !== null)
-                                        ? (float)$lastAvailablePrice['price']
-                                        : (float)$dhanaType['price'];
-                                }
-
-                                // Ensure we have a valid price
-                                if (!$futureBookingPrice || $futureBookingPrice <= 0) {
-                                    $futureBookingPrice = (float)$dhanaType['price'];
-                                }
-
-                                $futurePriceTentative = $futureDateObj >= $windowEndDate ? 1 : 0;
-
-                                // Check if parent_booking_id column exists
-                                try {
-                                    $db->query(
-                                        "INSERT INTO bookings (user_id, dhana_type_id, booking_date, booking_time_slot, special_requests, travel_support, is_annual_event, is_monk, total_amount, is_price_tentative, status, parent_booking_id)
-                                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)",
-                                        [$user['id'], $dhanaTypeId, $futureDate, $reservationTimeSlot, $specialRequests, $travelSupport, $isAnnualEvent, $isMonk, $futureBookingPrice, $futurePriceTentative, $bookingId]
-                                    );
-                                } catch (Exception $e) {
-                                    // Fallback if parent_booking_id column doesn't exist
-                                    $db->query(
-                                        "INSERT INTO bookings (user_id, dhana_type_id, booking_date, booking_time_slot, special_requests, travel_support, is_annual_event, is_monk, total_amount, is_price_tentative, status)
-                                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')",
-                                        [$user['id'], $dhanaTypeId, $futureDate, $reservationTimeSlot, $specialRequests, $travelSupport, $isAnnualEvent, $isMonk, $futureBookingPrice, $futurePriceTentative]
-                                    );
-                                }
-                            }
-                        }
-                    }
-
-                    // Send booking confirmation email
-                    try {
-                        require_once __DIR__ . '/includes/email.php';
-                        $emailService = getEmailService();
-
-                        $bookingData = [
-                            'user_email' => $user['email'],
-                            'user_name' => $user['first_name'] . ' ' . $user['last_name'],
-                            'booking_id' => $bookingId,
-                            'dhana_type' => $dhanaType['name'],
-                            'booking_date' => $reservationDate,
-                            'time_slot' => $reservationTimeSlot,
-                            'amount' => $bookingPrice,
-                            'is_price_tentative' => $isPriceTentative
-                        ];
-
-                        $emailService->sendBookingCreatedEmail($bookingData);
-                    } catch (Exception $e) {
-                        // Log email error but don't stop the booking process
-                        error_log("Failed to send booking confirmation email: " . $e->getMessage());
-                    }
-
-                    // Redirect to payment page
-                    header("Location: payment.php?booking_id=" . $bookingId);
-                    exit;
-                }
-            }
-        } catch (Exception $e) {
-            error_log("Reservation error: " . $e->getMessage());
-            $errors[] = 'An error occurred while processing your reservation. Please try again.';
-        }
+// Accept a calendar deep-link only when it is a real, currently bookable date.
+$selectedDate = '';
+if (!empty($_GET['date'])) {
+    $candidateDate = parseBookingDate((string) $_GET['date']);
+    if ($candidateDate && empty(validateBookingDate($db, $candidateDate))) {
+        $selectedDate = $candidateDate->format('Y-m-d');
     }
 }
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
+    $bookingResult = processBookingSubmission($db, $user, $_POST);
+    if ($bookingResult['success']) {
+        header('Location: payment.php?booking_id=' . $bookingResult['booking_id']);
+        exit;
+    }
+    $errors = $bookingResult['errors'];
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -280,10 +41,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>New Dāna Reservation - Dāna Reservation System</title>
     <?php include 'includes/favicon.php'; ?>
-    <link rel="stylesheet" href="assets/css/style.css?v=<?php echo time(); ?>">
-    <link rel="stylesheet" href="assets/css/booking-steps.css?v=<?php echo time(); ?>">
-    <link rel="stylesheet" href="assets/css/review-enhancements.css?v=<?php echo time(); ?>"
+    <link rel="stylesheet" href="assets/css/style.css?v=20260913">
+    <link rel="stylesheet" href="assets/css/booking-steps.css?v=20260913">
+    <link rel="stylesheet" href="assets/css/review-enhancements.css?v=20260913">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/pro-ui.css?v=20260914">
     <style>
         .review-navigation .btn:first-child {
             margin-right: auto !important;
@@ -1078,6 +840,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
 
             <!-- Reservation Form -->
             <form id="bookingForm" method="POST" class="step-form">
+                <?php echo csrfInput(); ?>
                 <input type="hidden" name="submit_booking" value="1">
                 
                 <!-- Step 1: Dhana Type Selection -->
@@ -1123,7 +886,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
 
                     <div class="date-time-selection">
                         <div class="form-group">
-                            <label for="booking_date">Reservation Date</label>
+                            <label for="booking_date_display">Reservation Date</label>
                             <div class="date-input-wrapper">
                                 <input type="text"
                                        id="booking_date_display"
@@ -1199,7 +962,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
                         <div class="toggle-group">
                             <div class="toggle-content">
                                 <h4><i class="fas fa-calendar-check"></i> Annual Event</h4>
-                                <p>Toggle this if this is an annual recurring event (will be booked for the whole year)</p>
+                                <p>Reserve this same calendar date once per year for the configured annual period.</p>
 
                                 <!-- Inline Annual Price Summary -->
                                 <div id="annual_price_summary" class="annual-price-inline-summary" style="display: none;">
@@ -1227,6 +990,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
                             <textarea id="special_requests"
                                       name="special_requests"
                                       rows="4"
+                                      maxlength="2000"
                                       placeholder="Any special requirements, dietary restrictions, or additional information for your dāna reservation..."></textarea>
                         </div>
                     </div>
@@ -1279,7 +1043,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
                         <div class="review-section total-amount-section">
                             <h4>Total Amount</h4>
                             <div class="total-amount">
-                                <span id="review-total-amount">Rs. 0</span>
+                                <span id="review-total-amount">Calculating…</span>
                             </div>
 
                             <!-- Tentative Price Disclaimer -->
@@ -1324,7 +1088,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
 
     <script>
         // Essential data for booking-steps.js
-        const dhanaTypes = <?php echo json_encode($dhanaTypes); ?>;
+        const dhanaTypes = <?php echo json_encode($dhanaTypes, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+        window.BOOKING_MAX_DATE = '<?php echo $maxBookingDate->format('Y-m-d'); ?>';
         const userId = <?php echo $user['id']; ?>;
         
         // Forcibly hide any debug or fallback elements
@@ -1411,51 +1176,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
         let selectedMonth = new Date().getMonth() + 1;
         let selectedYear = new Date().getFullYear();
         let selectedDay = new Date().getDate();
+        let datePickerReturnFocus = null;
 
         function showDatePicker() {
             console.log('📅 Date picker called');
+            datePickerReturnFocus = document.activeElement;
 
             // Create date picker modal
             const modal = document.createElement('div');
             modal.className = 'date-picker-modal';
+            modal.setAttribute('role', 'dialog');
+            modal.setAttribute('aria-modal', 'true');
+            modal.setAttribute('aria-labelledby', 'datePickerTitle');
             modal.innerHTML = `
-                <div class="date-picker-content">
+                <div class="date-picker-content" tabindex="-1">
                     <div class="date-picker-header">
-                        <h4>Select Reservation Date</h4>
-                        <button class="close-date-picker" onclick="closeDatePicker()">
+                        <h4 id="datePickerTitle">Select Reservation Date</h4>
+                        <button type="button" class="close-date-picker" onclick="closeDatePicker()" aria-label="Close date picker">
                             <i class="fas fa-times"></i>
                         </button>
                     </div>
                     <div class="date-picker-body">
                         <div class="date-selector-row">
                             <div class="year-selector">
-                                <label>Year:</label>
+                                <label for="dateYearSelect">Year:</label>
                                 <select id="dateYearSelect">
                                     ${generateYearOptions()}
                                 </select>
                             </div>
                             <div class="month-selector-dropdown">
-                                <label>Month:</label>
+                                <label for="dateMonthSelect">Month:</label>
                                 <select id="dateMonthSelect">
                                     ${generateMonthOptions()}
                                 </select>
                             </div>
                         </div>
                         <div class="day-selector">
-                            <label>Day:</label>
+                            <span class="day-selector-label">Day:</span>
                             <div class="day-grid" id="dayGrid">
                                 ${generateDayButtons()}
                             </div>
                         </div>
                     </div>
                     <div class="date-picker-footer">
-                        <button class="btn btn-secondary" onclick="closeDatePicker()">Cancel</button>
-                        <button class="btn btn-primary" onclick="applyDateSelection()">Select Date</button>
+                        <button type="button" class="btn btn-secondary" onclick="closeDatePicker()">Cancel</button>
+                        <button type="button" class="btn btn-primary" onclick="applyDateSelection()">Select Date</button>
                     </div>
                 </div>
             `;
 
             document.body.appendChild(modal);
+            modal.querySelector('.date-picker-content').focus();
 
             // Set current values
             const currentDate = document.getElementById('booking_date')?.value;
@@ -1465,12 +1236,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
                 selectedYear = date.getFullYear();
                 selectedDay = date.getDate();
             } else {
-                // Default to tomorrow
-                const tomorrow = new Date();
-                tomorrow.setDate(tomorrow.getDate() + 1);
-                selectedMonth = tomorrow.getMonth() + 1;
-                selectedYear = tomorrow.getFullYear();
-                selectedDay = tomorrow.getDate();
+                const today = new Date();
+                selectedMonth = today.getMonth() + 1;
+                selectedYear = today.getFullYear();
+                selectedDay = today.getDate();
             }
 
             const yearSelect = document.getElementById('dateYearSelect');
@@ -1498,7 +1267,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
         function generateYearOptions() {
             const currentYear = new Date().getFullYear();
             const startYear = currentYear;
-            const endYear = 2050;
+            const endYear = <?php echo (int) $maxBookingDate->format('Y'); ?>;
             let options = '';
 
             for (let year = startYear; year <= endYear; year++) {
@@ -1532,13 +1301,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
             const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
             const today = new Date();
             const tomorrow = new Date();
-            tomorrow.setDate(tomorrow.getDate() + 1);
+            tomorrow.setHours(0, 0, 0, 0);
+            const latestDate = new Date('<?php echo $maxBookingDate->format('Y-m-d'); ?>T00:00:00');
 
             let dayButtons = '';
 
             for (let day = 1; day <= daysInMonth; day++) {
                 const currentDate = new Date(selectedYear, selectedMonth - 1, day);
-                const isDisabled = currentDate < tomorrow;
+                const isDisabled = currentDate < tomorrow || currentDate > latestDate;
                 const isSelected = day === selectedDay;
 
                 let classes = 'day-btn';
@@ -1564,6 +1334,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
             const modal = document.querySelector('.date-picker-modal');
             if (modal) {
                 modal.remove();
+            }
+            if (datePickerReturnFocus && typeof datePickerReturnFocus.focus === 'function') {
+                datePickerReturnFocus.focus();
             }
         }
 
@@ -1792,6 +1565,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
             }
         });
     </script>
-    <script src="assets/js/booking-steps.js?v=<?php echo time(); ?>"></script>
+    <script src="assets/js/booking-steps.js?v=20260913"></script>
 </body>
 </html>

@@ -1,141 +1,77 @@
 <?php
+
+header('Content-Type: application/json; charset=utf-8');
+header('Cache-Control: no-store');
+ini_set('display_errors', '0');
+
 require_once __DIR__ . '/../config/database.php';
-
-header('Content-Type: application/json');
-
-// Enable error reporting for debugging
-error_reporting(E_ALL);
-ini_set('display_errors', 0); // Don't display errors in output
-ini_set('log_errors', 1);
+require_once __DIR__ . '/../includes/booking-rules.php';
 
 try {
+    $typeId = (int)($_GET['dhana_type_id'] ?? 0);
+    $startDate = parseBookingDate($_GET['start_date'] ?? '');
+    if (!$startDate || $typeId <= 0) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => 'Invalid date or dāna type']);
+        exit;
+    }
+    if ($startDate->format('m-d') === '02-29') {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => 'Annual reservations cannot start on February 29']);
+        exit;
+    }
+
     $db = getDB();
-    
-    // Get parameters
-    $dhanaTypeId = isset($_GET['dhana_type_id']) ? (int)$_GET['dhana_type_id'] : 0;
-    $startDate = isset($_GET['start_date']) ? $_GET['start_date'] : '';
-    
-    if (!$dhanaTypeId || !$startDate) {
-        echo json_encode([
-            'success' => false,
-            'error' => 'Missing required parameters'
-        ]);
+    $type = getBookableDhanaType($db, $typeId);
+    if (!$type) {
+        http_response_code(404);
+        echo json_encode(['success' => false, 'error' => 'Dāna type is not available']);
         exit;
     }
-    
-    // Get dhana type info
-    $dhanaType = $db->fetchOne(
-        "SELECT * FROM dhana_types WHERE id = ? AND is_active = 1",
-        [$dhanaTypeId]
-    );
-    
-    if (!$dhanaType) {
-        echo json_encode([
-            'success' => false,
-            'error' => 'Dhana type not found'
-        ]);
-        exit;
-    }
-    
-    // Get annual booking years setting
-    $annualYearsSetting = $db->fetchOne(
-        "SELECT setting_value FROM settings WHERE setting_key = 'annual_booking_years'"
-    );
-    $annualBookingYears = $annualYearsSetting ? (int)$annualYearsSetting['setting_value'] : 10;
-    
-    // Get pricing window setting
-    $windowSetting = $db->fetchOne(
-        "SELECT setting_value FROM settings WHERE setting_key = 'pricing_window_months'"
-    );
-    $pricingWindowMonths = $windowSetting ? (int)$windowSetting['setting_value'] : 24;
-    
-    // Calculate pricing window end date
-    $currentDate = new DateTime();
-    $currentDate->modify('first day of this month');
-    $windowEndDate = clone $currentDate;
-    $windowEndDate->modify("+{$pricingWindowMonths} months");
-    
-    // Build annual prices array
-    $baseDate = new DateTime($startDate);
-    $annualPrices = [];
-    $totalConfirmed = 0;
-    $totalTentative = 0;
+    $years = bookingSettingInt($db, 'annual_booking_years', 2, 1, 25);
+    $prices = [];
+    $confirmedTotal = 0;
+    $tentativeTotal = 0;
     $confirmedCount = 0;
     $tentativeCount = 0;
-    $notSetCount = 0;
-    
-    for ($yearOffset = 0; $yearOffset < $annualBookingYears; $yearOffset++) {
-        $targetDate = clone $baseDate;
-        $targetDate->modify("+{$yearOffset} year");
-        
-        $year = (int)$targetDate->format('Y');
-        $month = (int)$targetDate->format('n');
-        $dateStr = $targetDate->format('Y-m-d');
-        $displayDate = $targetDate->format('F j, Y');
-        
-        // Check if date is within pricing window
-        $isWithinWindow = $targetDate < $windowEndDate;
-        
-        // Try to get monthly price
-        $monthlyPricing = $db->fetchOne(
-            "SELECT price, is_confirmed, notes FROM monthly_pricing 
-             WHERE dhana_type_id = ? AND year = ? AND month = ?",
-            [$dhanaTypeId, $year, $month]
-        );
-        
-        if ($monthlyPricing) {
-            // Price is set in monthly pricing table
-            $price = (float)$monthlyPricing['price'];
-            $status = 'confirmed';
-            $totalConfirmed += $price;
-            $confirmedCount++;
-            
-            $annualPrices[] = [
-                'year_number' => $yearOffset + 1,
-                'date' => $dateStr,
-                'display_date' => $displayDate,
-                'price' => $price,
-                'status' => $status,
-                'is_within_window' => $isWithinWindow,
-                'notes' => $monthlyPricing['notes']
-            ];
+    for ($offset = 0; $offset < $years; $offset++) {
+        $date = clone $startDate;
+        if ($offset) $date->modify('+' . $offset . ' year');
+        $pricing = getEffectiveBookingPrice($db, $type, $date);
+        if ($pricing['is_tentative']) {
+            $tentativeTotal += $pricing['price'];
+            $tentativeCount++;
         } else {
-            // Price not set - don't use fallback
-            $status = 'not_set';
-            $notSetCount++;
-            
-            $annualPrices[] = [
-                'year_number' => $yearOffset + 1,
-                'date' => $dateStr,
-                'display_date' => $displayDate,
-                'price' => null,
-                'status' => $status,
-                'is_within_window' => $isWithinWindow,
-                'notes' => 'Price not set for this month yet'
-            ];
+            $confirmedTotal += $pricing['price'];
+            $confirmedCount++;
         }
+        $prices[] = [
+            'year_number' => $offset + 1,
+            'date' => $date->format('Y-m-d'),
+            'display_date' => $date->format('F j, Y'),
+            'price' => $pricing['price'],
+            'status' => $pricing['is_tentative'] ? 'tentative' : 'confirmed',
+            'is_within_window' => !$pricing['is_tentative'],
+            'notes' => $pricing['is_tentative'] ? 'Estimated price; final amount may change.' : null
+        ];
     }
-    
     echo json_encode([
         'success' => true,
-        'dhana_type_name' => $dhanaType['name'],
-        'annual_years' => $annualBookingYears,
-        'pricing_window_months' => $pricingWindowMonths,
-        'prices' => $annualPrices,
+        'dhana_type_name' => $type['name'],
+        'annual_years' => $years,
+        'prices' => $prices,
         'summary' => [
-            'total_confirmed' => $totalConfirmed,
-            'total_tentative' => $totalTentative,
+            'total_confirmed' => $confirmedTotal,
+            'total_tentative' => $tentativeTotal,
             'confirmed_count' => $confirmedCount,
             'tentative_count' => $tentativeCount,
-            'not_set_count' => $notSetCount,
-            'grand_total' => $totalConfirmed + $totalTentative
+            'not_set_count' => 0,
+            'grand_total' => $confirmedTotal + $tentativeTotal
         ]
     ]);
-    
-} catch (Exception $e) {
-    echo json_encode([
-        'success' => false,
-        'error' => 'Server error: ' . $e->getMessage()
-    ]);
+} catch (Throwable $error) {
+    error_log('Annual price error: ' . $error->getMessage());
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Unable to load annual pricing right now']);
 }
 

@@ -15,8 +15,10 @@ $errorMessage = '';
 // Handle forgot password form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'])) {
     $email = trim($_POST['email']);
-    
-    if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? null)) {
+        $errorMessage = 'Your session expired. Please refresh and try again.';
+    } elseif (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $errorMessage = 'Please enter a valid email address.';
     } else {
         $result = $auth->requestPasswordReset($email);
@@ -37,6 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'])) {
     <?php include 'includes/favicon.php'; ?>
     <link rel="stylesheet" href="assets/css/style.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/pro-ui.css?v=20260914">
     <style>
         .login-page {
             background-image: url('uploads/bck.webp');
@@ -199,6 +202,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'])) {
                 <?php endif; ?>
 
                 <form method="POST">
+                    <?php echo csrfInput(); ?>
                     <div class="form-group">
                         <label for="email">
                             <i class="fas fa-envelope"></i> Email Address
@@ -221,4 +225,3 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'])) {
     </div>
 </body>
 </html>
-

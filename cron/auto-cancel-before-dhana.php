@@ -10,15 +10,13 @@
  */
 
 // Prevent direct browser access
-if (php_sapi_name() !== 'cli' && !isset($_GET['manual_run'])) {
-    die('This script can only be run from command line or with manual_run parameter.');
+if (PHP_SAPI !== 'cli') {
+    http_response_code(403);
+    exit('This maintenance task is available from the command line only.');
 }
 
 require_once __DIR__ . '/../config/database.php';
-require_once __DIR__ . '/../includes/Database.php';
-
-// Initialize database
-$db = Database::getInstance();
+$db = getDB();
 
 // Log start
 $logMessage = "[" . date('Y-m-d H:i:s') . "] Auto-cancel cron job started\n";
@@ -59,8 +57,8 @@ try {
          FROM bookings b
          JOIN dhana_types dt ON b.dhana_type_id = dt.id
          JOIN users u ON b.user_id = u.id
-         WHERE b.status != 'confirmed'
-         AND b.status != 'cancelled'
+         WHERE b.status IN ('pending', 'payment_pending', 'receipt_submitted')
+         AND (b.on_hold IS NULL OR b.on_hold = 0)
          AND b.booking_date <= ?
          ORDER BY b.booking_date ASC",
         [$cutoffDate]
@@ -80,11 +78,13 @@ try {
         foreach ($bookingsToCancel as $booking) {
             try {
                 // Cancel the booking
-                $db->query(
-                    "UPDATE bookings SET status = 'cancelled', updated_at = NOW() WHERE id = ?",
+                $updated = $db->query(
+                    "UPDATE bookings SET status = 'cancelled', updated_at = NOW()
+                     WHERE id = ? AND status IN ('pending', 'payment_pending', 'receipt_submitted')
+                     AND (on_hold IS NULL OR on_hold = 0)",
                     [$booking['id']]
                 );
-                
+                if ($updated->rowCount() !== 1) continue;
                 $cancelledCount++;
                 
                 $logMessage = sprintf(
@@ -143,4 +143,3 @@ try {
 }
 
 exit(0);
-

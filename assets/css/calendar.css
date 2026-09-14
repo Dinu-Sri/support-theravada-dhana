@@ -121,6 +121,9 @@
 }
 
 .day-cell {
+    appearance: none;
+    width: 100%;
+    font: inherit;
     background: white;
     min-height: 80px;
     padding: 8px;
