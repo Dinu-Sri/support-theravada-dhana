@@ -6,18 +6,15 @@
 
 session_start();
 require_once '../config/database.php';
+require_once __DIR__ . '/includes/security.php';
 
-// Check if admin is logged in
-if (!isset($_SESSION['admin_logged_in'])) {
-    http_response_code(401);
-    echo json_encode(['success' => false, 'error' => 'Unauthorized']);
-    exit;
-}
-
-header('Content-Type: application/json');
+adminRequireLogin(true);
+header('Content-Type: application/json; charset=UTF-8');
 
 try {
     $db = getDB();
+    adminRequireCsrf(null, true);
+    adminRequirePermission($db, 'edit_personal_data', true);
     
     // Validate required fields
     $bookingId = isset($_POST['booking_id']) ? (int)$_POST['booking_id'] : 0;
@@ -318,7 +315,10 @@ try {
             ];
         }
 
-        // Send email notification if there are changes
+        $db->getConnection()->commit();
+
+        // Notifications happen after the durable database update. A mail failure
+        // must not hold locks open or roll back an otherwise valid reservation.
         if (!empty($changes)) {
             try {
                 require_once __DIR__ . '/../includes/booking-emails.php';
@@ -342,23 +342,27 @@ try {
             }
         }
 
-        $db->getConnection()->commit();
-
         echo json_encode([
             'success' => true,
             'message' => 'Reservation updated successfully'
         ]);
         
     } catch (Exception $e) {
-        $db->getConnection()->rollback();
+        if ($db->getConnection()->inTransaction()) {
+            $db->getConnection()->rollback();
+        }
         throw $e;
     }
     
 } catch (Exception $e) {
+    adminLogException('Update booking failed', $e);
     http_response_code(500);
+    header('Content-Type: application/json; charset=UTF-8');
     echo json_encode([
         'success' => false,
-        'error' => $e->getMessage()
+        'error' => $e instanceof PDOException
+            ? 'Unable to update the reservation. Please try again.'
+            : $e->getMessage()
     ]);
 }
 ?>

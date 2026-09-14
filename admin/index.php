@@ -5,6 +5,7 @@
 
 session_start();
 require_once '../config/database.php';
+require_once __DIR__ . '/includes/security.php';
 
 // Simple admin authentication (in production, use proper authentication)
 if (!isset($_SESSION['admin_logged_in'])) {
@@ -141,31 +142,24 @@ if (isset($_GET['logout'])) {
 $db = getDB();
 
 // This token protects JSON mutations initiated from the User Management modal.
-if (empty($_SESSION['admin_csrf_token'])) {
-    $_SESSION['admin_csrf_token'] = bin2hex(random_bytes(32));
-}
+adminEnsureCsrfToken();
 
 // Add permission checking function
 function hasPermission($permission) {
     global $db;
-    $role = $_SESSION['admin_role'];
-    
-    $check = $db->fetchOne(
-        "SELECT COUNT(*) as has_permission FROM role_permissions 
-         WHERE role_name = ? AND permission_name = ?",
-        [$role, $permission]
-    );
-    
-    return $check['has_permission'] > 0;
+    return adminHasPermission($db, $permission);
 }
 
 // Handle reservation status updates
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_booking'])) {
+    adminRequireCsrf(null, false);
     $bookingId = (int)$_POST['booking_id'];
     $newStatus = $_POST['status'];
 
     $validStatuses = ['pending', 'receipt_submitted', 'payment_pending', 'confirmed', 'completed', 'cancelled'];
-    if (in_array($newStatus, $validStatuses)) {
+    if (!adminHasAnyPermission($db, ['accept_reject_requests', 'update_booking_status'])) {
+        $errorMessage = 'You do not have permission to change reservation statuses.';
+    } elseif (in_array($newStatus, $validStatuses, true)) {
 
         // Check if user has permission to accept/reject requests
         if (hasPermission('accept_reject_requests')) {
@@ -614,14 +608,19 @@ $blockedDates = $db->fetchAll(
                                             <?php if (hasPermission('accept_reject_requests') || hasPermission('update_booking_status')): ?>
                                             <form method="POST" class="status-form">
                                                 <input type="hidden" name="booking_id" value="<?php echo $booking['id']; ?>">
-                                                <select name="status" onchange="this.form.submit()">
+                                                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['admin_csrf_token']); ?>">
+                                                <select name="status" aria-label="Status for reservation <?php echo $booking['id']; ?>">
                                                     <option value="pending" <?php echo $booking['status'] === 'pending' ? 'selected' : ''; ?>>Pending</option>
+                                                    <option value="receipt_submitted" <?php echo $booking['status'] === 'receipt_submitted' ? 'selected' : ''; ?>>Receipt Submitted</option>
                                                     <option value="payment_pending" <?php echo $booking['status'] === 'payment_pending' ? 'selected' : ''; ?>>Payment Pending</option>
                                                     <option value="confirmed" <?php echo $booking['status'] === 'confirmed' ? 'selected' : ''; ?>>Confirmed</option>
                                                     <option value="completed" <?php echo $booking['status'] === 'completed' ? 'selected' : ''; ?>>Completed</option>
                                                     <option value="cancelled" <?php echo $booking['status'] === 'cancelled' ? 'selected' : ''; ?>>Cancelled</option>
                                                 </select>
                                                 <input type="hidden" name="update_booking" value="1">
+                                                <button type="submit" class="btn btn-sm btn-primary" title="Save status" aria-label="Save reservation status">
+                                                    <i class="fas fa-check"></i>
+                                                </button>
                                             </form>
                                             <?php else: ?>
                                                 <!-- Supervisors see status as read-only -->
@@ -2289,7 +2288,8 @@ $blockedDates = $db->fetchAll(
                 body: JSON.stringify({
                     booking_id: bookingId,
                     action: action,
-                    hold_reason: holdReason
+                    hold_reason: holdReason,
+                    csrf_token: window.ADMIN_CSRF_TOKEN || ''
                 })
             })
             .then(response => response.json())

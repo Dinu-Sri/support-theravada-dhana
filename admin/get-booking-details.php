@@ -6,18 +6,14 @@
 
 session_start();
 require_once '../config/database.php';
+require_once __DIR__ . '/includes/security.php';
 
-// Check if admin is logged in
-if (!isset($_SESSION['admin_logged_in'])) {
-    http_response_code(401);
-    echo json_encode(['success' => false, 'error' => 'Unauthorized']);
-    exit;
-}
-
-header('Content-Type: application/json');
+adminRequireLogin(true);
+header('Content-Type: application/json; charset=UTF-8');
 
 try {
     $db = getDB();
+    adminRequirePermission($db, 'view_booking_details', true);
     
     // Get reservation ID
     $bookingId = isset($_GET['id']) ? (int)$_GET['id'] : 0;
@@ -34,14 +30,14 @@ try {
                 agent.email as agent_email, agent.contact_number as agent_contact_number,
                 pr.receipt_filename, pr.verified as receipt_verified,
                 ab.year_start, ab.year_end,
-                holder.first_name as held_by_first_name, holder.last_name as held_by_last_name
+                holder.username AS held_by_name
          FROM bookings b
          JOIN dhana_types dt ON b.dhana_type_id = dt.id
          JOIN users u ON b.user_id = u.id
          LEFT JOIN users agent ON b.booked_by_agent_id = agent.id
          LEFT JOIN payment_receipts pr ON b.id = pr.booking_id
          LEFT JOIN annual_bookings ab ON (b.id = ab.booking_id OR b.parent_booking_id = ab.booking_id)
-         LEFT JOIN users holder ON b.held_by = holder.id
+         LEFT JOIN admin_users holder ON b.held_by = holder.id
          WHERE b.id = ?",
         [$bookingId]
     );
@@ -60,7 +56,7 @@ try {
     // Add hold information
     if ($booking['on_hold']) {
         $booking['hold_info'] = [
-            'held_by_name' => trim(($booking['held_by_first_name'] ?? '') . ' ' . ($booking['held_by_last_name'] ?? '')),
+            'held_by_name' => $booking['held_by_name'] ?? '',
             'held_at' => $booking['held_at'] ?? null,
             'hold_reason' => $booking['hold_reason'] ?? null
         ];
@@ -72,10 +68,12 @@ try {
     ]);
     
 } catch (Exception $e) {
+    adminLogException('Get booking details failed', $e);
     http_response_code(500);
+    header('Content-Type: application/json; charset=UTF-8');
     echo json_encode([
         'success' => false,
-        'error' => $e->getMessage()
+        'error' => 'Unable to load the reservation details. Please try again.'
     ]);
 }
 ?>

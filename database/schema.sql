@@ -640,7 +640,7 @@ ALTER TABLE `bookings`
   ADD CONSTRAINT `bookings_ibfk_5` FOREIGN KEY (`booked_by_agent_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   ADD CONSTRAINT `bookings_ibfk_2` FOREIGN KEY (`dhana_type_id`) REFERENCES `dhana_types` (`id`),
   ADD CONSTRAINT `bookings_ibfk_3` FOREIGN KEY (`parent_booking_id`) REFERENCES `bookings` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `bookings_ibfk_4` FOREIGN KEY (`held_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
+  ADD CONSTRAINT `bookings_held_by_admin_fk` FOREIGN KEY (`held_by`) REFERENCES `admin_users` (`id`) ON DELETE SET NULL;
 
 --
 -- Constraints for table `monthly_pricing`

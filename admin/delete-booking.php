@@ -6,21 +6,22 @@
 
 session_start();
 require_once '../config/database.php';
+require_once __DIR__ . '/includes/security.php';
 
-// Check if admin is logged in
-if (!isset($_SESSION['admin_logged_in'])) {
-    http_response_code(401);
-    echo json_encode(['success' => false, 'error' => 'Unauthorized']);
-    exit;
-}
-
-header('Content-Type: application/json');
+adminRequireLogin(true);
+header('Content-Type: application/json; charset=UTF-8');
 
 try {
     $db = getDB();
     
     // Get JSON input
     $input = json_decode(file_get_contents('php://input'), true);
+    if (!is_array($input)) {
+        adminJsonResponse(['success' => false, 'error' => 'Invalid request body.'], 400);
+    }
+
+    adminRequireCsrf($input, true);
+    adminRequirePermission($db, 'delete_bookings', true);
     $bookingId = isset($input['booking_id']) ? (int)$input['booking_id'] : 0;
     
     if (!$bookingId) {
@@ -89,10 +90,12 @@ try {
     }
     
 } catch (Exception $e) {
+    adminLogException('Delete booking failed', $e);
     http_response_code(500);
+    header('Content-Type: application/json; charset=UTF-8');
     echo json_encode([
         'success' => false,
-        'error' => $e->getMessage()
+        'error' => 'Unable to delete the reservation. Please try again.'
     ]);
 }
 ?>

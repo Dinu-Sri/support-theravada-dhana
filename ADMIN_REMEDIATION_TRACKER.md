@@ -16,20 +16,20 @@ Statuses: `TODO` → `IN PROGRESS` → `FIXED` → `VERIFIED`; use `BLOCKED` onl
 
 - Audit baseline: `293df13`
 - Current phase: Phase 1 — authorization, CSRF, session security, and data integrity
-- Next item: `ADM-001`
+- Next item: continue `ADM-001`/`ADM-002` across remaining mutation endpoints
 - Progress: 0 verified / 69 total
 - Verification constraints: local MySQL was unavailable at audit time; authenticated browser testing requires a working database and an admin account.
 
 ## Phase 1 — Security and data integrity
 
-- [ ] `ADM-001` **P0 Security** — Mutation endpoints do not consistently enforce role permissions. Status: `TODO`. Evidence: permission tests for every mutation endpoint. Commit: —
-- [ ] `ADM-002` **P0 Security** — Most admin mutations have no CSRF protection. Status: `TODO`. Evidence: valid/invalid-token POST and JSON tests. Commit: —
-- [ ] `ADM-003` **P0 Data integrity** — Booking hold stores an admin ID in a donor-user foreign key and joins the wrong table. Status: `TODO`. Evidence: schema/query correction and hold toggle test. Commit: —
+- [ ] `ADM-001` **P0 Security** — Mutation endpoints do not consistently enforce role permissions. Status: `IN PROGRESS` (booking update/delete/hold secured; remaining mutations pending). Evidence: permission tests for every mutation endpoint. Commit: current batch
+- [ ] `ADM-002` **P0 Security** — Most admin mutations have no CSRF protection. Status: `IN PROGRESS` (booking update/delete/hold/status secured; remaining mutations pending). Evidence: valid/invalid-token POST and JSON tests. Commit: current batch
+- [ ] `ADM-003` **P0 Data integrity** — Booking hold stores an admin ID in a donor-user foreign key and joins the wrong table. Status: `FIXED` (dynamic migration/hold test pending). Evidence: schema/query correction and hold toggle test. Commit: current batch
 - [ ] `ADM-004` **P0 Security** — Reservation data reaches HTML/JavaScript without consistent escaping, enabling stored XSS. Status: `TODO`. Evidence: malicious-text rendering test. Commit: —
 - [ ] `ADM-005` **P0 Security** — Pricing notes are injected into inline JavaScript unsafely. Status: `TODO`. Evidence: quote/script payload test. Commit: —
 - [ ] `ADM-006` **P0 Reliability** — Standalone analytics queries a nonexistent `dhana_type` field. Status: `TODO`. Evidence: analytics page and endpoint smoke tests. Commit: —
-- [ ] `ADM-007` **P0 Logic** — Reservation status selector omits `receipt_submitted`. Status: `TODO`. Evidence: all schema statuses rendered and accepted. Commit: —
-- [ ] `ADM-008` **P0 UX/Data integrity** — Changing a status immediately submits with no review or recovery. Status: `TODO`. Evidence: explicit save/confirm flow. Commit: —
+- [ ] `ADM-007` **P0 Logic** — Reservation status selector omits `receipt_submitted`. Status: `FIXED` (browser verification pending). Evidence: all schema statuses rendered and accepted. Commit: current batch
+- [ ] `ADM-008` **P0 UX/Data integrity** — Changing a status immediately submits with no review or recovery. Status: `FIXED` (browser verification pending). Evidence: explicit save/confirm flow. Commit: current batch
 - [ ] `ADM-009` **P0 Data integrity** — Approval processing is incomplete and non-atomic. Status: `TODO`. Evidence: each action type applies transactionally or is rejected. Commit: —
 - [ ] `ADM-010` **P0 Security** — Destructive settings actions are insufficiently protected. Status: `TODO`. Evidence: permission, CSRF, and confirmation tests. Commit: —
 
@@ -43,7 +43,7 @@ Statuses: `TODO` → `IN PROGRESS` → `FIXED` → `VERIFIED`; use `BLOCKED` onl
 - [ ] `ADM-016` **P1 Maintainability** — Booking details rendering is duplicated. Status: `TODO`. Evidence: one implementation and detail-modal regression test. Commit: —
 - [ ] `ADM-017` **P1 Reliability** — Global modal handlers overwrite each other. Status: `TODO`. Evidence: each modal closes independently by button/Escape/backdrop. Commit: —
 - [ ] `ADM-018` **P1 Logic** — Annual-booking edits are inconsistent across parent and child rows. Status: `TODO`. Evidence: parent/child update scenarios. Commit: —
-- [ ] `ADM-019` **P1 Reliability** — Email is sent inside the booking edit transaction. Status: `TODO`. Evidence: DB commit remains correct when mail fails. Commit: —
+- [ ] `ADM-019` **P1 Reliability** — Email is sent inside the booking edit transaction. Status: `FIXED` (failure-path integration test pending). Evidence: DB commit remains correct when mail fails. Commit: current batch
 - [ ] `ADM-020` **P1 Privacy** — Deleting a booking leaves physical receipt files behind. Status: `TODO`. Evidence: safe file cleanup test. Commit: —
 - [ ] `ADM-021` **P1 Auditability** — Booking deletion has no durable audit trail. Status: `TODO`. Evidence: actor, target, time, and before-state recorded. Commit: —
 - [ ] `ADM-022` **P1 Logic** — Admin calendar has a hard 2030 year ceiling. Status: `TODO`. Evidence: settings-driven range boundary tests. Commit: —
@@ -109,3 +109,4 @@ Statuses: `TODO` → `IN PROGRESS` → `FIXED` → `VERIFIED`; use `BLOCKED` onl
 Add dated entries here with command/browser evidence. Never include credentials, uploaded receipts, or production data.
 
 - 2026-09-14 — Tracker created from the audit of baseline `293df13`; no issues marked fixed without verification.
+- 2026-09-14 — Added shared admin security helpers; secured booking update/delete/hold/detail routes; added explicit status save and the missing receipt status; corrected hold ownership schema with a one-time migration; moved update email after commit. PHP lint and the elevated Node syntax check passed.

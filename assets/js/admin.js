@@ -956,6 +956,7 @@ function closeEditBookingModal() {
 function saveBookingChanges() {
     const form = document.getElementById('editBookingForm');
     const formData = new FormData(form);
+    formData.set('csrf_token', window.ADMIN_CSRF_TOKEN || '');
 
     // Show loading state
     const saveBtn = document.querySelector('.modal-footer .btn-primary');
@@ -1047,7 +1048,10 @@ function deleteBooking(bookingId) {
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ booking_id: bookingId })
+        body: JSON.stringify({
+            booking_id: bookingId,
+            csrf_token: window.ADMIN_CSRF_TOKEN || ''
+        })
     })
     .then(response => response.json())
     .then(data => {

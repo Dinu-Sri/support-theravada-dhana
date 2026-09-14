@@ -6,21 +6,22 @@
 
 session_start();
 require_once '../config/database.php';
+require_once __DIR__ . '/includes/security.php';
 
-// Check if admin is logged in
-if (!isset($_SESSION['admin_logged_in'])) {
-    http_response_code(401);
-    echo json_encode(['success' => false, 'error' => 'Unauthorized']);
-    exit;
-}
-
-header('Content-Type: application/json');
+adminRequireLogin(true);
+header('Content-Type: application/json; charset=UTF-8');
 
 try {
     $db = getDB();
     
     // Get POST data
     $input = json_decode(file_get_contents('php://input'), true);
+    if (!is_array($input)) {
+        adminJsonResponse(['success' => false, 'error' => 'Invalid request body.'], 400);
+    }
+
+    adminRequireCsrf($input, true);
+    adminRequirePermission($db, 'update_booking_status', true);
     $bookingId = isset($input['booking_id']) ? (int)$input['booking_id'] : 0;
     $action = isset($input['action']) ? $input['action'] : ''; // 'hold' or 'unhold'
     $holdReason = isset($input['hold_reason']) ? trim($input['hold_reason']) : '';
@@ -90,9 +91,9 @@ try {
     // Get updated booking info
     $updatedBooking = $db->fetchOne(
         "SELECT b.on_hold, b.hold_reason, b.held_at,
-                u.first_name, u.last_name
+                au.username AS held_by_name
          FROM bookings b
-         LEFT JOIN users u ON b.held_by = u.id
+         LEFT JOIN admin_users au ON b.held_by = au.id
          WHERE b.id = ?",
         [$bookingId]
     );
@@ -105,8 +106,8 @@ try {
             'on_hold' => (bool)$updatedBooking['on_hold'],
             'hold_reason' => $updatedBooking['hold_reason'],
             'held_at' => $updatedBooking['held_at'],
-            'held_by_name' => $updatedBooking['on_hold'] 
-                ? trim($updatedBooking['first_name'] . ' ' . $updatedBooking['last_name'])
+            'held_by_name' => $updatedBooking['on_hold']
+                ? $updatedBooking['held_by_name']
                 : null
         ]
     ];
@@ -114,10 +115,11 @@ try {
     echo json_encode($response);
     
 } catch (Exception $e) {
+    adminLogException('Toggle booking hold failed', $e);
     http_response_code(400);
+    header('Content-Type: application/json; charset=UTF-8');
     echo json_encode([
         'success' => false,
-        'error' => $e->getMessage()
+        'error' => 'Unable to update the reservation hold. Please try again.'
     ]);
 }
-
