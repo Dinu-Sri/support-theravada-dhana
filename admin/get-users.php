@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once '../config/database.php';
+header('Content-Type: application/json; charset=UTF-8');
 
 // Check if user is logged in and has proper permissions
 if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_role'] !== 'administrator') {
@@ -10,10 +11,16 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_role'] !== 'adminis
 }
 
 $filter = $_GET['filter'] ?? 'all';
+$allowedFilters = ['all', 'donor', 'agent', 'supervisor', 'editor', 'administrator'];
+if (!in_array($filter, $allowedFilters, true)) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'error' => 'Invalid user filter']);
+    exit;
+}
 
 try {
-    $pdo = new PDO("mysql:host=" . DB_HOST . ";dbname=" . DB_NAME, DB_USER, DB_PASS);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $db = getDB();
+    $pdo = $db->getConnection();
     
     // Check if role_permissions table exists
     $checkTable = $pdo->query("SHOW TABLES LIKE 'role_permissions'");
@@ -54,13 +61,7 @@ try {
 
             echo json_encode([
                 'success' => true,
-                'users' => $users,
-                'debug_info' => [
-                    'total_users' => count($users),
-                    'table_exists' => $tableExists,
-                    'filter' => $filter,
-                    'source_table' => 'combined (users + demoted admins)'
-                ]
+                'users' => $users
             ]);
             exit; // Exit here for donor filter
 
@@ -80,13 +81,7 @@ try {
 
             echo json_encode([
                 'success' => true,
-                'users' => $users,
-                'debug_info' => [
-                    'total_users' => count($users),
-                    'table_exists' => $tableExists,
-                    'filter' => $filter,
-                    'source_table' => 'users'
-                ]
+                'users' => $users
             ]);
             exit;
 
@@ -133,13 +128,7 @@ try {
             
             echo json_encode([
                 'success' => true,
-                'users' => $users,
-                'debug_info' => [
-                    'total_users' => count($users),
-                    'table_exists' => $tableExists,
-                    'filter' => $filter,
-                    'source_table' => 'admin_users'
-                ]
+                'users' => $users
             ]);
             exit; // Exit here for admin role filters
             
@@ -226,24 +215,12 @@ try {
     
     echo json_encode([
         'success' => true,
-        'users' => $users,
-        'debug_info' => [
-            'total_users' => count($users),
-            'table_exists' => $tableExists,
-            'filter' => $filter,
-            'query_type' => $filter === 'all' ? 'combined_tables' : 'users_table_only'
-        ]
+        'users' => $users
     ]);
     
-} catch (PDOException $e) {
+} catch (Throwable $e) {
     http_response_code(500);
-    echo json_encode([
-        'success' => false,
-        'error' => 'Database error: ' . $e->getMessage(),
-        'debug_info' => [
-            'query_type' => $filter === 'all' ? 'combined_tables' : 'users_table_only',
-            'filter' => $filter
-        ]
-    ]);
+    error_log('Unable to load admin users: ' . $e->getMessage());
+    echo json_encode(['success' => false, 'error' => 'Unable to load users. Please try again.']);
 }
 ?>

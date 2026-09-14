@@ -8,15 +8,21 @@ if (!isset($_SESSION['admin_logged_in']) || !$_SESSION['is_super_admin']) {
     exit;
 }
 
+if (empty($_SESSION['admin_csrf_token'])) {
+    $_SESSION['admin_csrf_token'] = bin2hex(random_bytes(32));
+}
+
 // Handle approval/rejection actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!is_string($_POST['csrf_token'] ?? null) || !hash_equals($_SESSION['admin_csrf_token'], $_POST['csrf_token'])) {
+        $errorMessage = 'Your session has expired. Refresh the page and try again.';
+    } else {
     $actionId = $_POST['action_id'] ?? null;
     $decision = $_POST['decision'] ?? null; // 'approve' or 'reject'
     
     if ($actionId && in_array($decision, ['approve', 'reject'])) {
         try {
-            $pdo = new PDO("mysql:host=" . DB_HOST . ";dbname=" . DB_NAME, DB_USER, DB_PASS);
-            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            $pdo = getDB()->getConnection();
             
             $pdo->beginTransaction();
             
@@ -61,17 +67,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $errorMessage = 'Action not found or already processed';
             }
             
-        } catch (Exception $e) {
-            $pdo->rollback();
-            $errorMessage = 'Error processing action: ' . $e->getMessage();
+        } catch (Throwable $e) {
+            if (isset($pdo) && $pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            error_log('Pending approval update failed: ' . $e->getMessage());
+            $errorMessage = 'Unable to process this approval. Please try again.';
         }
+    }
     }
 }
 
 // Get pending actions
 try {
-    $pdo = new PDO("mysql:host=" . DB_HOST . ";dbname=" . DB_NAME, DB_USER, DB_PASS);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $pdo = getDB()->getConnection();
     
     $stmt = $pdo->prepare("
         SELECT aa.*, au.username as admin_username, au.email as admin_email
@@ -83,8 +92,9 @@ try {
     $stmt->execute();
     $pendingActions = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-} catch (PDOException $e) {
-    $errorMessage = 'Database error: ' . $e->getMessage();
+} catch (Throwable $e) {
+    error_log('Unable to load pending approvals: ' . $e->getMessage());
+    $errorMessage = 'Unable to load pending approvals. Please try again.';
     $pendingActions = [];
 }
 ?>
@@ -249,6 +259,7 @@ try {
                                         <form method="POST" style="display: inline;">
                                             <input type="hidden" name="action_id" value="<?php echo $action['id']; ?>">
                                             <input type="hidden" name="decision" value="approve">
+                                            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['admin_csrf_token']); ?>">
                                             <button type="submit" class="btn-approve" onclick="return confirm('Are you sure you want to approve this action?')">
                                                 <i class="fas fa-check"></i> Approve
                                             </button>
@@ -257,6 +268,7 @@ try {
                                         <form method="POST" style="display: inline;">
                                             <input type="hidden" name="action_id" value="<?php echo $action['id']; ?>">
                                             <input type="hidden" name="decision" value="reject">
+                                            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['admin_csrf_token']); ?>">
                                             <button type="submit" class="btn-reject" onclick="return confirm('Are you sure you want to reject this action?')">
                                                 <i class="fas fa-times"></i> Reject
                                             </button>

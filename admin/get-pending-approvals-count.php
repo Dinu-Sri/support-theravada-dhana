@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once '../config/database.php';
+header('Content-Type: application/json; charset=UTF-8');
 
 // Check if user is logged in and is super admin
 if (!isset($_SESSION['admin_logged_in']) || !$_SESSION['is_super_admin']) {
@@ -10,8 +11,7 @@ if (!isset($_SESSION['admin_logged_in']) || !$_SESSION['is_super_admin']) {
 }
 
 try {
-    $pdo = new PDO("mysql:host=" . DB_HOST . ";dbname=" . DB_NAME, DB_USER, DB_PASS);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $pdo = getDB()->getConnection();
     
     $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM admin_actions WHERE status = 'pending'");
     $stmt->execute();
@@ -22,11 +22,9 @@ try {
         'count' => (int)$result['count']
     ]);
     
-} catch (PDOException $e) {
+} catch (Throwable $e) {
     http_response_code(500);
-    echo json_encode([
-        'success' => false,
-        'error' => 'Database error: ' . $e->getMessage()
-    ]);
+    error_log('Unable to load pending approval count: ' . $e->getMessage());
+    echo json_encode(['success' => false, 'error' => 'Unable to load pending approvals.']);
 }
 ?>

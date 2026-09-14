@@ -140,6 +140,11 @@ if (isset($_GET['logout'])) {
 
 $db = getDB();
 
+// This token protects JSON mutations initiated from the User Management modal.
+if (empty($_SESSION['admin_csrf_token'])) {
+    $_SESSION['admin_csrf_token'] = bin2hex(random_bytes(32));
+}
+
 // Add permission checking function
 function hasPermission($permission) {
     global $db;
@@ -399,12 +404,13 @@ $blockedDates = $db->fetchAll(
     <?php include '../includes/favicon.php'; ?>
     <link rel="stylesheet" href="../assets/css/style.css">
     <link rel="stylesheet" href="../assets/css/admin.css?v=<?php echo time(); ?>">
+    <link rel="stylesheet" href="../assets/css/admin-pro-ui.css?v=20260914">
     <link rel="stylesheet" href="../assets/css/analytics.css">
     <link rel="stylesheet" href="../assets/css/supervisor-styles.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body>
+<body class="admin-dashboard">
     <div class="admin-panel">
         <!-- Admin Header -->
         <div class="admin-header">
@@ -931,6 +937,8 @@ $blockedDates = $db->fetchAll(
     </div>
 
     <script>
+        window.ADMIN_CSRF_TOKEN = <?php echo json_encode($_SESSION['admin_csrf_token']); ?>;
+
         // Pass PHP data to JavaScript for calendar functionality
         window.adminCalendarData = {
             currentMonth: <?php echo $currentMonth; ?>,
@@ -951,6 +959,10 @@ $blockedDates = $db->fetchAll(
                 <span class="close" id="closeUserManagement">&times;</span>
             </div>
             <div class="user-management-body">
+                <div class="user-management-guidance" role="note">
+                    <i class="fas fa-circle-info"></i>
+                    <span><strong>Reservation agents</strong> use the normal donor dashboard and may place bookings for other people. Select a donor account, choose <strong>Reservation Agent</strong>, then save the role.</span>
+                </div>
                 <div class="user-controls">
                     <div class="user-filters">
                         <button class="filter-btn active" data-filter="all">All Users</button>
@@ -1121,7 +1133,6 @@ $blockedDates = $db->fetchAll(
                         renderCurrentPage();
                     } else {
                         console.error('Error loading users:', data.error);
-                        console.log('Debug info:', data.debug_info);
                         alert('Error loading users: ' + (data.error || 'Unknown error'));
                     }
                 })
@@ -1165,7 +1176,7 @@ $blockedDates = $db->fetchAll(
                 let permissionsDisplay = '';
                 if (user.permissions && user.permissions.length > 0) {
                     const keyPermissions = user.permissions.slice(0, 3);
-                    permissionsDisplay = keyPermissions.map(p => `<span class="permission-tag">${p}</span>`).join(' ');
+                    permissionsDisplay = keyPermissions.map(p => `<span class="permission-tag">${escapeUserText(p)}</span>`).join(' ');
                     if (user.permissions.length > 3) {
                         permissionsDisplay += ` <span class="permission-more">+${user.permissions.length - 3} more</span>`;
                     }
@@ -1178,21 +1189,22 @@ $blockedDates = $db->fetchAll(
                     ? ['donor', 'agent']
                     : ['donor', 'supervisor', 'editor', 'administrator'];
                 const roleLabels = { donor: 'Donor', agent: 'Reservation Agent', supervisor: 'Supervisor', editor: 'Editor', administrator: 'Administrator' };
+                const safeRole = Object.prototype.hasOwnProperty.call(roleLabels, user.role) ? user.role : 'donor';
                 const roleDropdown = roleOptions.map(role => 
-                    `<option value="${role}" ${user.role === role ? 'selected' : ''}>${roleLabels[role]}</option>`
+                    `<option value="${role}" ${safeRole === role ? 'selected' : ''}>${roleLabels[role]}</option>`
                 ).join('');
 
                 row.innerHTML = `
                     <td><strong>#${user.id}</strong></td>
                     <td>
                         <div class="user-info">
-                            <div class="user-name">${user.first_name} ${user.last_name}</div>
-                            <div class="user-email">${user.email}</div>
+                            <div class="user-name">${escapeUserText(user.first_name)} ${escapeUserText(user.last_name)}</div>
+                            <div class="user-email">${escapeUserText(user.email)}</div>
                         </div>
                     </td>
-                    <td class="user-contact">${user.contact_number}</td>
+                    <td class="user-contact">${escapeUserText(user.contact_number)}</td>
                     <td>
-                        <span class="role-badge role-${user.role}">${roleLabels[user.role] || user.role}</span>
+                        <span class="role-badge role-${safeRole}">${roleLabels[safeRole]}</span>
                     </td>
                     <td class="permissions-cell">
                         ${permissionsDisplay}
@@ -1201,7 +1213,7 @@ $blockedDates = $db->fetchAll(
                         <select class="role-change-select" data-user-id="${user.id}" data-source-table="${user.source_table}" data-current-role="${user.role}">
                             ${roleDropdown}
                         </select>
-                        <button class="btn-change-role" data-user-id="${user.id}" onclick="changeUserRole(${user.id})">
+                        <button class="btn-change-role" type="button" onclick="changeUserRole(this)">
                             <i class="fas fa-save"></i> Update
                         </button>
                     </td>
@@ -1227,6 +1239,12 @@ $blockedDates = $db->fetchAll(
                     }
                 });
             });
+        }
+
+        function escapeUserText(value) {
+            const element = document.createElement('span');
+            element.textContent = value == null ? '' : String(value);
+            return element.innerHTML;
         }
 
         function updatePaginationInfo() {
@@ -1320,8 +1338,13 @@ $blockedDates = $db->fetchAll(
         }
 
         // Change user role
-        function changeUserRole(userId) {
-            const select = document.querySelector(`select[data-user-id="${userId}"]`);
+        function changeUserRole(button) {
+            const select = button.closest('.action-buttons')?.querySelector('.role-change-select');
+            if (!select) {
+                showNotification('Unable to identify this user row. Please refresh and try again.', 'error');
+                return;
+            }
+            const userId = Number(select.dataset.userId);
             const newRole = select.value;
             const currentRole = select.dataset.currentRole;
             const sourceTable = select.dataset.sourceTable;
@@ -1337,7 +1360,6 @@ $blockedDates = $db->fetchAll(
             }
 
             // Show loading state
-            const button = document.querySelector(`[data-user-id="${userId}"].btn-change-role`);
             const originalText = button.innerHTML;
             button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
             button.disabled = true;
@@ -1351,10 +1373,17 @@ $blockedDates = $db->fetchAll(
                 body: JSON.stringify({
                     user_id: userId,
                     new_role: newRole,
-                    source_table: sourceTable
+                    source_table: sourceTable,
+                    csrf_token: window.ADMIN_CSRF_TOKEN
                 }),
             })
-            .then(response => response.json())
+            .then(async response => {
+                const data = await response.json().catch(() => null);
+                if (!response.ok || !data) {
+                    throw new Error(data?.error || `Request failed (${response.status})`);
+                }
+                return data;
+            })
             .then(data => {
                 if (data.success) {
                     // Update the current role in dataset
@@ -1390,7 +1419,7 @@ $blockedDates = $db->fetchAll(
                 button.disabled = false;
                 select.disabled = false;
                 
-                showNotification('An error occurred while changing user role', 'error');
+                showNotification(error.message || 'An error occurred while changing user role', 'error');
             });
         }
 

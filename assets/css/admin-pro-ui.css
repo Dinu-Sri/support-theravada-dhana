@@ -1,0 +1,202 @@
+/* Compact, accessible refinements for the administrator dashboard.
+   Loaded after admin.css so legacy page-specific styling remains intact. */
+.admin-dashboard {
+    background: #f7f4ef;
+    color: #26384a;
+}
+
+.admin-dashboard .admin-nav,
+.admin-dashboard .admin-content {
+    max-width: 1600px;
+}
+
+.admin-dashboard .admin-header {
+    box-shadow: 0 2px 10px rgba(59, 44, 25, .16);
+}
+
+.admin-dashboard .admin-nav {
+    min-height: 64px;
+    gap: 16px;
+}
+
+.admin-dashboard .admin-nav h1 {
+    font-size: clamp(1.15rem, 2vw, 1.55rem);
+}
+
+.admin-dashboard .admin-sidebar {
+    width: 244px;
+    padding: 16px 12px;
+    border-radius: 14px;
+    box-shadow: 0 10px 24px rgba(47, 36, 23, .08);
+}
+
+.admin-dashboard .sidebar-link {
+    min-height: 42px;
+    padding: 10px 12px;
+    border-radius: 9px;
+}
+
+.admin-dashboard .admin-main {
+    min-width: 0;
+}
+
+.admin-dashboard .dashboard-header {
+    margin-bottom: 18px;
+}
+
+.admin-dashboard .dashboard-header h2 {
+    font-size: clamp(1.35rem, 2.2vw, 1.85rem);
+}
+
+.admin-dashboard .stats-grid {
+    gap: 14px;
+    margin-bottom: 18px;
+}
+
+.admin-dashboard .stat-card {
+    min-height: 108px;
+    padding: 16px;
+    border-radius: 12px;
+    box-shadow: 0 7px 18px rgba(56, 40, 20, .08);
+}
+
+.admin-dashboard .card,
+.admin-dashboard .calendar-section,
+.admin-dashboard .quick-actions {
+    border-radius: 12px;
+    box-shadow: 0 7px 18px rgba(56, 40, 20, .07);
+}
+
+.user-management-modal {
+    padding: 20px;
+    background: rgba(27, 32, 38, .58);
+    overflow-y: auto;
+}
+
+.user-management-content {
+    width: min(1240px, 100%);
+    max-height: calc(100dvh - 40px);
+    margin: 0 auto;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 22px 60px rgba(0, 0, 0, .32);
+}
+
+.user-management-header {
+    min-height: 64px;
+    padding: 16px 20px;
+}
+
+.user-management-header h3 {
+    font-size: 1.15rem;
+}
+
+.user-management-header .close {
+    display: grid;
+    width: 34px;
+    height: 34px;
+    place-items: center;
+    border: 1px solid rgba(255,255,255,.48);
+    border-radius: 8px;
+    color: #fff;
+    line-height: 1;
+}
+
+.user-management-header .close:hover,
+.user-management-header .close:focus {
+    background: rgba(255,255,255,.18);
+}
+
+.user-management-body {
+    padding: 18px 20px 20px;
+    overflow-y: auto;
+}
+
+.user-management-guidance {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    margin-bottom: 14px;
+    padding: 11px 13px;
+    border: 1px solid #f1d2a8;
+    border-left: 4px solid #d4822a;
+    border-radius: 9px;
+    background: #fff9f0;
+    color: #61431d;
+    font-size: .9rem;
+    line-height: 1.45;
+}
+
+.user-management-guidance i {
+    margin-top: 3px;
+    color: #b8860b;
+}
+
+.user-controls {
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.user-filters {
+    gap: 7px;
+}
+
+.filter-btn {
+    min-height: 36px;
+    padding: 7px 11px;
+    border-radius: 8px;
+    font-size: .84rem;
+}
+
+.users-table-container {
+    border-radius: 10px;
+    overflow-x: auto;
+}
+
+.users-table {
+    min-width: 860px;
+}
+
+.users-table th {
+    padding: 11px 12px;
+    font-size: .77rem;
+    letter-spacing: .03em;
+}
+
+.users-table td {
+    padding: 10px 12px;
+}
+
+.users-table tbody tr:hover {
+    transform: none;
+}
+
+.role-change-select,
+.btn-change-role {
+    min-height: 36px;
+    border-radius: 7px;
+}
+
+.btn-change-role {
+    white-space: nowrap;
+}
+
+.pagination-container {
+    gap: 10px;
+    padding: 12px;
+}
+
+@media (max-width: 1024px) {
+    .admin-dashboard .admin-sidebar { width: 100%; }
+    .user-management-modal { padding: 10px; }
+    .user-management-content { max-height: calc(100dvh - 20px); }
+}
+
+@media (max-width: 640px) {
+    .user-management-header,
+    .user-management-body { padding-left: 14px; padding-right: 14px; }
+    .user-management-guidance { font-size: .84rem; }
+    .user-filters { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 3px; }
+    .filter-btn { flex: 0 0 auto; }
+    .pagination-container { align-items: flex-start; flex-direction: column; }
+}

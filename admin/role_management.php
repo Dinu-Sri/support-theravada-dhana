@@ -15,11 +15,22 @@ if (!isset($_SESSION['admin_logged_in'])) {
 
 $db = getDB();
 
+if (empty($_SESSION['admin_csrf_token'])) {
+    $_SESSION['admin_csrf_token'] = bin2hex(random_bytes(32));
+}
+
 // Get current admin info with new role system
 $currentAdmin = $db->fetchOne(
     "SELECT * FROM admin_users WHERE id = ?",
     [$_SESSION['admin_id']]
 );
+
+if (!$currentAdmin || empty($currentAdmin['is_active'])) {
+    session_unset();
+    session_destroy();
+    header('Location: index.php');
+    exit;
+}
 
 // Update session with new role system
 $_SESSION['admin_role'] = $currentAdmin['role'];
@@ -46,17 +57,21 @@ $message = '';
 $messageType = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!is_string($_POST['csrf_token'] ?? null) || !hash_equals($_SESSION['admin_csrf_token'], $_POST['csrf_token'])) {
+        $message = 'Your session has expired. Refresh the page and try again.';
+        $messageType = 'error';
+    } else {
     
     // Change user role
     if (isset($_POST['change_role']) && hasPermission('manage_users')) {
-        $userId = $_POST['user_id'];
-        $newRole = $_POST['new_role'];
-        $userType = $_POST['user_type']; // 'admin' or 'regular'
+        $userId = (int)($_POST['user_id'] ?? 0);
+        $newRole = $_POST['new_role'] ?? '';
+        $userType = $_POST['user_type'] ?? '';
 
         $allowedRoles = $userType === 'admin'
             ? ['donor', 'supervisor', 'editor', 'administrator']
             : ['donor', 'agent'];
-        if (!in_array($newRole, $allowedRoles, true)) {
+        if ($userId < 1 || !in_array($userType, ['admin', 'regular'], true) || !in_array($newRole, $allowedRoles, true)) {
             $message = 'That role is not available for this account type.';
             $messageType = 'error';
             $newRole = null;
@@ -64,6 +79,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         try {
             if ($newRole === null) throw new RuntimeException($message);
+            if ($newRole === 'agent') {
+                $roleColumn = $db->fetchOne("SHOW COLUMNS FROM users LIKE 'role'");
+                if (!$roleColumn || strpos((string)$roleColumn['Type'], "'agent'") === false) {
+                    throw new RuntimeException('Reservation agents require the database migration. Run database/migrations/2026-09-14-agent-reservations.sql once in phpMyAdmin.');
+                }
+            }
             if ($userType === 'admin') {
                 // Update admin_users table
                 $db->query(
@@ -79,7 +100,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 );
                 
             } else {
-                $oldRole = $db->fetchOne("SELECT role FROM users WHERE id = ?", [$userId])['role'] ?? 'donor';
+                $existingUser = $db->fetchOne("SELECT role FROM users WHERE id = ?", [$userId]);
+                if (!$existingUser) {
+                    throw new RuntimeException('The selected user no longer exists. Refresh the page and try again.');
+                }
+                $oldRole = $existingUser['role'] ?? 'donor';
                 // Update users table
                 $db->query(
                     "UPDATE users SET role = ? WHERE id = ?",
@@ -97,18 +122,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message = "Role updated successfully!";
             $messageType = "success";
             
-        } catch (Exception $e) {
-            $message = "Error updating role: " . $e->getMessage();
+        } catch (Throwable $e) {
+            error_log('Role management update failed: ' . $e->getMessage());
+            $message = $e instanceof RuntimeException ? $e->getMessage() : 'Unable to update the role. Please try again.';
             $messageType = "error";
         }
     }
     
     // Approve/reject pending actions
     if (isset($_POST['action_decision']) && hasPermission('super_admin_approval')) {
-        $actionId = $_POST['action_id'];
-        $decision = $_POST['decision']; // 'approve' or 'reject'
+        $actionId = (int)($_POST['action_id'] ?? 0);
+        $decision = $_POST['decision'] ?? ''; // 'approve' or 'reject'
+        if ($actionId < 1 || !in_array($decision, ['approve', 'reject'], true)) {
+            $message = 'Invalid approval request.';
+            $messageType = 'error';
+            $decision = null;
+        }
         
         try {
+            if ($decision === null) throw new RuntimeException($message);
             $status = ($decision === 'approve') ? 'approved' : 'rejected';
             
             $db->query(
@@ -134,10 +166,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message = "Action " . $decision . "d successfully!";
             $messageType = "success";
             
-        } catch (Exception $e) {
-            $message = "Error processing action: " . $e->getMessage();
+        } catch (Throwable $e) {
+            error_log('Role management approval failed: ' . $e->getMessage());
+            $message = 'Unable to process this approval. Please try again.';
             $messageType = "error";
         }
+    }
     }
 }
 
@@ -150,12 +184,12 @@ $adminUsers = $db->fetchAll("
     ORDER BY rh.hierarchy_level DESC, au.username
 ");
 
-// Get regular users with elevated roles
+// Reservation agents are normal donor accounts that may book on behalf of others.
 $elevatedUsers = $db->fetchAll("
     SELECT u.*, rh.role_display_name, rh.hierarchy_level
     FROM users u
     LEFT JOIN role_hierarchy rh ON u.role = rh.role_name
-    WHERE u.role IS NOT NULL AND u.role != 'donor' AND u.is_active = 1
+    WHERE u.role = 'agent' AND u.is_active = 1
     ORDER BY rh.hierarchy_level DESC, u.first_name, u.last_name
 ");
 
@@ -299,6 +333,11 @@ $roleHierarchy = $db->fetchAll("
             <a href="index.php" class="btn btn-primary"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
         </div>
 
+        <div class="role-card" style="border-left: 4px solid #d4822a;">
+            <h3><i class="fas fa-user-friends"></i> Assigning reservation agents</h3>
+            <p>Use <strong>User Management</strong> on the dashboard to find a donor, select <strong>Reservation Agent</strong>, and save. Agents are donor-dashboard users who may place reservations for other people; they are not staff administrators.</p>
+        </div>
+
         <?php if ($message): ?>
             <div class="message <?php echo $messageType; ?>">
                 <i class="fas fa-<?php echo $messageType === 'success' ? 'check-circle' : 'exclamation-circle'; ?>"></i>
@@ -333,18 +372,16 @@ $roleHierarchy = $db->fetchAll("
         <div class="stats-grid">
             <?php
             $roleStats = $db->fetchAll("
-                SELECT 
-                    COALESCE(au.role, u.role) as role,
+                SELECT
+                    combined.role,
                     COUNT(*) as count,
                     rh.role_display_name,
                     rh.hierarchy_level
                 FROM (
                     SELECT role FROM admin_users WHERE is_active = 1
                     UNION ALL
-                    SELECT role FROM users WHERE role IS NOT NULL AND role != 'donor' AND is_active = 1
+                    SELECT role FROM users WHERE role = 'agent' AND is_active = 1
                 ) combined
-                LEFT JOIN admin_users au ON combined.role = au.role
-                LEFT JOIN users u ON combined.role = u.role
                 LEFT JOIN role_hierarchy rh ON combined.role = rh.role_name
                 GROUP BY combined.role, rh.role_display_name, rh.hierarchy_level
                 ORDER BY rh.hierarchy_level DESC
@@ -383,6 +420,7 @@ $roleHierarchy = $db->fetchAll("
                                 <td class="action-buttons">
                                     <form method="POST" style="display: inline;">
                                         <input type="hidden" name="action_id" value="<?php echo $action['id']; ?>">
+                                        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['admin_csrf_token']); ?>">
                                         <button type="submit" name="action_decision" value="approve" class="btn btn-success">
                                             <i class="fas fa-check"></i> Approve
                                         </button>
@@ -428,6 +466,7 @@ $roleHierarchy = $db->fetchAll("
                                         <form method="POST" style="display: inline;">
                                             <input type="hidden" name="user_id" value="<?php echo $user['id']; ?>">
                                             <input type="hidden" name="user_type" value="admin">
+                                            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['admin_csrf_token']); ?>">
                                             <select name="new_role" onchange="this.form.submit()">
                                                 <option value="">Change Role...</option>
                                                 <?php foreach ($roleHierarchy as $role): ?>
@@ -475,9 +514,10 @@ $roleHierarchy = $db->fetchAll("
                                     </span>
                                 </td>
                                 <td>
-                                    <form method="POST" style="display: inline;">
-                                        <input type="hidden" name="user_id" value="<?php echo $user['id']; ?>">
-                                        <input type="hidden" name="user_type" value="regular">
+                                        <form method="POST" style="display: inline;">
+                                            <input type="hidden" name="user_id" value="<?php echo $user['id']; ?>">
+                                            <input type="hidden" name="user_type" value="regular">
+                                            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['admin_csrf_token']); ?>">
                                         <select name="new_role" onchange="this.form.submit()">
                                             <option value="">Change Role...</option>
                                             <option value="donor">Demote to Donor</option>
