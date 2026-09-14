@@ -242,6 +242,11 @@ This is an automated email. Please do not reply to this message.
         $timeSlot = ucfirst(str_replace('_', ' ', $bookingData['time_slot']));
         $amount = number_format($bookingData['amount'], 2);
         $paymentLink = SITE_URL . '/payment.php?booking_id=' . $bookingId;
+        $bookedForName = trim((string)($bookingData['booked_for_name'] ?? ''));
+        $recipientRowHtml = $bookedForName !== ''
+            ? "<div class='detail-row'><span class='detail-label'>Reservation Recipient:</span><span class='detail-value'>" . htmlspecialchars($bookedForName, ENT_QUOTES, 'UTF-8') . "</span></div>"
+            : '';
+        $recipientRowText = $bookedForName !== '' ? "- Reservation Recipient: {$bookedForName}\n" : '';
 
         // Get timeout hours for the warning message
         $db = getDB();
@@ -285,6 +290,7 @@ This is an automated email. Please do not reply to this message.
                             <span class='detail-label'>Booking ID:</span>
                             <span class='detail-value'>#{$bookingId}</span>
                         </div>
+                        {$recipientRowHtml}
                         <div class='detail-row'>
                             <span class='detail-label'>Dhana Type:</span>
                             <span class='detail-value'>{$dhanaType}</span>
@@ -341,7 +347,7 @@ Thank you for making a dhana offering! Your booking has been created successfull
 
 BOOKING DETAILS:
 - Booking ID: #{$bookingId}
-- Dhana Type: {$dhanaType}
+{$recipientRowText}- Dhana Type: {$dhanaType}
 - Date: {$bookingDate}
 - Time Slot: {$timeSlot}
 - Amount: LKR {$amount}

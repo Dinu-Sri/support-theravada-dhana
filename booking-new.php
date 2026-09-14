@@ -8,6 +8,11 @@ requireLogin();
 $auth = getAuth();
 $user = $auth->getCurrentUser();
 $db = getDB();
+$isReservationAgent = (($user['role'] ?? 'donor') === 'agent');
+$bookingForOther = $isReservationAgent && (($_GET['for'] ?? '') === 'other');
+$totalBookingSteps = $bookingForOther ? 5 : 4;
+$additionalInfoStep = $bookingForOther ? 4 : 3;
+$reviewStep = $bookingForOther ? 5 : 4;
 
 // Only types that can actually be reserved are presented to donors.
 $dhanaTypes = $db->fetchAll("SELECT * FROM dhana_types WHERE is_active = 1 AND price > 0 ORDER BY price DESC");
@@ -45,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
     <link rel="stylesheet" href="assets/css/booking-steps.css?v=20260913">
     <link rel="stylesheet" href="assets/css/review-enhancements.css?v=20260913">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="assets/css/pro-ui.css?v=20260915">
+    <link rel="stylesheet" href="assets/css/pro-ui.css?v=20260916">
     <style>
         .review-navigation .btn:first-child {
             margin-right: auto !important;
@@ -748,44 +753,75 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
             font-weight: 500 !important;
         }
 
-        /* FINAL OVERRIDE: Force step 3 elements to use full width like step 2 - ONLY WHEN ACTIVE */
-        .step-form .form-step.active[data-step="3"] .additional-info-section {
-            max-width: none !important;
+        /* Compact the option step into one desktop screen: choices side-by-side,
+           concise notes below, and navigation immediately after the fields. */
+        .step-form .form-step.additional-info-step.active {
+            display: block !important;
+            min-height: 0 !important;
+        }
+
+        .step-form .form-step.additional-info-step .additional-info-section {
             width: 100% !important;
             margin: 0 !important;
-            display: block !important;
-            flex-direction: unset !important;
-            justify-content: unset !important;
-            align-items: unset !important;
-            flex-grow: unset !important;
-            gap: unset !important;
+            display: grid !important;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px 16px !important;
+            align-items: stretch;
         }
 
-        .step-form .form-step.active[data-step="3"] .toggle-group {
-            max-width: none !important;
+        .step-form .form-step.additional-info-step .toggle-group {
             width: 100% !important;
-            margin-left: 0 !important;
-            margin-right: 0 !important;
-            margin-bottom: 30px !important;
+            min-height: 118px !important;
+            margin: 0 !important;
+            padding: 18px 20px !important;
         }
 
-        .step-form .form-step.active[data-step="3"] .special-requests-group {
-            max-width: none !important;
+        .step-form .form-step.additional-info-step .toggle-content h4 {
+            margin-bottom: 5px !important;
+            font-size: 1.05rem;
+        }
+
+        .step-form .form-step.additional-info-step .toggle-content p {
+            font-size: .88rem;
+            line-height: 1.4;
+        }
+
+        .step-form .form-step.additional-info-step .special-requests-group {
+            grid-column: 1 / -1;
             width: 100% !important;
-            margin-left: 0 !important;
-            margin-right: 0 !important;
+            margin: 0 !important;
         }
 
-        .step-form .form-step.active[data-step="3"] {
-            display: block !important;
-            flex-direction: unset !important;
-            justify-content: unset !important;
-            min-height: unset !important;
+        .step-form .form-step.additional-info-step .special-requests-group textarea {
+            min-height: 78px;
+            max-height: 92px;
+            resize: vertical;
         }
 
-        /* Ensure inactive step 3 remains hidden */
-        .step-form .form-step[data-step="3"]:not(.active) {
-            display: none !important;
+        .step-form .form-navigation {
+            margin-top: 18px !important;
+            padding-top: 16px !important;
+        }
+
+        .beneficiary-form-card {
+            max-width: 850px;
+            margin: 0 auto;
+            padding: 24px;
+            border: 1px solid #ead7a6;
+            border-radius: 14px;
+            background: #fffaf0;
+        }
+        .beneficiary-form-card > p { margin: 0 0 18px; color: #5d5144; }
+        .beneficiary-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 18px; }
+        .beneficiary-fields .form-group { margin: 0; }
+        .beneficiary-fields .full-width { grid-column: 1 / -1; }
+
+        @media (max-width: 720px) {
+            .step-form .form-step.additional-info-step .additional-info-section,
+            .beneficiary-fields { grid-template-columns: 1fr; }
+            .step-form .form-step.additional-info-step .special-requests-group,
+            .beneficiary-fields .full-width { grid-column: auto; }
+            .step-form .form-step.additional-info-step .toggle-group { min-height: 0 !important; }
         }
     </style>
 </head>
@@ -815,12 +851,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
                         <div class="step-number">2</div>
                         <div class="step-label">Date & Time</div>
                     </div>
+                    <?php if ($bookingForOther): ?>
                     <div class="step-indicator" data-step="3">
                         <div class="step-number">3</div>
+                        <div class="step-label">Person Details</div>
+                    </div>
+                    <?php endif; ?>
+                    <div class="step-indicator" data-step="<?php echo $additionalInfoStep; ?>">
+                        <div class="step-number"><?php echo $additionalInfoStep; ?></div>
                         <div class="step-label">Additional Info</div>
                     </div>
-                    <div class="step-indicator" data-step="4">
-                        <div class="step-number">4</div>
+                    <div class="step-indicator" data-step="<?php echo $reviewStep; ?>">
+                        <div class="step-number"><?php echo $reviewStep; ?></div>
                         <div class="step-label">Review & Submit</div>
                     </div>
                 </div>
@@ -839,9 +881,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
             <?php endif; ?>
 
             <!-- Reservation Form -->
-            <form id="bookingForm" method="POST" class="step-form">
+            <form id="bookingForm" method="POST" class="step-form" data-total-steps="<?php echo $totalBookingSteps; ?>" data-booking-mode="<?php echo $bookingForOther ? 'agent-other' : 'self'; ?>">
                 <?php echo csrfInput(); ?>
                 <input type="hidden" name="submit_booking" value="1">
+                <?php if ($bookingForOther): ?>
+                    <input type="hidden" name="book_for_other" value="1">
+                <?php endif; ?>
                 
                 <!-- Step 1: Dhana Type Selection -->
                 <div class="form-step active" data-step="1">
@@ -930,10 +975,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
                     </div>
                 </div>
 
-                <!-- Step 3: Additional Information -->
-                <div class="form-step" data-step="3">
+                <?php if ($bookingForOther): ?>
+                <!-- Step 3: the person receiving the reservation. Agents retain ownership and payment access. -->
+                <div class="form-step beneficiary-step" data-step="3">
                     <div class="step-header">
-                        <h3><i class="fas fa-info-circle"></i> Step 3: Additional Information</h3>
+                        <h3><i class="fas fa-user-friends"></i> Step 3: Reservation for Another Person</h3>
+                        <p>Enter the details of the person for whom you are arranging this dāna reservation.</p>
+                    </div>
+                    <div class="beneficiary-form-card">
+                        <p><i class="fas fa-shield-alt"></i> You remain the booking agent and payment contact. These details identify the reservation recipient for the monastery.</p>
+                        <div class="beneficiary-fields">
+                            <div class="form-group">
+                                <label for="booked_for_first_name">Recipient First Name</label>
+                                <input type="text" id="booked_for_first_name" name="booked_for_first_name" maxlength="50" autocomplete="off" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="booked_for_last_name">Recipient Last Name</label>
+                                <input type="text" id="booked_for_last_name" name="booked_for_last_name" maxlength="50" autocomplete="off" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="booked_for_primary_contact">Primary Mobile Number</label>
+                                <input type="tel" id="booked_for_primary_contact" name="booked_for_primary_contact" maxlength="20" inputmode="tel" autocomplete="tel" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="booked_for_secondary_contact">Second Mobile Number <small>(optional)</small></label>
+                                <input type="tel" id="booked_for_secondary_contact" name="booked_for_secondary_contact" maxlength="20" inputmode="tel" autocomplete="tel">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <?php endif; ?>
+
+                <!-- Additional Information -->
+                <div class="form-step additional-info-step" data-step="<?php echo $additionalInfoStep; ?>">
+                    <div class="step-header">
+                        <h3><i class="fas fa-info-circle"></i> Step <?php echo $additionalInfoStep; ?>: Additional Information</h3>
                         <p>Please provide additional details about your reservation</p>
                     </div>
 
@@ -996,16 +1072,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
                     </div>
                 </div>
 
-                <!-- Step 4: Review & Submit -->
-                <div class="form-step" data-step="4">
+                <!-- Review & Submit -->
+                <div class="form-step review-step" data-step="<?php echo $reviewStep; ?>">
                     <div class="step-header">
-                        <h3><i class="fas fa-check-circle"></i> Step 4: Review & Submit</h3>
+                        <h3><i class="fas fa-check-circle"></i> Step <?php echo $reviewStep; ?>: Review & Submit</h3>
                         <p>Please review your reservation details before submitting</p>
                     </div>
 
                     <div class="booking-review">
+                        <?php if ($bookingForOther): ?>
+                        <div class="review-section beneficiary-review-section">
+                            <h4><i class="fas fa-user-friends"></i> Reservation Recipient</h4>
+                            <div class="review-item">
+                                <span class="label">Full Name</span>
+                                <span class="value" id="review-beneficiary-name">Not provided</span>
+                            </div>
+                            <div class="review-item">
+                                <span class="label">Primary Mobile</span>
+                                <span class="value" id="review-beneficiary-primary-contact">Not provided</span>
+                            </div>
+                            <div class="review-item">
+                                <span class="label">Second Mobile</span>
+                                <span class="value" id="review-beneficiary-secondary-contact">Not provided</span>
+                            </div>
+                        </div>
+                        <?php endif; ?>
                         <div class="review-section donor-info-section">
-                            <h4><i class="fas fa-user-circle"></i> Donor Information</h4>
+                            <h4><i class="fas fa-user-circle"></i> <?php echo $bookingForOther ? 'Agent Information' : 'Donor Information'; ?></h4>
                             <div class="review-item">
                                 <span class="label">Full Name</span>
                                 <span class="value"><?php echo htmlspecialchars($user['first_name'] . ' ' . $user['last_name']); ?></span>
@@ -1090,6 +1183,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
         // Essential data for booking-steps.js
         const dhanaTypes = <?php echo json_encode($dhanaTypes, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
         window.BOOKING_MAX_DATE = '<?php echo $maxBookingDate->format('Y-m-d'); ?>';
+        window.BOOKING_FLOW = {
+            isAgentBooking: <?php echo $bookingForOther ? 'true' : 'false'; ?>,
+            totalSteps: <?php echo $totalBookingSteps; ?>,
+            additionalInfoStep: <?php echo $additionalInfoStep; ?>,
+            reviewStep: <?php echo $reviewStep; ?>
+        };
         const userId = <?php echo $user['id']; ?>;
         
         // Forcibly hide any debug or fallback elements
@@ -1575,6 +1674,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
             }
         });
     </script>
-    <script src="assets/js/booking-steps.js?v=20260913"></script>
+    <script src="assets/js/booking-steps.js?v=20260916"></script>
 </body>
 </html>

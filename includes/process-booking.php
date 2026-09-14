@@ -10,6 +10,13 @@ function processBookingSubmission($db, $user, $post) {
     $specialRequests = trim($post['special_requests'] ?? '');
     $travelSupport = isset($post['travel_support']) ? 1 : 0;
     $isAnnualEvent = isset($post['is_annual_event']) ? 1 : 0;
+    $isAgentBooking = (($user['role'] ?? 'donor') === 'agent') && (($post['book_for_other'] ?? '') === '1');
+    $beneficiary = [
+        'first_name' => trim((string)($post['booked_for_first_name'] ?? '')),
+        'last_name' => trim((string)($post['booked_for_last_name'] ?? '')),
+        'primary_contact' => trim((string)($post['booked_for_primary_contact'] ?? '')),
+        'secondary_contact' => trim((string)($post['booked_for_secondary_contact'] ?? '')),
+    ];
 
     if (!verifyCsrfToken($post['csrf_token'] ?? null)) $errors[] = 'Your session expired. Please refresh and try again.';
     $dhanaType = getBookableDhanaType($db, $dhanaTypeId);
@@ -26,6 +33,21 @@ function processBookingSubmission($db, $user, $post) {
         $errors[] = 'The selected time slot does not match the dāna type.';
     }
     if (mb_strlen($specialRequests) > 2000) $errors[] = 'Special requests must be 2,000 characters or fewer.';
+    if ($isAgentBooking) {
+        if (mb_strlen($beneficiary['first_name']) < 2 || mb_strlen($beneficiary['first_name']) > 50) {
+            $errors[] = 'The reservation recipient’s first name must be between 2 and 50 characters.';
+        }
+        if (mb_strlen($beneficiary['last_name']) < 2 || mb_strlen($beneficiary['last_name']) > 50) {
+            $errors[] = 'The reservation recipient’s last name must be between 2 and 50 characters.';
+        }
+        foreach (['primary_contact' => 'primary', 'secondary_contact' => 'secondary'] as $field => $label) {
+            $number = $beneficiary[$field];
+            if ($label === 'secondary' && $number === '') continue;
+            if (!preg_match('/^[0-9+()\\-\\s]{5,20}$/', $number)) {
+                $errors[] = 'Please enter a valid ' . $label . ' mobile number for the reservation recipient.';
+            }
+        }
+    }
     if ($errors) return ['success' => false, 'errors' => array_values(array_unique($errors))];
 
     $connection = $db->getConnection();
@@ -63,9 +85,18 @@ function processBookingSubmission($db, $user, $post) {
             $pricing = getEffectiveBookingPrice($db, $dhanaType, $instance['object']);
             if ($pricing['price'] <= 0) throw new RuntimeException('Pricing is not available for this reservation.');
             $db->query(
-                "INSERT INTO bookings (user_id, dhana_type_id, booking_date, booking_time_slot, special_requests, travel_support, is_annual_event, is_monk, total_amount, is_price_tentative, status, parent_booking_id)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)",
-                [$user['id'], $dhanaTypeId, $instance['date'], $timeSlot, $specialRequests, $travelSupport, $isAnnualEvent, (int)($user['is_monk'] ?? 0), $pricing['price'], $pricing['is_tentative'] ? 1 : 0, $parentId]
+                "INSERT INTO bookings (user_id, booked_by_agent_id, booked_for_first_name, booked_for_last_name, booked_for_primary_contact, booked_for_secondary_contact, dhana_type_id, booking_date, booking_time_slot, special_requests, travel_support, is_annual_event, is_monk, total_amount, is_price_tentative, status, parent_booking_id)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)",
+                [
+                    $user['id'],
+                    $isAgentBooking ? $user['id'] : null,
+                    $isAgentBooking ? $beneficiary['first_name'] : null,
+                    $isAgentBooking ? $beneficiary['last_name'] : null,
+                    $isAgentBooking ? $beneficiary['primary_contact'] : null,
+                    $isAgentBooking && $beneficiary['secondary_contact'] !== '' ? $beneficiary['secondary_contact'] : null,
+                    $dhanaTypeId, $instance['date'], $timeSlot, $specialRequests, $travelSupport, $isAnnualEvent,
+                    (int)($user['is_monk'] ?? 0), $pricing['price'], $pricing['is_tentative'] ? 1 : 0, $parentId
+                ]
             );
             if ($index === 0) {
                 $parentId = $db->lastInsertId();
@@ -88,7 +119,8 @@ function processBookingSubmission($db, $user, $post) {
                 'user_email' => $user['email'], 'user_name' => $user['first_name'] . ' ' . $user['last_name'],
                 'booking_id' => $parentId, 'dhana_type' => $dhanaType['name'], 'booking_date' => $reservationDate,
                 'time_slot' => $timeSlot, 'amount' => $firstPricing['price'],
-                'is_price_tentative' => $firstPricing['is_tentative'] ? 1 : 0
+                'is_price_tentative' => $firstPricing['is_tentative'] ? 1 : 0,
+                'booked_for_name' => $isAgentBooking ? trim($beneficiary['first_name'] . ' ' . $beneficiary['last_name']) : null
             ]);
         } catch (Throwable $emailError) {
             error_log('Booking email error: ' . $emailError->getMessage());

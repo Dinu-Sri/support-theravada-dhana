@@ -16,7 +16,7 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_role'] !== 'adminis
 // Get JSON input
 $input = json_decode(file_get_contents('php://input'), true);
 
-if (!isset($input['user_id']) || !isset($input['new_role'])) {
+if (!isset($input['user_id']) || !isset($input['new_role']) || !isset($input['source_table'])) {
     http_response_code(400);
     echo json_encode(['success' => false, 'error' => 'Missing required parameters']);
     exit;
@@ -24,9 +24,19 @@ if (!isset($input['user_id']) || !isset($input['new_role'])) {
 
 $userId = (int)$input['user_id'];
 $newRole = $input['new_role'];
+$sourceTable = $input['source_table'];
 
 // Validate role
-if (!in_array($newRole, ['donor', 'supervisor', 'editor', 'administrator'])) {
+if (!in_array($sourceTable, ['users', 'admin_users'], true)) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'error' => 'Invalid account type']);
+    exit;
+}
+
+$allowedRoles = $sourceTable === 'users'
+    ? ['donor', 'agent']
+    : ['donor', 'supervisor', 'editor', 'administrator'];
+if (!in_array($newRole, $allowedRoles, true)) {
     http_response_code(400);
     echo json_encode(['success' => false, 'error' => 'Invalid role']);
     exit;
@@ -37,15 +47,17 @@ try {
     $pdo = new PDO("mysql:host=" . DB_HOST . ";dbname=" . DB_NAME, DB_USER, DB_PASS);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-    // First, try to find user in users table
-    $stmt = $pdo->prepare("SELECT id, email, role, first_name, last_name FROM users WHERE id = ?");
-    $stmt->execute([$userId]);
-    $regularUser = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    // Then try to find user in admin_users table  
-    $stmt = $pdo->prepare("SELECT id, email, role, username FROM admin_users WHERE id = ?");
-    $stmt->execute([$userId]);
-    $adminUser = $stmt->fetch(PDO::FETCH_ASSOC);
+    $regularUser = null;
+    $adminUser = null;
+    if ($sourceTable === 'users') {
+        $stmt = $pdo->prepare("SELECT id, email, role, first_name, last_name FROM users WHERE id = ?");
+        $stmt->execute([$userId]);
+        $regularUser = $stmt->fetch(PDO::FETCH_ASSOC);
+    } else {
+        $stmt = $pdo->prepare("SELECT id, email, role, username FROM admin_users WHERE id = ?");
+        $stmt->execute([$userId]);
+        $adminUser = $stmt->fetch(PDO::FETCH_ASSOC);
+    }
 
     if (!$regularUser && !$adminUser) {
         throw new Exception('User not found in either users or admin_users table');
@@ -58,14 +70,14 @@ try {
     $userEmail = $currentUser['email'];
     
     // Determine if new role requires admin_users table
-    $newRoleRequiresAdminTable = in_array($newRole, ['supervisor', 'editor', 'administrator']);
+    $newRoleRequiresAdminTable = in_array($newRole, ['supervisor', 'editor', 'administrator'], true);
 
     $pdo->beginTransaction();
 
     if ($isCurrentlyAdmin && $newRoleRequiresAdminTable) {
         // User is admin and staying admin - just update role in admin_users
         $stmt = $pdo->prepare("UPDATE admin_users SET role = ? WHERE id = ?");
-        $stmt->execute([$newRole, $userId]);
+        $stmt->execute([$newRole === 'agent' ? 'donor' : $newRole, $userId]);
         
     } elseif ($isCurrentlyAdmin && !$newRoleRequiresAdminTable) {
         // Demoting admin to donor
@@ -73,7 +85,7 @@ try {
         // Just update the role to 'donor' in admin_users table
 
         $stmt = $pdo->prepare("UPDATE admin_users SET role = ? WHERE id = ?");
-        $stmt->execute([$newRole, $userId]);
+        $stmt->execute([$newRole === 'agent' ? 'donor' : $newRole, $userId]);
 
         // Also check if user exists in users table and update there too
         $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ?");
@@ -132,14 +144,16 @@ try {
             ]);
         }
         
-        // Update or keep user in users table but mark as inactive admin
-        $stmt = $pdo->prepare("UPDATE users SET role = ? WHERE id = ?");
-        $stmt->execute(['', $userId]); // Clear role in users table
-        
     } else {
         // Regular user staying as regular user (donor to donor, etc.)
         $stmt = $pdo->prepare("UPDATE users SET role = ? WHERE id = ?");
         $stmt->execute([$newRole, $userId]);
+
+        $stmt = $pdo->prepare(
+            "INSERT INTO user_role_changes (user_id, old_role, new_role, changed_by, created_at)
+             VALUES (?, ?, ?, ?, NOW())"
+        );
+        $stmt->execute([$userId, $currentRole, $newRole, $_SESSION['admin_id']]);
     }
 
     $pdo->commit();

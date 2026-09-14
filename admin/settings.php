@@ -24,6 +24,16 @@ $db = getDB();
 $successMessage = '';
 $errorMessage = '';
 
+function hasPermission($permission) {
+    global $db;
+    $role = $_SESSION['admin_role'] ?? '';
+    $row = $db->fetchOne(
+        "SELECT COUNT(*) AS has_permission FROM role_permissions WHERE role_name = ? AND permission_name = ?",
+        [$role, $permission]
+    );
+    return !empty($row['has_permission']);
+}
+
 // Get current admin details
 $adminId = $_SESSION['admin_id'];
 $admin = $db->fetchOne(
@@ -102,6 +112,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $successMessage = 'Password changed successfully!';
             } catch (Exception $e) {
                 $errorMessage = 'Error changing password: ' . $e->getMessage();
+            }
+        }
+    }
+
+    // Booking window: this controls how many days ahead new reservations may be made.
+    if (isset($_POST['update_booking_window']) && $admin['role'] === 'administrator') {
+        $bookingAdvanceDays = filter_var($_POST['booking_advance_days'] ?? null, FILTER_VALIDATE_INT);
+        if ($bookingAdvanceDays === false || $bookingAdvanceDays < 1 || $bookingAdvanceDays > 730) {
+            $errorMessage = 'The booking window must be between 1 and 730 days.';
+        } else {
+            try {
+                $existingSetting = $db->fetchOne("SELECT id FROM settings WHERE setting_key = 'booking_advance_days'");
+                if ($existingSetting) {
+                    $db->query("UPDATE settings SET setting_value = ? WHERE setting_key = 'booking_advance_days'", [$bookingAdvanceDays]);
+                } else {
+                    $db->query(
+                        "INSERT INTO settings (setting_key, setting_value, description) VALUES (?, ?, ?)",
+                        ['booking_advance_days', $bookingAdvanceDays, 'How many days in advance reservations can be made']
+                    );
+                }
+                header('Location: settings.php?success=booking_window_updated');
+                exit;
+            } catch (Throwable $e) {
+                $errorMessage = 'Unable to update the booking window. Please try again.';
+                error_log('Booking window settings error: ' . $e->getMessage());
             }
         }
     }
@@ -347,7 +382,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $permDesc = $perm['permission_description'];
 
                 // Check which roles have this permission enabled
-                $roles = ['donor', 'supervisor', 'editor', 'administrator'];
+                $roles = ['donor', 'agent', 'supervisor', 'editor', 'administrator'];
                 foreach ($roles as $role) {
                     $key = $role . '_' . $permName;
                     if (isset($permissions[$key])) {
@@ -394,6 +429,8 @@ if (isset($_GET['success'])) {
         $successMessage = 'Annual booking years updated successfully!';
     } elseif ($_GET['success'] === 'auto_cancel_updated') {
         $successMessage = 'Auto-cancel setting updated successfully!';
+    } elseif ($_GET['success'] === 'booking_window_updated') {
+        $successMessage = 'Booking window updated successfully!';
     } elseif ($_GET['success'] === 'bookings_cleared') {
         $successMessage = 'All bookings and receipts cleared successfully!';
     } elseif ($_GET['success'] === 'backup_retention_updated') {
@@ -408,6 +445,9 @@ if ($admin['role'] === 'administrator') {
     $annualYearsSetting = $db->fetchOne(
         "SELECT setting_value FROM settings WHERE setting_key = 'annual_booking_years'"
     );
+    $bookingAdvanceDaysSetting = $db->fetchOne(
+        "SELECT setting_value FROM settings WHERE setting_key = 'booking_advance_days'"
+    );
     $autoCancelDaysSetting = $db->fetchOne(
         "SELECT setting_value FROM settings WHERE setting_key = 'auto_cancel_days_before_dhana'"
     );
@@ -416,6 +456,7 @@ if ($admin['role'] === 'administrator') {
     );
 
     $systemSettings['annual_booking_years'] = $annualYearsSetting ? $annualYearsSetting['setting_value'] : '10';
+    $systemSettings['booking_advance_days'] = $bookingAdvanceDaysSetting ? $bookingAdvanceDaysSetting['setting_value'] : '30';
     $systemSettings['auto_cancel_days_before'] = $autoCancelDaysSetting ? $autoCancelDaysSetting['setting_value'] : '30';
     $systemSettings['last_auto_cancel_cleanup'] = $lastCleanupSetting ? $lastCleanupSetting['setting_value'] : 'Never';
 
@@ -445,6 +486,7 @@ if ($admin['role'] === 'administrator') {
     // Organize permissions by role
     $rolePermissions = [
         'donor' => [],
+        'agent' => [],
         'supervisor' => [],
         'editor' => [],
         'administrator' => []
@@ -637,6 +679,27 @@ try {
                 <!-- System Settings Tab -->
                 <div class="tab-content" id="system-tab">
                 <div class="settings-container">
+                        <!-- Reservation Window -->
+                        <div class="settings-section">
+                            <h3><i class="fas fa-calendar-day"></i> Reservation Window</h3>
+                            <form method="POST" class="settings-form">
+                                <div class="form-group">
+                                    <label for="booking_advance_days">How Many Days Ahead Can Be Reserved?</label>
+                                    <input type="number" id="booking_advance_days" name="booking_advance_days"
+                                           value="<?php echo htmlspecialchars($systemSettings['booking_advance_days']); ?>"
+                                           min="1" max="730" required>
+                                    <small>Current setting: <?php echo (int)$systemSettings['booking_advance_days']; ?> days (range: 1–730 days).</small>
+                                    <div class="help-text">
+                                        <i class="fas fa-info-circle"></i>
+                                        This is why the calendar currently shows reservations through a specific date. For example, a 30-day window on September 14 allows reservations through October 14.
+                                    </div>
+                                </div>
+                                <button type="submit" name="update_booking_window" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> Update Reservation Window
+                                </button>
+                            </form>
+                        </div>
+
                         <!-- Annual Booking Configuration -->
                         <div class="settings-section">
                             <h3><i class="fas fa-calendar-alt"></i> Annual Booking Configuration</h3>
@@ -988,6 +1051,9 @@ try {
                                             <i class="fas fa-user"></i><br>Donor
                                         </th>
                                         <th style="padding: 15px; text-align: center; font-weight: 600; width: 120px;">
+                                            <i class="fas fa-user-friends"></i><br>Agent
+                                        </th>
+                                        <th style="padding: 15px; text-align: center; font-weight: 600; width: 120px;">
                                             <i class="fas fa-eye"></i><br>Supervisor
                                         </th>
                                         <th style="padding: 15px; text-align: center; font-weight: 600; width: 120px;">
@@ -1022,6 +1088,17 @@ try {
                                                            name="permissions[donor_<?php echo $permission['permission_name']; ?>]"
                                                            value="1"
                                                            <?php echo in_array($permission['permission_name'], $rolePermissions['donor']) ? 'checked' : ''; ?>
+                                                           style="width: 20px; height: 20px; cursor: pointer;">
+                                                </label>
+                                            </td>
+
+                                            <!-- Reservation Agent -->
+                                            <td style="padding: 12px; text-align: center;">
+                                                <label class="permission-checkbox">
+                                                    <input type="checkbox"
+                                                           name="permissions[agent_<?php echo $permission['permission_name']; ?>]"
+                                                           value="1"
+                                                           <?php echo in_array($permission['permission_name'], $rolePermissions['agent']) ? 'checked' : ''; ?>
                                                            style="width: 20px; height: 20px; cursor: pointer;">
                                                 </label>
                                             </td>

@@ -14,9 +14,10 @@ INSERT INTO `dhana_types` (`id`, `name`, `price`, `description`, `time_slot`, `i
 
 INSERT INTO `role_hierarchy` (`id`, `role_name`, `hierarchy_level`, `role_display_name`, `role_description`) VALUES
 (1, 'donor', 1, 'Donor', 'Regular users who can make bookings and check availability'),
-(2, 'supervisor', 2, 'Supervisor', 'Can view Dana schedules and donor names (for senior monks)'),
-(3, 'editor', 3, 'Editor', 'Can accept/reject requests and verify payments, but cannot edit personal data'),
-(4, 'administrator', 4, 'Administrator', 'Full system access - Head of Daana coordinating');
+(2, 'agent', 1, 'Reservation Agent', 'Can make reservations for another person through the normal donor dashboard'),
+(3, 'supervisor', 2, 'Supervisor', 'Can view Dana schedules and donor names (for senior monks)'),
+(4, 'editor', 3, 'Editor', 'Can accept/reject requests and verify payments, but cannot edit personal data'),
+(5, 'administrator', 4, 'Administrator', 'Full system access - Head of Daana coordinating');
 
 INSERT INTO `role_permissions` (`id`, `role_name`, `permission_name`, `permission_description`) VALUES
 (206, 'editor', 'accept_reject_requests', 'Accept or reject booking requests'),
@@ -107,7 +108,13 @@ INSERT INTO `role_permissions` (`id`, `role_name`, `permission_name`, `permissio
 (291, 'editor', 'view_user_contact', 'View user contact information'),
 (292, 'administrator', 'view_user_contact', 'View user contact information'),
 (293, 'supervisor', 'view_users', 'View user accounts and information'),
-(294, 'administrator', 'view_users', 'View user accounts and information');
+(294, 'administrator', 'view_users', 'View user accounts and information'),
+(295, 'agent', 'check_availability', 'Check booking availability'),
+(296, 'agent', 'create_booking', 'Create booking requests'),
+(297, 'agent', 'create_booking_for_others', 'Create booking requests on behalf of another person'),
+(298, 'agent', 'edit_own_profile', 'Edit their own profile information'),
+(299, 'agent', 'upload_payment', 'Upload payment receipts for their bookings'),
+(300, 'agent', 'view_own_bookings', 'View booking history they created');
 
 INSERT INTO `settings` (`id`, `setting_key`, `setting_value`, `description`) VALUES
 (1, 'site_name', 'Dāna Reservation System', 'Website name'),

@@ -307,10 +307,12 @@ function buildPaginationUrl($page, $status = 'all') {
 $bookingQueryParams = array_merge($queryParams, [$recordsPerPage, $offset]);
 $recentBookings = $db->fetchAll(
     "SELECT b.*, dt.name as dhana_type_name, u.first_name, u.last_name, u.email,
+            agent.first_name AS agent_first_name, agent.last_name AS agent_last_name, agent.email AS agent_email,
             pr.receipt_filename, pr.verified as receipt_verified
      FROM bookings b
      JOIN dhana_types dt ON b.dhana_type_id = dt.id
      JOIN users u ON b.user_id = u.id
+     LEFT JOIN users agent ON b.booked_by_agent_id = agent.id
      LEFT JOIN payment_receipts pr ON b.id = pr.booking_id
      $whereClause
      ORDER BY b.created_at DESC
@@ -568,8 +570,14 @@ $blockedDates = $db->fetchAll(
                                         <td>#<?php echo str_pad($booking['id'], 6, '0', STR_PAD_LEFT); ?></td>
                                         <td>
                                             <div class="donor-info">
-                                                <strong><?php echo htmlspecialchars($booking['first_name'] . ' ' . $booking['last_name']); ?></strong>
-                                                <small><?php echo htmlspecialchars($booking['email']); ?></small>
+                                                <?php if (!empty($booking['booked_by_agent_id'])): ?>
+                                                    <strong><?php echo htmlspecialchars($booking['booked_for_first_name'] . ' ' . $booking['booked_for_last_name']); ?></strong>
+                                                    <small>Recipient · <?php echo htmlspecialchars($booking['booked_for_primary_contact']); ?></small>
+                                                    <small>Agent: <?php echo htmlspecialchars(trim(($booking['agent_first_name'] ?? '') . ' ' . ($booking['agent_last_name'] ?? '')) ?: $booking['email']); ?></small>
+                                                <?php else: ?>
+                                                    <strong><?php echo htmlspecialchars($booking['first_name'] . ' ' . $booking['last_name']); ?></strong>
+                                                    <small><?php echo htmlspecialchars($booking['email']); ?></small>
+                                                <?php endif; ?>
                                             </div>
                                         </td>
                                         <td><?php echo htmlspecialchars($booking['dhana_type_name']); ?></td>
@@ -947,6 +955,7 @@ $blockedDates = $db->fetchAll(
                     <div class="user-filters">
                         <button class="filter-btn active" data-filter="all">All Users</button>
                         <button class="filter-btn" data-filter="donor">Donors</button>
+                        <button class="filter-btn" data-filter="agent">Reservation Agents</button>
                         <button class="filter-btn" data-filter="supervisor">Supervisors</button>
                         <button class="filter-btn" data-filter="editor">Editors</button>
                         <button class="filter-btn" data-filter="administrator">Administrators</button>
@@ -1165,9 +1174,12 @@ $blockedDates = $db->fetchAll(
                 }
 
                 // Create role change dropdown
-                const roleOptions = ['donor', 'supervisor', 'editor', 'administrator'];
+                const roleOptions = user.source_table === 'users'
+                    ? ['donor', 'agent']
+                    : ['donor', 'supervisor', 'editor', 'administrator'];
+                const roleLabels = { donor: 'Donor', agent: 'Reservation Agent', supervisor: 'Supervisor', editor: 'Editor', administrator: 'Administrator' };
                 const roleDropdown = roleOptions.map(role => 
-                    `<option value="${role}" ${user.role === role ? 'selected' : ''}>${role.charAt(0).toUpperCase() + role.slice(1)}</option>`
+                    `<option value="${role}" ${user.role === role ? 'selected' : ''}>${roleLabels[role]}</option>`
                 ).join('');
 
                 row.innerHTML = `
@@ -1180,13 +1192,13 @@ $blockedDates = $db->fetchAll(
                     </td>
                     <td class="user-contact">${user.contact_number}</td>
                     <td>
-                        <span class="role-badge role-${user.role}">${user.role.charAt(0).toUpperCase() + user.role.slice(1)}</span>
+                        <span class="role-badge role-${user.role}">${roleLabels[user.role] || user.role}</span>
                     </td>
                     <td class="permissions-cell">
                         ${permissionsDisplay}
                     </td>
                     <td class="action-buttons">
-                        <select class="role-change-select" data-user-id="${user.id}" data-current-role="${user.role}">
+                        <select class="role-change-select" data-user-id="${user.id}" data-source-table="${user.source_table}" data-current-role="${user.role}">
                             ${roleDropdown}
                         </select>
                         <button class="btn-change-role" data-user-id="${user.id}" onclick="changeUserRole(${user.id})">
@@ -1312,6 +1324,7 @@ $blockedDates = $db->fetchAll(
             const select = document.querySelector(`select[data-user-id="${userId}"]`);
             const newRole = select.value;
             const currentRole = select.dataset.currentRole;
+            const sourceTable = select.dataset.sourceTable;
             
             if (newRole === currentRole) {
                 alert('No changes to save. Please select a different role.');
@@ -1337,7 +1350,8 @@ $blockedDates = $db->fetchAll(
                 },
                 body: JSON.stringify({
                     user_id: userId,
-                    new_role: newRole
+                    new_role: newRole,
+                    source_table: sourceTable
                 }),
             })
             .then(response => response.json())
@@ -1992,6 +2006,30 @@ $blockedDates = $db->fetchAll(
                 month: 'long',
                 day: 'numeric'
             });
+            const escapeDetail = (value) => String(value ?? '').replace(/[&<>'"]/g, (character) => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+            }[character]));
+            const agentBookingSection = booking.booked_by_agent_id ? `
+                    <div class="details-section">
+                        <h4><i class="fas fa-user-friends"></i> Reservation Recipient</h4>
+                        <div class="details-row">
+                            <span class="label">Name:</span>
+                            <span class="value">${escapeDetail(`${booking.booked_for_first_name || ''} ${booking.booked_for_last_name || ''}`.trim() || 'Not provided')}</span>
+                        </div>
+                        <div class="details-row">
+                            <span class="label">Primary Mobile:</span>
+                            <span class="value">${escapeDetail(booking.booked_for_primary_contact || 'Not provided')}</span>
+                        </div>
+                        ${booking.booked_for_secondary_contact ? `
+                        <div class="details-row">
+                            <span class="label">Second Mobile:</span>
+                            <span class="value">${escapeDetail(booking.booked_for_secondary_contact)}</span>
+                        </div>` : ''}
+                        <div class="details-row">
+                            <span class="label">Booked by Agent:</span>
+                            <span class="value">${escapeDetail(`${booking.agent_first_name || ''} ${booking.agent_last_name || ''}`.trim() || booking.agent_email || 'Not provided')}</span>
+                        </div>
+                    </div>` : '';
 
             content.innerHTML = `
                 <div class="booking-details-grid">
@@ -2060,6 +2098,8 @@ $blockedDates = $db->fetchAll(
                             </span>
                         </div>
                     </div>
+
+                    ${agentBookingSection}
 
                     <!-- Reservation Details -->
                     <div class="details-section">

@@ -52,8 +52,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $userId = $_POST['user_id'];
         $newRole = $_POST['new_role'];
         $userType = $_POST['user_type']; // 'admin' or 'regular'
+
+        $allowedRoles = $userType === 'admin'
+            ? ['donor', 'supervisor', 'editor', 'administrator']
+            : ['donor', 'agent'];
+        if (!in_array($newRole, $allowedRoles, true)) {
+            $message = 'That role is not available for this account type.';
+            $messageType = 'error';
+            $newRole = null;
+        }
         
         try {
+            if ($newRole === null) throw new RuntimeException($message);
             if ($userType === 'admin') {
                 // Update admin_users table
                 $db->query(
@@ -69,6 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 );
                 
             } else {
+                $oldRole = $db->fetchOne("SELECT role FROM users WHERE id = ?", [$userId])['role'] ?? 'donor';
                 // Update users table
                 $db->query(
                     "UPDATE users SET role = ? WHERE id = ?",
@@ -76,7 +87,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 );
                 
                 // Log in user_role_changes
-                $oldRole = $db->fetchOne("SELECT role FROM users WHERE id = ?", [$userId])['role'] ?? 'donor';
                 $db->query(
                     "INSERT INTO user_role_changes (user_id, old_role, new_role, changed_by, created_at)
                      VALUES (?, ?, ?, ?, NOW())",
@@ -192,6 +202,7 @@ $roleHierarchy = $db->fetchAll("
         .role-administrator { border-left: 5px solid #e74c3c; }
         .role-editor { border-left: 5px solid #f39c12; }
         .role-supervisor { border-left: 5px solid #27ae60; }
+        .role-agent { border-left: 5px solid #9b59b6; }
         .role-donor { border-left: 5px solid #3498db; }
         .user-table {
             width: 100%;
@@ -217,6 +228,7 @@ $roleHierarchy = $db->fetchAll("
         .role-badge.administrator { background-color: #e74c3c; }
         .role-badge.editor { background-color: #f39c12; }
         .role-badge.supervisor { background-color: #27ae60; }
+        .role-badge.agent { background-color: #9b59b6; }
         .role-badge.donor { background-color: #3498db; }
         .action-buttons {
             display: flex;
@@ -419,7 +431,7 @@ $roleHierarchy = $db->fetchAll("
                                             <select name="new_role" onchange="this.form.submit()">
                                                 <option value="">Change Role...</option>
                                                 <?php foreach ($roleHierarchy as $role): ?>
-                                                    <?php if ($role['role_name'] !== 'donor' && $role['role_name'] !== $user['role']): ?>
+                                                    <?php if (!in_array($role['role_name'], ['donor', 'agent'], true) && $role['role_name'] !== $user['role']): ?>
                                                         <option value="<?php echo $role['role_name']; ?>">
                                                             <?php echo $role['role_display_name']; ?>
                                                         </option>
@@ -442,7 +454,7 @@ $roleHierarchy = $db->fetchAll("
         <!-- Elevated Regular Users -->
         <?php if (hasPermission('manage_users') && !empty($elevatedUsers)): ?>
             <div class="role-card">
-                <h3><i class="fas fa-user-plus"></i> Elevated Regular Users</h3>
+                <h3><i class="fas fa-user-friends"></i> Reservation Agents</h3>
                 <table class="user-table">
                     <thead>
                         <tr>
@@ -469,13 +481,9 @@ $roleHierarchy = $db->fetchAll("
                                         <select name="new_role" onchange="this.form.submit()">
                                             <option value="">Change Role...</option>
                                             <option value="donor">Demote to Donor</option>
-                                            <?php foreach ($roleHierarchy as $role): ?>
-                                                <?php if ($role['role_name'] !== 'donor' && $role['role_name'] !== $user['role']): ?>
-                                                    <option value="<?php echo $role['role_name']; ?>">
-                                                        <?php echo $role['role_display_name']; ?>
-                                                    </option>
-                                                <?php endif; ?>
-                                            <?php endforeach; ?>
+                                            <?php if ($user['role'] !== 'agent'): ?>
+                                                <option value="agent">Make Reservation Agent</option>
+                                            <?php endif; ?>
                                         </select>
                                         <input type="hidden" name="change_role" value="1">
                                     </form>

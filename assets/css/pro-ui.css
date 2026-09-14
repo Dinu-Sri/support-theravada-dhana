@@ -204,19 +204,19 @@ input:not([type="checkbox"]):not([type="radio"]):focus, select:focus, textarea:f
 }
 
 /* Step 3: information stays centered vertically; the switch has a stable right column. */
-.form-step[data-step="3"] .toggle-group {
+.form-step.additional-info-step .toggle-group {
     display: grid !important;
     grid-template-columns: minmax(0, 1fr) 118px;
     align-items: center !important;
     gap: 24px !important;
     padding: 22px 26px !important;
 }
-.form-step[data-step="3"] .toggle-content {
+.form-step.additional-info-step .toggle-content {
     justify-self: stretch;
     align-self: center;
 }
-.form-step[data-step="3"] .toggle-switch-container,
-.form-step[data-step="3"] .toggle-group .toggle-switch-container {
+.form-step.additional-info-step .toggle-switch-container,
+.form-step.additional-info-step .toggle-group .toggle-switch-container {
     grid-column: 2;
     justify-self: end !important;
     align-self: center !important;
@@ -343,10 +343,10 @@ input:not([type="checkbox"]):not([type="radio"]):focus, select:focus, textarea:f
     .auth-container { width: calc(100% - 18px); min-height: 0; }
     .dhana-types-grid { grid-template-columns: 1fr; }
     .settings-section .info-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .form-step[data-step="3"] .toggle-group { grid-template-columns: 1fr; text-align: center; }
-    .form-step[data-step="3"] .toggle-content h4 { justify-content: center; }
-    .form-step[data-step="3"] .toggle-switch-container,
-    .form-step[data-step="3"] .toggle-group .toggle-switch-container { grid-column: 1; justify-self: center !important; }
+    .form-step.additional-info-step .toggle-group { grid-template-columns: 1fr; text-align: center; }
+    .form-step.additional-info-step .toggle-content h4 { justify-content: center; }
+    .form-step.additional-info-step .toggle-switch-container,
+    .form-step.additional-info-step .toggle-group .toggle-switch-container { grid-column: 1; justify-self: center !important; }
     .booking-review { padding: 30px 16px 24px; }
     .booking-review .review-section { padding: 24px 18px; }
     .payment-bank-details .bank-details-header { align-items: flex-start; flex-direction: column; }
@@ -355,6 +355,13 @@ input:not([type="checkbox"]):not([type="radio"]):focus, select:focus, textarea:f
 @media (max-height: 680px) {
     .date-picker-modal .day-grid { max-height: 180px; overflow-y: auto; }
 }
+
+/* Reservation-agent dashboard action. */
+.agent-reservation-action {
+    border-color: #e5c579;
+    background: linear-gradient(180deg, #fffdf8 0%, #fff7e5 100%);
+}
+.agent-reservation-action i { color: #a66b16; }
 
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }

@@ -181,6 +181,13 @@ $bookings = $db->fetchAll(
                                     <span><?php echo date('F j, Y', strtotime($booking['booking_date'])); ?></span>
                                 </div>
 
+                                <?php if (!empty($booking['booked_by_agent_id'])): ?>
+                                    <div class="detail-row">
+                                        <i class="fas fa-user-friends"></i>
+                                        <span>For: <?php echo htmlspecialchars(trim(($booking['booked_for_first_name'] ?? '') . ' ' . ($booking['booked_for_last_name'] ?? ''))); ?></span>
+                                    </div>
+                                <?php endif; ?>
+
                                 <?php if ($booking['is_annual_event'] && $booking['year_start'] && $booking['year_end']): ?>
                                     <div class="detail-row">
                                         <i class="fas fa-repeat"></i>

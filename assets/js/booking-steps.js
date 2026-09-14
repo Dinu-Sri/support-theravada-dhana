@@ -7,7 +7,11 @@ console.log('🔧 BOOKING STEPS JS LOADED - Version 2024-01-01-FINAL');
 console.log('✅ System ready with enhanced features and visibility fixes');
 
 let currentStep = 1;
-const totalSteps = 4;
+const bookingFlow = window.BOOKING_FLOW || {};
+const isAgentBooking = bookingFlow.isAgentBooking === true;
+const totalSteps = Number(bookingFlow.totalSteps) || 4;
+const additionalInfoStep = Number(bookingFlow.additionalInfoStep) || 3;
+const reviewStep = Number(bookingFlow.reviewStep) || totalSteps;
 let stepTransitionPending = false;
 
 // Safe function to check if element exists before accessing
@@ -160,8 +164,8 @@ function safeShowStep(step) {
             }
 
             restoreStep2Content();
-        } else if (step === 3) {
-            console.log('🔧 Restoring Step 3 content (Additional Info)');
+        } else if (step === additionalInfoStep) {
+            console.log('🔧 Restoring additional information content');
             restoreStep3Content();
         }
 
@@ -392,19 +396,19 @@ function restoreStep3Content() {
     const additionalInfo = document.querySelector('.additional-info-section');
     const toggleGroups = document.querySelectorAll('.toggle-group');
     const specialRequests = document.querySelector('.special-requests-group');
-    const step3Container = document.querySelector('.form-step[data-step="3"]');
+    const step3Container = document.querySelector('.form-step.additional-info-step');
 
     // Restore Step 3 elements
     if (additionalInfo) {
-        additionalInfo.style.cssText = 'display: block !important; visibility: visible !important; opacity: 1 !important; position: relative !important;';
+        additionalInfo.removeAttribute('style');
     }
     toggleGroups.forEach(group => {
         if (group) {
-            group.style.cssText = 'display: block !important; visibility: visible !important; opacity: 1 !important; position: relative !important;';
+            group.removeAttribute('style');
         }
     });
     if (specialRequests) {
-        specialRequests.style.cssText = 'display: block !important; visibility: visible !important; opacity: 1 !important; position: relative !important;';
+        specialRequests.removeAttribute('style');
     }
 
     // Apply ULTRA-AGGRESSIVE dhana container hiding (original Step 3 logic)
@@ -1174,7 +1178,7 @@ function showStep(step) {
             }
 
             // Special handling for step 3 - remove empty space ULTRA-AGGRESSIVELY
-            if (step === 3) {
+            if (step === additionalInfoStep) {
                 console.log('🔧 Fixing step 3 empty space ULTRA-AGGRESSIVELY...');
 
                 // ULTRA-AGGRESSIVE: Completely remove dhana-types-container from layout flow
@@ -1285,7 +1289,7 @@ function showStep(step) {
             }
 
             // Special handling for step 4 - remove empty space
-            if (step === 4) {
+            if (step === reviewStep) {
                 console.log('🔧 Fixing step 4 empty space...');
 
                 // Remove any error messages that might be taking space
@@ -1446,7 +1450,10 @@ function prevStep() {
 
 function updateProgressBar() {
     const progressFill = document.getElementById('progressFill');
-    const progressPercentage = (currentStep / totalSteps) * 100;
+    if (!progressFill) return;
+    const progressPercentage = totalSteps > 1
+        ? ((currentStep - 1) / (totalSteps - 1)) * 100
+        : 100;
     progressFill.style.width = progressPercentage + '%';
 }
 
@@ -1536,17 +1543,23 @@ function validateCurrentStep() {
             break;
 
         case 3:
-            // Travel support step - no validation required
+            if (isAgentBooking) {
+                isValid = validateBeneficiaryDetails(errors);
+            }
             break;
 
         case 4:
+            if (isAgentBooking) {
+                // Additional information is optional for agents too.
+                break;
+            }
             isValid = validateAllSteps();
             if (!isValid) errors.push('Please return to the date step and verify your selection.');
             break;
 
         case 5:
-            // Final review - validate all previous steps
             isValid = validateAllSteps();
+            if (!isValid) errors.push('Please complete the recipient details and verify the selected date and time.');
             break;
     }
 
@@ -1564,12 +1577,42 @@ function validateAllSteps() {
     const bookingDate = document.getElementById('booking_date').value;
     const timeSlot = document.getElementById('booking_time_slot').value;
 
+    const beneficiaryValid = !isAgentBooking || validateBeneficiaryDetails([]);
+
     return Boolean(
         selectedDhanaType && bookingDate && timeSlot &&
         currentAvailabilityStatus &&
         currentAvailabilityStatus.available &&
-        currentAvailabilityStatus.selectionKey === getAvailabilitySelectionKey()
+        currentAvailabilityStatus.selectionKey === getAvailabilitySelectionKey() &&
+        beneficiaryValid
     );
+}
+
+function validateBeneficiaryDetails(errors) {
+    const firstName = document.getElementById('booked_for_first_name')?.value.trim() || '';
+    const lastName = document.getElementById('booked_for_last_name')?.value.trim() || '';
+    const primaryContact = document.getElementById('booked_for_primary_contact')?.value.trim() || '';
+    const secondaryContact = document.getElementById('booked_for_secondary_contact')?.value.trim() || '';
+    const phonePattern = /^[0-9+()\-\s]{5,20}$/;
+    let valid = true;
+
+    if (firstName.length < 2 || firstName.length > 50) {
+        errors.push('Please enter the reservation recipient’s first name.');
+        valid = false;
+    }
+    if (lastName.length < 2 || lastName.length > 50) {
+        errors.push('Please enter the reservation recipient’s last name.');
+        valid = false;
+    }
+    if (!phonePattern.test(primaryContact)) {
+        errors.push('Please enter a valid primary mobile number for the reservation recipient.');
+        valid = false;
+    }
+    if (secondaryContact && !phonePattern.test(secondaryContact)) {
+        errors.push('Please enter a valid second mobile number, or leave it blank.');
+        valid = false;
+    }
+    return valid;
 }
 
 function showValidationErrors(errors) {
@@ -1941,6 +1984,20 @@ function updateReviewSection() {
             const annualEventElement = document.getElementById('is_annual_event');
             const isChecked = annualEventElement ? annualEventElement.checked : false;
             reviewAnnualEvent.textContent = isChecked ? 'Yes' : 'No';
+        }
+
+        if (isAgentBooking) {
+            const firstName = document.getElementById('booked_for_first_name')?.value.trim() || '';
+            const lastName = document.getElementById('booked_for_last_name')?.value.trim() || '';
+            const primaryContact = document.getElementById('booked_for_primary_contact')?.value.trim() || '';
+            const secondaryContact = document.getElementById('booked_for_secondary_contact')?.value.trim() || '';
+            const recipientName = document.getElementById('review-beneficiary-name');
+            const recipientPrimary = document.getElementById('review-beneficiary-primary-contact');
+            const recipientSecondary = document.getElementById('review-beneficiary-secondary-contact');
+
+            if (recipientName) recipientName.textContent = `${firstName} ${lastName}`.trim() || 'Not provided';
+            if (recipientPrimary) recipientPrimary.textContent = primaryContact || 'Not provided';
+            if (recipientSecondary) recipientSecondary.textContent = secondaryContact || 'Not provided';
         }
 
         console.log('updateReviewSection completed successfully');

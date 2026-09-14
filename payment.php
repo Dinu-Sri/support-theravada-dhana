@@ -176,7 +176,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['receipt'])) {
     <link rel="stylesheet" href="assets/css/style.css?v=20260913">
     <link rel="stylesheet" href="assets/css/payment.css?v=20260913">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="assets/css/pro-ui.css?v=20260915">
+    <link rel="stylesheet" href="assets/css/pro-ui.css?v=20260916">
 </head>
 <body>
     <div class="dashboard">
@@ -268,6 +268,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['receipt'])) {
                         </tr>
                     </tbody>
                 </table>
+
+                <?php if (!empty($booking['booked_by_agent_id']) && !empty($booking['booked_for_first_name'])): ?>
+                <table class="summary-table">
+                    <thead>
+                        <tr>
+                            <th colspan="2" class="table-header">Reservation Recipient</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="label-cell">Name</td>
+                            <td class="value-cell"><?php echo htmlspecialchars(trim($booking['booked_for_first_name'] . ' ' . $booking['booked_for_last_name'])); ?></td>
+                        </tr>
+                        <tr>
+                            <td class="label-cell">Primary Mobile</td>
+                            <td class="value-cell"><?php echo htmlspecialchars($booking['booked_for_primary_contact']); ?></td>
+                        </tr>
+                        <?php if (!empty($booking['booked_for_secondary_contact'])): ?>
+                        <tr>
+                            <td class="label-cell">Second Mobile</td>
+                            <td class="value-cell"><?php echo htmlspecialchars($booking['booked_for_secondary_contact']); ?></td>
+                        </tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+                <?php endif; ?>
 
                 <!-- Dāna Details Table -->
                 <table class="summary-table">

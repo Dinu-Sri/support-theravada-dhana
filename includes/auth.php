@@ -209,7 +209,7 @@ class Auth {
         }
         
         $user = $this->db->fetchOne(
-            "SELECT id, first_name, last_name, email, is_monk, is_active, password_hash FROM users WHERE id = ?",
+            "SELECT id, first_name, last_name, email, is_monk, role, is_active, password_hash FROM users WHERE id = ?",
             [$_SESSION['user_id']]
         );
 

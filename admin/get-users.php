@@ -64,12 +64,38 @@ try {
             ]);
             exit; // Exit here for donor filter
 
+        case 'agent':
+            $agentQuery = "SELECT id, first_name, last_name, email, contact_number, role, is_active, created_at,
+                                  'users' as source_table
+                           FROM users
+                           WHERE role = 'agent' AND is_active = 1
+                           ORDER BY created_at DESC";
+            $stmt = $pdo->prepare($agentQuery);
+            $stmt->execute();
+            $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            foreach ($users as &$user) {
+                $user['permissions'] = ['check_availability', 'create_booking', 'create_booking_for_others', 'upload_payment', 'view_own_bookings'];
+            }
+
+            echo json_encode([
+                'success' => true,
+                'users' => $users,
+                'debug_info' => [
+                    'total_users' => count($users),
+                    'table_exists' => $tableExists,
+                    'filter' => $filter,
+                    'source_table' => 'users'
+                ]
+            ]);
+            exit;
+
         case 'supervisor':
         case 'editor':
         case 'administrator':
             // For admin roles, we need to query admin_users table
             $adminQuery = "SELECT id, username as first_name, '' as last_name, email, '' as contact_number,
-                                 role, is_active, created_at
+                                 role, is_active, created_at, 'admin_users' as source_table
                           FROM admin_users
                           WHERE role = ? AND is_active = 1
                           ORDER BY created_at DESC";
@@ -144,7 +170,8 @@ try {
                             WHEN role = 'administrator' THEN 1
                             WHEN role = 'editor' THEN 2  
                             WHEN role = 'supervisor' THEN 3
-                            WHEN role = 'donor' OR role = '' OR role IS NULL THEN 4
+                            WHEN role = 'agent' THEN 4
+                            WHEN role = 'donor' OR role = '' OR role IS NULL THEN 5
                         END, created_at DESC";
     } else {
         // For donor filter, only query users table
@@ -185,6 +212,9 @@ try {
                     break;
                 case 'supervisor':
                     $user['permissions'] = ['view_bookings'];
+                    break;
+                case 'agent':
+                    $user['permissions'] = ['check_availability', 'create_booking', 'create_booking_for_others', 'upload_payment', 'view_own_bookings'];
                     break;
                 case 'donor':
                 default:

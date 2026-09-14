@@ -35,7 +35,7 @@ $dhanaTypes = $db->fetchAll("SELECT * FROM dhana_types WHERE is_active = 1 AND p
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Sinhala:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="assets/css/pro-ui.css?v=20260915">
+    <link rel="stylesheet" href="assets/css/pro-ui.css?v=20260916">
 </head>
 <body>
     <div class="dashboard">
@@ -220,6 +220,14 @@ $dhanaTypes = $db->fetchAll("SELECT * FROM dhana_types WHERE is_active = 1 AND p
                             <span>Create New Reservation</span>
                             <small>Step-by-step reservation process</small>
                         </a>
+
+                        <?php if (($user['role'] ?? 'donor') === 'agent'): ?>
+                        <a href="booking-new.php?for=other" class="action-btn-large agent-reservation-action">
+                            <i class="fas fa-user-friends"></i>
+                            <span>Reservation for Others</span>
+                            <small>Arrange a dāna reservation for someone you are assisting</small>
+                        </a>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>

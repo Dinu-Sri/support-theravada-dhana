@@ -103,6 +103,11 @@ CREATE TABLE `blocked_dates` (
 CREATE TABLE `bookings` (
   `id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
+  `booked_by_agent_id` int(11) DEFAULT NULL,
+  `booked_for_first_name` varchar(50) DEFAULT NULL,
+  `booked_for_last_name` varchar(50) DEFAULT NULL,
+  `booked_for_primary_contact` varchar(20) DEFAULT NULL,
+  `booked_for_secondary_contact` varchar(20) DEFAULT NULL,
   `dhana_type_id` int(11) NOT NULL,
   `booking_date` date NOT NULL,
   `booking_time_slot` enum('morning','lunch','whole_day') DEFAULT 'whole_day',
@@ -235,7 +240,7 @@ CREATE TABLE `pricing_history` (
 
 CREATE TABLE `role_hierarchy` (
   `id` int(11) NOT NULL,
-  `role_name` enum('donor','supervisor','editor','administrator') NOT NULL,
+  `role_name` enum('donor','agent','supervisor','editor','administrator') NOT NULL,
   `hierarchy_level` int(11) NOT NULL,
   `role_display_name` varchar(50) NOT NULL,
   `role_description` text DEFAULT NULL,
@@ -273,7 +278,7 @@ CREATE TABLE `role_migration_backup` (
 
 CREATE TABLE `role_permissions` (
   `id` int(11) NOT NULL,
-  `role_name` enum('donor','supervisor','editor','administrator') NOT NULL,
+  `role_name` enum('donor','agent','supervisor','editor','administrator') NOT NULL,
   `permission_name` varchar(100) NOT NULL,
   `permission_description` text DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT current_timestamp()
@@ -318,7 +323,7 @@ CREATE TABLE `users` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   `is_active` tinyint(1) DEFAULT 1,
   `is_monk` tinyint(1) DEFAULT 0,
-  `role` enum('donor','supervisor','editor','administrator') DEFAULT 'donor',
+  `role` enum('donor','agent','supervisor','editor','administrator') DEFAULT 'donor',
   `admin_user_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -331,8 +336,8 @@ CREATE TABLE `users` (
 CREATE TABLE `user_role_changes` (
   `id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
-  `old_role` enum('donor','supervisor','editor','administrator') NOT NULL,
-  `new_role` enum('donor','supervisor','editor','administrator') NOT NULL,
+  `old_role` enum('donor','agent','supervisor','editor','administrator') NOT NULL,
+  `new_role` enum('donor','agent','supervisor','editor','administrator') NOT NULL,
   `changed_by` int(11) NOT NULL,
   `reason` text DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
@@ -388,6 +393,7 @@ ALTER TABLE `bookings`
   ADD PRIMARY KEY (`id`),
   ADD KEY `idx_booking_date_type_slot` (`booking_date`,`dhana_type_id`,`booking_time_slot`),
   ADD KEY `user_id` (`user_id`),
+  ADD KEY `booked_by_agent_id` (`booked_by_agent_id`),
   ADD KEY `dhana_type_id` (`dhana_type_id`),
   ADD KEY `parent_booking_id` (`parent_booking_id`),
   ADD KEY `held_by` (`held_by`),
@@ -631,6 +637,7 @@ ALTER TABLE `blocked_dates`
 --
 ALTER TABLE `bookings`
   ADD CONSTRAINT `bookings_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `bookings_ibfk_5` FOREIGN KEY (`booked_by_agent_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   ADD CONSTRAINT `bookings_ibfk_2` FOREIGN KEY (`dhana_type_id`) REFERENCES `dhana_types` (`id`),
   ADD CONSTRAINT `bookings_ibfk_3` FOREIGN KEY (`parent_booking_id`) REFERENCES `bookings` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `bookings_ibfk_4` FOREIGN KEY (`held_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
