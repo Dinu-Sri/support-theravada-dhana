@@ -6,18 +6,14 @@
 
 session_start();
 require_once '../config/database.php';
+require_once __DIR__ . '/includes/security.php';
+require_once __DIR__ . '/includes/approvals.php';
 
-// Check if admin is logged in
-if (!isset($_SESSION['admin_logged_in'])) {
-    header('Location: index.php');
-    exit;
-}
+adminRequireLogin(false);
 
 $db = getDB();
 
-if (empty($_SESSION['admin_csrf_token'])) {
-    $_SESSION['admin_csrf_token'] = bin2hex(random_bytes(32));
-}
+adminEnsureCsrfToken();
 
 // Get current admin info with new role system
 $currentAdmin = $db->fetchOne(
@@ -37,19 +33,12 @@ $_SESSION['admin_role'] = $currentAdmin['role'];
 $_SESSION['is_administrator'] = ($currentAdmin['role'] === 'administrator');
 $_SESSION['is_editor'] = ($currentAdmin['role'] === 'editor');
 $_SESSION['is_supervisor'] = ($currentAdmin['role'] === 'supervisor');
+$_SESSION['is_super_admin'] = ($currentAdmin['role'] === 'administrator');
 
 // Check permissions
 function hasPermission($permission) {
     global $db;
-    $role = $_SESSION['admin_role'];
-    
-    $check = $db->fetchOne(
-        "SELECT COUNT(*) as has_permission FROM role_permissions 
-         WHERE role_name = ? AND permission_name = ?",
-        [$role, $permission]
-    );
-    
-    return $check['has_permission'] > 0;
+    return adminHasPermission($db, $permission);
 }
 
 // Handle role management actions
@@ -57,19 +46,31 @@ $message = '';
 $messageType = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!is_string($_POST['csrf_token'] ?? null) || !hash_equals($_SESSION['admin_csrf_token'], $_POST['csrf_token'])) {
-        $message = 'Your session has expired. Refresh the page and try again.';
+    adminRequireCsrf(null, false);
+    $requestedActions = array_filter([
+        'change_role' => isset($_POST['change_role']),
+        'action_decision' => isset($_POST['action_decision'])
+    ]);
+    if (count($requestedActions) !== 1) {
+        $message = 'Submit one role-management action at a time.';
         $messageType = 'error';
     } else {
-    
+
     // Change user role
-    if (isset($_POST['change_role']) && hasPermission('manage_users')) {
+    if (isset($_POST['change_role'])) {
         $userId = (int)($_POST['user_id'] ?? 0);
         $newRole = $_POST['new_role'] ?? '';
         $userType = $_POST['user_type'] ?? '';
 
+        $requiredPermission = $userType === 'admin' ? 'manage_admins' : 'manage_users';
+        if (!hasPermission($requiredPermission)) {
+            $message = 'You do not have permission to change this account type.';
+            $messageType = 'error';
+            $newRole = null;
+        }
+
         $allowedRoles = $userType === 'admin'
-            ? ['donor', 'supervisor', 'editor', 'administrator']
+            ? ['supervisor', 'editor', 'administrator']
             : ['donor', 'agent'];
         if ($userId < 1 || !in_array($userType, ['admin', 'regular'], true) || !in_array($newRole, $allowedRoles, true)) {
             $message = 'That role is not available for this account type.';
@@ -79,13 +80,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         try {
             if ($newRole === null) throw new RuntimeException($message);
+            if ($userType === 'admin' && $userId === (int)$_SESSION['admin_id']) {
+                throw new RuntimeException('You cannot change your own staff role. Ask another administrator to make this change.');
+            }
             if ($newRole === 'agent') {
                 $roleColumn = $db->fetchOne("SHOW COLUMNS FROM users LIKE 'role'");
                 if (!$roleColumn || strpos((string)$roleColumn['Type'], "'agent'") === false) {
                     throw new RuntimeException('Reservation agents require the database migration. Run database/migrations/2026-09-14-agent-reservations.sql once in phpMyAdmin.');
                 }
             }
+            $db->getConnection()->beginTransaction();
             if ($userType === 'admin') {
+                $existingAdmin = $db->fetchOne("SELECT id, role FROM admin_users WHERE id = ? AND is_active = 1 FOR UPDATE", [$userId]);
+                if (!$existingAdmin) {
+                    throw new RuntimeException('The selected staff account no longer exists. Refresh the page and try again.');
+                }
+                if ($existingAdmin['role'] === 'administrator' && $newRole !== 'administrator') {
+                    $activeAdministrators = $db->fetchAll("SELECT id FROM admin_users WHERE role = 'administrator' AND is_active = 1 FOR UPDATE");
+                    if (count($activeAdministrators) <= 1) {
+                        throw new RuntimeException('At least one active administrator must remain.');
+                    }
+                }
                 // Update admin_users table
                 $db->query(
                     "UPDATE admin_users SET role = ? WHERE id = ?",
@@ -100,7 +115,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 );
                 
             } else {
-                $existingUser = $db->fetchOne("SELECT role FROM users WHERE id = ?", [$userId]);
+                $existingUser = $db->fetchOne("SELECT role FROM users WHERE id = ? AND is_active = 1 FOR UPDATE", [$userId]);
                 if (!$existingUser) {
                     throw new RuntimeException('The selected user no longer exists. Refresh the page and try again.');
                 }
@@ -118,57 +133,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     [$userId, $oldRole, $newRole, $_SESSION['admin_id']]
                 );
             }
-            
-            $message = "Role updated successfully!";
+
+            $db->getConnection()->commit();
+            $message = 'Role updated successfully.';
             $messageType = "success";
             
         } catch (Throwable $e) {
+            if ($db->getConnection()->inTransaction()) {
+                $db->getConnection()->rollBack();
+            }
             error_log('Role management update failed: ' . $e->getMessage());
-            $message = $e instanceof RuntimeException ? $e->getMessage() : 'Unable to update the role. Please try again.';
+            $message = $e instanceof InvalidArgumentException || $e instanceof RuntimeException
+                ? $e->getMessage()
+                : 'Unable to update the role. Please try again.';
             $messageType = "error";
         }
     }
     
     // Approve/reject pending actions
-    if (isset($_POST['action_decision']) && hasPermission('super_admin_approval')) {
+    if (isset($_POST['action_decision'])) {
         $actionId = (int)($_POST['action_id'] ?? 0);
         $decision = $_POST['decision'] ?? ''; // 'approve' or 'reject'
-        if ($actionId < 1 || !in_array($decision, ['approve', 'reject'], true)) {
-            $message = 'Invalid approval request.';
-            $messageType = 'error';
-            $decision = null;
-        }
         
         try {
-            if ($decision === null) throw new RuntimeException($message);
-            $status = ($decision === 'approve') ? 'approved' : 'rejected';
-            
-            $db->query(
-                "UPDATE admin_actions SET status = ?, approved_by = ?, approved_at = NOW() WHERE id = ?",
-                [$status, $_SESSION['admin_id'], $actionId]
-            );
-            
-            // If approved, execute the action
-            if ($decision === 'approve') {
-                $action = $db->fetchOne("SELECT * FROM admin_actions WHERE id = ?", [$actionId]);
-                
-                if ($action['action_type'] === 'booking_update') {
-                    $newValues = json_decode($action['new_values'], true);
-                    if (isset($newValues['status'])) {
-                        $db->query(
-                            "UPDATE bookings SET status = ? WHERE id = ?",
-                            [$newValues['status'], $action['target_id']]
-                        );
-                    }
-                }
+            if (!hasPermission('super_admin_approval')) {
+                throw new RuntimeException('You do not have permission to process approvals.');
             }
-            
-            $message = "Action " . $decision . "d successfully!";
+            $message = adminProcessApproval($db, $actionId, $decision, $_SESSION['admin_id']);
             $messageType = "success";
             
         } catch (Throwable $e) {
             error_log('Role management approval failed: ' . $e->getMessage());
-            $message = 'Unable to process this approval. Please try again.';
+            $message = $e instanceof InvalidArgumentException || $e instanceof RuntimeException
+                ? $e->getMessage()
+                : 'Unable to process this approval. Please try again.';
             $messageType = "error";
         }
     }
@@ -421,10 +419,11 @@ $roleHierarchy = $db->fetchAll("
                                     <form method="POST" style="display: inline;">
                                         <input type="hidden" name="action_id" value="<?php echo $action['id']; ?>">
                                         <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['admin_csrf_token']); ?>">
-                                        <button type="submit" name="action_decision" value="approve" class="btn btn-success">
+                                        <input type="hidden" name="action_decision" value="1">
+                                        <button type="submit" name="decision" value="approve" class="btn btn-success">
                                             <i class="fas fa-check"></i> Approve
                                         </button>
-                                        <button type="submit" name="action_decision" value="reject" class="btn btn-danger">
+                                        <button type="submit" name="decision" value="reject" class="btn btn-danger">
                                             <i class="fas fa-times"></i> Reject
                                         </button>
                                     </form>

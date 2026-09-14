@@ -6,12 +6,9 @@
 session_start();
 require_once '../config/database.php';
 require_once '../config/backup.php';
+require_once __DIR__ . '/includes/security.php';
 
-// Check if admin is logged in
-if (!isset($_SESSION['admin_logged_in'])) {
-    header('Location: index.php');
-    exit;
-}
+adminRequireLogin(false);
 
 // Handle logout
 if (isset($_GET['logout'])) {
@@ -26,13 +23,10 @@ $errorMessage = '';
 
 function hasPermission($permission) {
     global $db;
-    $role = $_SESSION['admin_role'] ?? '';
-    $row = $db->fetchOne(
-        "SELECT COUNT(*) AS has_permission FROM role_permissions WHERE role_name = ? AND permission_name = ?",
-        [$role, $permission]
-    );
-    return !empty($row['has_permission']);
+    return adminHasPermission($db, $permission);
 }
+
+adminEnsureCsrfToken();
 
 // Get current admin details
 $adminId = $_SESSION['admin_id'];
@@ -43,6 +37,40 @@ $admin = $db->fetchOne(
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    adminRequireCsrf(null, false);
+    $settingsActions = [
+        'update_profile',
+        'change_password',
+        'update_booking_window',
+        'update_annual_years',
+        'update_auto_cancel',
+        'clear_all_bookings',
+        'update_backup_retention',
+        'create_backup',
+        'update_permissions'
+    ];
+    $submittedActions = array_values(array_filter($settingsActions, function ($action) {
+        return isset($_POST[$action]);
+    }));
+
+    if (count($submittedActions) !== 1) {
+        $errorMessage = 'Submit one settings action at a time.';
+    } else {
+        $requiredPermissions = [
+            'update_booking_window' => 'system_settings',
+            'update_annual_years' => 'manage_annual_settings',
+            'update_auto_cancel' => 'manage_auto_cancel',
+            'clear_all_bookings' => 'clear_all_bookings',
+            'update_backup_retention' => 'system_settings',
+            'create_backup' => 'system_settings',
+            'update_permissions' => 'manage_admins'
+        ];
+        $requestedAction = $submittedActions[0];
+        if (isset($requiredPermissions[$requestedAction]) && !hasPermission($requiredPermissions[$requestedAction])) {
+            $errorMessage = 'You do not have permission to change this setting.';
+            unset($_POST[$requestedAction]);
+        }
+
     if (isset($_POST['update_profile'])) {
         $username = trim($_POST['username']);
         $email = trim($_POST['email']);
@@ -247,11 +275,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Delete all bookings (cascades to payment_receipts and annual_bookings due to foreign keys)
                 $db->query("DELETE FROM bookings");
 
-                // Reset auto-increment counters
-                $db->query("ALTER TABLE bookings AUTO_INCREMENT = 1");
-                $db->query("ALTER TABLE payment_receipts AUTO_INCREMENT = 1");
-                $db->query("ALTER TABLE annual_bookings AUTO_INCREMENT = 1");
-
                 // Commit transaction
                 $db->getConnection()->commit();
 
@@ -272,7 +295,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 }
 
-                $successMessage = "✅ All bookings cleared successfully! Deleted {$bookingCount} bookings and {$deletedFiles} receipt files. Booking ID counter reset to 1.";
+                $successMessage = "All bookings cleared successfully. Deleted {$bookingCount} bookings and {$deletedFiles} receipt files.";
 
                 // Log the action
                 error_log("CRITICAL: All bookings cleared by admin #{$adminId} ({$admin['username']}) - {$bookingCount} bookings deleted, {$deletedFiles} files removed");
@@ -358,6 +381,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             // Get all submitted permissions
             $permissions = isset($_POST['permissions']) ? $_POST['permissions'] : [];
+            $requiredAdministratorPermissions = ['manage_admins', 'system_settings', 'super_admin_approval'];
+            foreach ($requiredAdministratorPermissions as $requiredPermission) {
+                if (empty($permissions['administrator_' . $requiredPermission])) {
+                    throw new InvalidArgumentException(
+                        'Administrators must retain Manage Admins, System Settings, and Super Admin Approval permissions.'
+                    );
+                }
+            }
 
             // Get all unique permissions (permission_name and description pairs)
             // Group by permission_name and take the first description found
@@ -367,6 +398,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 GROUP BY permission_name
                 ORDER BY permission_name
             ");
+
+            $roles = ['donor', 'agent', 'supervisor', 'editor', 'administrator'];
+            foreach ($allPermissions as $permissionDefinition) {
+                $isAssigned = false;
+                foreach ($roles as $roleName) {
+                    if (!empty($permissions[$roleName . '_' . $permissionDefinition['permission_name']])) {
+                        $isAssigned = true;
+                        break;
+                    }
+                }
+                if (!$isAssigned) {
+                    throw new InvalidArgumentException(
+                        'Every permission must remain assigned to at least one role so it is not lost from the permission catalogue.'
+                    );
+                }
+            }
 
             // Start transaction
             $db->getConnection()->beginTransaction();
@@ -382,7 +429,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $permDesc = $perm['permission_description'];
 
                 // Check which roles have this permission enabled
-                $roles = ['donor', 'agent', 'supervisor', 'editor', 'administrator'];
                 foreach ($roles as $role) {
                     $key = $role . '_' . $permName;
                     if (isset($permissions[$key])) {
@@ -418,8 +464,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($db->getConnection()->inTransaction()) {
                 $db->getConnection()->rollBack();
             }
-            $errorMessage = 'Error updating permissions: ' . $e->getMessage();
+            adminLogException('Permission update failed', $e);
+            $errorMessage = $e instanceof InvalidArgumentException
+                ? $e->getMessage()
+                : 'Unable to update permissions. Please try again.';
         }
+    }
     }
 }
 
@@ -497,15 +547,6 @@ if ($admin['role'] === 'administrator') {
     }
 }
 
-// Check if phone column exists, if not add it
-try {
-    $columns = $db->fetchAll("SHOW COLUMNS FROM admin_users LIKE 'phone'");
-    if (empty($columns)) {
-        $db->query("ALTER TABLE admin_users ADD COLUMN phone VARCHAR(20) NULL AFTER email");
-    }
-} catch (Exception $e) {
-    // Column might already exist or there's a permission issue
-}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -556,23 +597,23 @@ try {
 
                 <!-- Tab Navigation -->
                 <div class="settings-tabs">
-                    <button class="tab-btn active" onclick="switchTab('account')">
+                    <button class="tab-btn active" onclick="switchTab('account', this)">
                         <i class="fas fa-info-circle"></i> Account Info
                     </button>
-                    <button class="tab-btn" onclick="switchTab('profile')">
+                    <button class="tab-btn" onclick="switchTab('profile', this)">
                         <i class="fas fa-user"></i> Profile
                     </button>
-                    <button class="tab-btn" onclick="switchTab('password')">
+                    <button class="tab-btn" onclick="switchTab('password', this)">
                         <i class="fas fa-lock"></i> Password
                     </button>
                     <?php if ($admin['role'] === 'administrator'): ?>
-                    <button class="tab-btn" onclick="switchTab('system')">
+                    <button class="tab-btn" onclick="switchTab('system', this)">
                         <i class="fas fa-cogs"></i> System Settings
                     </button>
-                    <button class="tab-btn" onclick="switchTab('backup')">
+                    <button class="tab-btn" onclick="switchTab('backup', this)">
                         <i class="fas fa-database"></i> Backups
                     </button>
-                    <button class="tab-btn" onclick="switchTab('permissions')">
+                    <button class="tab-btn" onclick="switchTab('permissions', this)">
                         <i class="fas fa-shield-alt"></i> Permissions
                     </button>
                     <?php endif; ?>
@@ -615,6 +656,7 @@ try {
                     <div class="settings-section">
                         <h2><i class="fas fa-user"></i> Profile Settings</h2>
                         <form method="POST" class="settings-form">
+                            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['admin_csrf_token']); ?>">
                             <div class="form-group">
                                 <label for="username">Username</label>
                                 <input type="text" id="username" name="username"
@@ -649,6 +691,7 @@ try {
                     <div class="settings-section">
                         <h2><i class="fas fa-lock"></i> Change Password</h2>
                         <form method="POST" class="settings-form">
+                            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['admin_csrf_token']); ?>">
                             <div class="form-group">
                                 <label for="current_password">Current Password</label>
                                 <input type="password" id="current_password" name="current_password" required>
@@ -683,6 +726,7 @@ try {
                         <div class="settings-section">
                             <h3><i class="fas fa-calendar-day"></i> Reservation Window</h3>
                             <form method="POST" class="settings-form">
+                                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['admin_csrf_token']); ?>">
                                 <div class="form-group">
                                     <label for="booking_advance_days">How Many Days Ahead Can Be Reserved?</label>
                                     <input type="number" id="booking_advance_days" name="booking_advance_days"
@@ -704,6 +748,7 @@ try {
                         <div class="settings-section">
                             <h3><i class="fas fa-calendar-alt"></i> Annual Booking Configuration</h3>
                             <form method="POST" class="settings-form">
+                                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['admin_csrf_token']); ?>">
                                 <div class="form-group">
                                     <label for="annual_booking_years">
                                         Number of Years for Annual Bookings
@@ -730,6 +775,7 @@ try {
                         <div class="settings-section">
                             <h3><i class="fas fa-clock"></i> Auto-Cancel Unconfirmed Bookings</h3>
                             <form method="POST" class="settings-form">
+                                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['admin_csrf_token']); ?>">
                                 <div class="form-group">
                                     <label for="auto_cancel_days_before">
                                         Days Before Dhana Date to Auto-Cancel
@@ -869,6 +915,7 @@ try {
 
                             <!-- Backup Retention Settings -->
                             <form method="POST" class="settings-form" style="margin-bottom: 20px;">
+                                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['admin_csrf_token']); ?>">
                                 <div class="form-group">
                                     <label for="backup_retention_days">
                                         Daily Backup Retention (Days)
@@ -901,6 +948,7 @@ try {
 
                                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                                     <form method="POST" style="display: inline;">
+                                        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['admin_csrf_token']); ?>">
                                         <input type="hidden" name="backup_type" value="database">
                                         <button type="submit" name="create_backup" class="btn btn-primary" style="background: #1976d2;">
                                             <i class="fas fa-database"></i> Create Daily DB Backup
@@ -908,6 +956,7 @@ try {
                                     </form>
 
                                     <form method="POST" style="display: inline;">
+                                        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['admin_csrf_token']); ?>">
                                         <input type="hidden" name="backup_type" value="monthly">
                                         <button type="submit" name="create_backup" class="btn btn-primary" style="background: #388e3c;">
                                             <i class="fas fa-calendar-alt"></i> Create Monthly DB Backup
@@ -915,6 +964,7 @@ try {
                                     </form>
 
                                     <form method="POST" style="display: inline;">
+                                        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['admin_csrf_token']); ?>">
                                         <input type="hidden" name="backup_type" value="receipts">
                                         <button type="submit" name="create_backup" class="btn btn-primary" style="background: #f57c00;">
                                             <i class="fas fa-file-archive"></i> Backup Receipts
@@ -1006,6 +1056,7 @@ try {
                             </div>
 
                             <form method="POST" class="settings-form" onsubmit="return confirmClearAllBookings();">
+                                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['admin_csrf_token']); ?>">
                                 <div class="form-group" style="margin-top: 20px;">
                                     <label for="confirm_text" style="color: #d32f2f; font-weight: bold;">
                                         Type "DELETE ALL BOOKINGS" to confirm
@@ -1040,6 +1091,7 @@ try {
                         </div>
 
                         <form method="POST" class="settings-form" onsubmit="return confirm('Are you sure you want to update role permissions? This will affect all users with these roles immediately.');">
+                        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['admin_csrf_token']); ?>">
                         <div class="permissions-table-container" style="overflow-x: auto; margin: 20px 0;">
                             <table class="permissions-table" style="width: 100%; border-collapse: collapse; background: white; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
                                 <thead style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
@@ -1215,6 +1267,8 @@ try {
             display: block;
         }
 
+    </style>
+
     <style>
         /* Permissions Table Styling */
         .permissions-table-container {
@@ -1266,7 +1320,7 @@ try {
 
     <script>
         // Tab Switching Function
-        function switchTab(tabName) {
+        function switchTab(tabName, triggerButton) {
             // Hide all tab contents
             document.querySelectorAll('.tab-content').forEach(tab => {
                 tab.classList.remove('active');
@@ -1278,10 +1332,14 @@ try {
             });
 
             // Show selected tab
-            document.getElementById(tabName + '-tab').classList.add('active');
+            const selectedTab = document.getElementById(tabName + '-tab');
+            if (!selectedTab || !triggerButton) {
+                return;
+            }
+            selectedTab.classList.add('active');
 
             // Add active class to clicked button
-            event.target.closest('.tab-btn').classList.add('active');
+            triggerButton.classList.add('active');
         }
 
         // Password confirmation validation
@@ -1354,7 +1412,6 @@ try {
             message += `   ✗ ${totalReceipts} receipt file(s) from server\n`;
             message += '   ✗ ALL annual booking records\n';
             message += '   ✗ ALL payment receipt records\n\n';
-            message += '✓ Booking ID counter will be reset to 1\n\n';
             message += '⚠️ THIS ACTION CANNOT BE UNDONE!\n';
             message += '⚠️ ALL DATA WILL BE LOST FOREVER!\n\n';
             message += 'Are you ABSOLUTELY SURE you want to proceed?';

@@ -1,86 +1,37 @@
 <?php
 session_start();
 require_once '../config/database.php';
+require_once __DIR__ . '/includes/security.php';
+require_once __DIR__ . '/includes/approvals.php';
 
-// Check if user is logged in and is super admin
-if (!isset($_SESSION['admin_logged_in']) || !$_SESSION['is_super_admin']) {
-    header('Location: index.php');
-    exit;
-}
-
-if (empty($_SESSION['admin_csrf_token'])) {
-    $_SESSION['admin_csrf_token'] = bin2hex(random_bytes(32));
-}
+adminRequireLogin(false);
+$db = getDB();
+adminRequirePermission($db, 'super_admin_approval', false);
+adminEnsureCsrfToken();
 
 // Handle approval/rejection actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!is_string($_POST['csrf_token'] ?? null) || !hash_equals($_SESSION['admin_csrf_token'], $_POST['csrf_token'])) {
-        $errorMessage = 'Your session has expired. Refresh the page and try again.';
-    } else {
-    $actionId = $_POST['action_id'] ?? null;
+    adminRequireCsrf(null, false);
+    $actionId = (int)($_POST['action_id'] ?? 0);
     $decision = $_POST['decision'] ?? null; // 'approve' or 'reject'
     
-    if ($actionId && in_array($decision, ['approve', 'reject'])) {
+    if ($actionId > 0 && in_array($decision, ['approve', 'reject'], true)) {
         try {
-            $pdo = getDB()->getConnection();
-            
-            $pdo->beginTransaction();
-            
-            // Get the action details
-            $stmt = $pdo->prepare("SELECT * FROM admin_actions WHERE id = ? AND status = 'pending'");
-            $stmt->execute([$actionId]);
-            $action = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            if ($action) {
-                if ($decision === 'approve') {
-                    // Apply the changes based on action type
-                    switch ($action['action_type']) {
-                        case 'booking_update':
-                            // Apply booking status change
-                            $newValues = json_decode($action['new_values'], true);
-                            if (isset($newValues['status'])) {
-                                $stmt = $pdo->prepare("UPDATE bookings SET status = ? WHERE id = ?");
-                                $stmt->execute([$newValues['status'], $action['target_id']]);
-                            }
-                            break;
-                        // Add more action types as needed
-                    }
-                    
-                    $status = 'approved';
-                    $message = 'Action approved and applied successfully';
-                } else {
-                    $status = 'rejected';
-                    $message = 'Action rejected';
-                }
-                
-                // Update action status
-                $stmt = $pdo->prepare("
-                    UPDATE admin_actions 
-                    SET status = ?, approved_by = ?, approved_at = NOW() 
-                    WHERE id = ?
-                ");
-                $stmt->execute([$status, $_SESSION['admin_id'], $actionId]);
-                
-                $pdo->commit();
-                $successMessage = $message;
-            } else {
-                $errorMessage = 'Action not found or already processed';
-            }
-            
+            $successMessage = adminProcessApproval($db, $actionId, $decision, $_SESSION['admin_id']);
         } catch (Throwable $e) {
-            if (isset($pdo) && $pdo->inTransaction()) {
-                $pdo->rollBack();
-            }
             error_log('Pending approval update failed: ' . $e->getMessage());
-            $errorMessage = 'Unable to process this approval. Please try again.';
+            $errorMessage = $e instanceof InvalidArgumentException || $e instanceof RuntimeException
+                ? $e->getMessage()
+                : 'Unable to process this approval. Please try again.';
         }
-    }
+    } else {
+        $errorMessage = 'Invalid approval request.';
     }
 }
 
 // Get pending actions
 try {
-    $pdo = getDB()->getConnection();
+    $pdo = $db->getConnection();
     
     $stmt = $pdo->prepare("
         SELECT aa.*, au.username as admin_username, au.email as admin_email

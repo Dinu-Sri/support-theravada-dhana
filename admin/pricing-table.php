@@ -6,12 +6,9 @@
 
 session_start();
 require_once '../config/database.php';
+require_once __DIR__ . '/includes/security.php';
 
-// Check if admin is logged in
-if (!isset($_SESSION['admin_logged_in'])) {
-    header('Location: index.php');
-    exit;
-}
+adminRequireLogin(false);
 
 $db = getDB();
 $successMessage = '';
@@ -24,15 +21,7 @@ $admin = $db->fetchOne("SELECT * FROM admin_users WHERE id = ?", [$adminId]);
 // Permission checking function
 function hasPermission($permission) {
     global $db;
-    $role = $_SESSION['admin_role'];
-
-    $check = $db->fetchOne(
-        "SELECT COUNT(*) as has_permission FROM role_permissions
-         WHERE role_name = ? AND permission_name = ?",
-        [$role, $permission]
-    );
-
-    return $check['has_permission'] > 0;
+    return adminHasPermission($db, $permission);
 }
 
 // Check if user has permission to view pricing table
@@ -48,38 +37,62 @@ if (isset($_GET['logout'])) {
     exit;
 }
 
+adminEnsureCsrfToken();
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    adminRequireCsrf(null, false);
+}
+
 // Handle price update
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_price'])) {
     // Check permission
     if (!hasPermission('edit_pricing')) {
         $errorMessage = "You don't have permission to edit prices.";
     } else {
-        $pricingId = (int)$_POST['pricing_id'];
-        $newPrice = (float)$_POST['price'];
+        $pricingId = (int)($_POST['pricing_id'] ?? 0);
+        $rawPrice = $_POST['price'] ?? null;
         $notes = trim($_POST['notes'] ?? '');
 
         try {
-            // Get old price for history
-            $oldPricing = $db->fetchOne("SELECT * FROM monthly_pricing WHERE id = ?", [$pricingId]);
-
-            if ($oldPricing) {
-                // Update price
-                $db->query(
-                    "UPDATE monthly_pricing SET price = ?, notes = ?, updated_by = ?, updated_at = NOW() WHERE id = ?",
-                    [$newPrice, $notes, $adminId, $pricingId]
-                );
-
-                // Log to pricing history
-                $db->query(
-                    "INSERT INTO pricing_history (monthly_pricing_id, dhana_type_id, year, month, old_price, new_price, changed_by, changed_at)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, NOW())",
-                    [$pricingId, $oldPricing['dhana_type_id'], $oldPricing['year'], $oldPricing['month'], $oldPricing['price'], $newPrice, $adminId]
-                );
-
-                $successMessage = "Price updated successfully!";
+            if ($pricingId < 1 || !is_numeric($rawPrice)) {
+                throw new InvalidArgumentException('Select a valid pricing entry and enter a numeric price.');
             }
-        } catch (Exception $e) {
-            $errorMessage = "Error updating price: " . $e->getMessage();
+            $newPrice = (float)$rawPrice;
+            if (!is_finite($newPrice) || $newPrice < 0 || $newPrice > 100000000) {
+                throw new InvalidArgumentException('Price must be between LKR 0 and LKR 100,000,000.');
+            }
+            if (strlen($notes) > 255) {
+                throw new InvalidArgumentException('Notes cannot exceed 255 characters.');
+            }
+
+            $db->getConnection()->beginTransaction();
+            // Get old price for history
+            $oldPricing = $db->fetchOne("SELECT * FROM monthly_pricing WHERE id = ? FOR UPDATE", [$pricingId]);
+
+            if (!$oldPricing) {
+                throw new InvalidArgumentException('The selected pricing entry no longer exists.');
+            }
+
+            $db->query(
+                "UPDATE monthly_pricing SET price = ?, notes = ?, updated_by = ?, updated_at = NOW() WHERE id = ?",
+                [$newPrice, $notes, $adminId, $pricingId]
+            );
+
+            $db->query(
+                "INSERT INTO pricing_history (monthly_pricing_id, dhana_type_id, year, month, old_price, new_price, changed_by, change_reason, changed_at)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())",
+                [$pricingId, $oldPricing['dhana_type_id'], $oldPricing['year'], $oldPricing['month'], $oldPricing['price'], $newPrice, $adminId, $notes]
+            );
+
+            $db->getConnection()->commit();
+            $successMessage = 'Price updated successfully.';
+        } catch (Throwable $e) {
+            if ($db->getConnection()->inTransaction()) {
+                $db->getConnection()->rollBack();
+            }
+            adminLogException('Pricing update failed', $e);
+            $errorMessage = $e instanceof InvalidArgumentException
+                ? $e->getMessage()
+                : 'Unable to update the price. Please try again.';
         }
     }
 }
@@ -92,16 +105,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_month'])) {
     if (!hasPermission('add_pricing_months')) {
         $errorMessage = "You don't have permission to add months.";
     } else {
-        $monthsToAdd = (int)$_POST['months_to_add'];
+        $monthsToAdd = (int)($_POST['months_to_add'] ?? 0);
 
         try {
+            if ($monthsToAdd < 1 || $monthsToAdd > 24) {
+                throw new InvalidArgumentException('Choose between 1 and 24 months to add.');
+            }
+            $db->getConnection()->beginTransaction();
             // Get the latest month in the pricing table
             $latestEntry = $db->fetchOne(
                 "SELECT year, month FROM monthly_pricing ORDER BY year DESC, month DESC LIMIT 1"
             );
 
             if ($latestEntry) {
-                $lastDate = new DateTime("{$latestEntry['year']}-{$latestEntry['month']}-01");
+                $lastDate = new DateTime(sprintf('%04d-%02d-01', $latestEntry['year'], $latestEntry['month']));
                 $dhanaTypes = $db->fetchAll("SELECT id, price FROM dhana_types WHERE is_active = 1");
 
                 $insertedCount = 0;
@@ -132,10 +149,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_month'])) {
                 // Update pricing window setting to match actual months in table
                 updatePricingWindow($db);
 
-                $successMessage = "Added {$monthsToAdd} months to pricing table ({$insertedCount} entries created)!";
+                $db->getConnection()->commit();
+                $successMessage = "Added {$monthsToAdd} months to the pricing table ({$insertedCount} entries created).";
+            } else {
+                throw new RuntimeException('No base pricing month exists. Import the seed data before adding months.');
             }
-        } catch (Exception $e) {
-            $errorMessage = "Error adding months: " . $e->getMessage();
+        } catch (Throwable $e) {
+            if ($db->getConnection()->inTransaction()) {
+                $db->getConnection()->rollBack();
+            }
+            adminLogException('Add pricing months failed', $e);
+            $errorMessage = $e instanceof InvalidArgumentException || $e instanceof RuntimeException
+                ? $e->getMessage()
+                : 'Unable to add pricing months. Please try again.';
         }
     }
 }
@@ -146,9 +172,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['remove_months'])) {
     if (!hasPermission('remove_pricing_months')) {
         $errorMessage = "You don't have permission to remove months. This action is restricted to Administrators only.";
     } else {
-        $monthsToRemove = (int)$_POST['months_to_remove'];
+        $monthsToRemove = (int)($_POST['months_to_remove'] ?? 0);
 
         try {
+            if ($monthsToRemove < 1 || $monthsToRemove > 12) {
+                throw new InvalidArgumentException('Choose between 1 and 12 months to remove.');
+            }
+            $db->getConnection()->beginTransaction();
             // Get the latest months to remove (from the end)
             $latestMonths = $db->fetchAll(
                 "SELECT DISTINCT year, month FROM monthly_pricing
@@ -172,10 +202,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['remove_months'])) {
                 // Update pricing window setting to match actual months in table
                 updatePricingWindow($db);
 
-                $successMessage = "Removed {$deletedCount} months from pricing table!";
+                $db->getConnection()->commit();
+                $successMessage = "Removed {$deletedCount} months from the pricing table.";
+            } else {
+                throw new RuntimeException('There are no pricing months to remove.');
             }
-        } catch (Exception $e) {
-            $errorMessage = "Error removing months: " . $e->getMessage();
+        } catch (Throwable $e) {
+            if ($db->getConnection()->inTransaction()) {
+                $db->getConnection()->rollBack();
+            }
+            adminLogException('Remove pricing months failed', $e);
+            $errorMessage = $e instanceof InvalidArgumentException || $e instanceof RuntimeException
+                ? $e->getMessage()
+                : 'Unable to remove pricing months. Please try again.';
         }
     }
 }
@@ -192,15 +231,15 @@ function updatePricingWindow($db) {
     );
 
     if ($latestEntry) {
-        $latestDate = new DateTime("{$latestEntry['year']}-{$latestEntry['month']}-01");
+        $latestDate = new DateTime(sprintf('%04d-%02d-01', $latestEntry['year'], $latestEntry['month']));
+        $monthsDiff = (($latestDate->format('Y') - $currentDate->format('Y')) * 12)
+            + ($latestDate->format('n') - $currentDate->format('n')) + 1;
+        $monthsDiff = max(0, $monthsDiff);
 
-        // Calculate difference in months
-        $interval = $currentDate->diff($latestDate);
-        $monthsDiff = ($interval->y * 12) + $interval->m;
-
-        // Update the setting
         $db->query(
-            "UPDATE settings SET setting_value = ? WHERE setting_key = 'pricing_window_months'",
+            "INSERT INTO settings (setting_key, setting_value, description)
+             VALUES ('pricing_window_months', ?, 'Number of months with configured pricing')
+             ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)",
             [$monthsDiff]
         );
     }
@@ -318,7 +357,7 @@ for ($i = 0; $i < $displayMonths; $i++) {
                 <div class="info-card">
                     <div class="info-icon"><i class="fas fa-calendar-check"></i></div>
                     <div class="info-content">
-                        <h3><?php echo $dateRange ? date('M Y', strtotime($dateRange['min_date'])) : 'N/A'; ?></h3>
+                        <h3><?php echo !empty($dateRange['min_date']) ? date('M Y', strtotime($dateRange['min_date'])) : 'No data'; ?></h3>
                         <p>First Month</p>
                         <small style="color: #666; font-size: 11px; display: block; margin-top: 4px;">Earliest month in pricing table</small>
                     </div>
@@ -326,7 +365,7 @@ for ($i = 0; $i < $displayMonths; $i++) {
                 <div class="info-card">
                     <div class="info-icon"><i class="fas fa-calendar-plus"></i></div>
                     <div class="info-content">
-                        <h3><?php echo $dateRange ? date('M Y', strtotime($dateRange['max_date'])) : 'N/A'; ?></h3>
+                        <h3><?php echo !empty($dateRange['max_date']) ? date('M Y', strtotime($dateRange['max_date'])) : 'No data'; ?></h3>
                         <p>Last Month</p>
                         <small style="color: #666; font-size: 11px; display: block; margin-top: 4px;">Latest month customers can book</small>
                     </div>
@@ -407,7 +446,9 @@ for ($i = 0; $i < $displayMonths; $i++) {
                                     ?>
                                     <td class="price-cell <?php echo $isPast ? 'past-month' : ''; ?> <?php echo $isCurrent ? 'current-month' : ''; ?>">
                                         <?php if ($pricing): ?>
-                                            <div class="price-display" onclick="editPrice(<?php echo $pricing['id']; ?>, <?php echo $pricing['price']; ?>, '<?php echo htmlspecialchars($pricing['notes'] ?? ''); ?>')">
+                                            <div class="price-display" role="button" tabindex="0"
+                                                 onclick="editPrice(<?php echo (int)$pricing['id']; ?>, <?php echo json_encode((float)$pricing['price']); ?>, <?php echo htmlspecialchars(json_encode($pricing['notes'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>)"
+                                                 onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); this.click(); }">
                                                 <div class="price-amount">LKR <?php echo number_format($pricing['price'], 2); ?></div>
                                                 <?php if ($pricing['notes']): ?>
                                                     <div class="price-notes" title="<?php echo htmlspecialchars($pricing['notes']); ?>">
@@ -461,6 +502,7 @@ for ($i = 0; $i < $displayMonths; $i++) {
             </div>
             <form method="POST" class="modal-form">
                 <input type="hidden" name="pricing_id" id="edit_pricing_id">
+                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['admin_csrf_token']); ?>">
 
                 <div class="form-group">
                     <label for="edit_price">Price (LKR)</label>
@@ -490,6 +532,7 @@ for ($i = 0; $i < $displayMonths; $i++) {
                 <span class="close" onclick="closeModal('addMonthModal')">&times;</span>
             </div>
             <form method="POST" class="modal-form">
+                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['admin_csrf_token']); ?>">
                 <div class="form-group">
                     <label for="months_to_add">Number of Months to Add</label>
                     <input type="number" name="months_to_add" id="months_to_add" min="1" max="24" value="1" required class="form-control">
@@ -519,6 +562,7 @@ for ($i = 0; $i < $displayMonths; $i++) {
                 <span class="close" onclick="closeModal('removeMonthModal')">&times;</span>
             </div>
             <form method="POST" class="modal-form" onsubmit="return confirmRemoveMonths()">
+                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['admin_csrf_token']); ?>">
                 <div class="form-group">
                     <label for="months_to_remove">Number of Months to Remove</label>
                     <input type="number" name="months_to_remove" id="months_to_remove" min="1" max="12" value="1" required class="form-control">

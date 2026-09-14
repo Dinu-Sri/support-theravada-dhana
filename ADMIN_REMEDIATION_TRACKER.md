@@ -16,29 +16,29 @@ Statuses: `TODO` → `IN PROGRESS` → `FIXED` → `VERIFIED`; use `BLOCKED` onl
 
 - Audit baseline: `293df13`
 - Current phase: Phase 1 — authorization, CSRF, session security, and data integrity
-- Next item: continue `ADM-001`/`ADM-002` across remaining mutation endpoints
+- Next item: `ADM-004` stored-XSS output audit and remediation
 - Progress: 0 verified / 69 total
 - Verification constraints: local MySQL was unavailable at audit time; authenticated browser testing requires a working database and an admin account.
 
 ## Phase 1 — Security and data integrity
 
-- [ ] `ADM-001` **P0 Security** — Mutation endpoints do not consistently enforce role permissions. Status: `IN PROGRESS` (booking update/delete/hold secured; remaining mutations pending). Evidence: permission tests for every mutation endpoint. Commit: current batch
-- [ ] `ADM-002` **P0 Security** — Most admin mutations have no CSRF protection. Status: `IN PROGRESS` (booking update/delete/hold/status secured; remaining mutations pending). Evidence: valid/invalid-token POST and JSON tests. Commit: current batch
+- [ ] `ADM-001` **P0 Security** — Mutation endpoints do not consistently enforce role permissions. Status: `FIXED` (role-matrix integration tests pending). Evidence: permission tests for every mutation endpoint. Commit: `76f334d` + current batch
+- [ ] `ADM-002` **P0 Security** — Most admin mutations have no CSRF protection. Status: `FIXED` (valid/invalid-token integration tests pending). Evidence: valid/invalid-token POST and JSON tests. Commit: `76f334d` + current batch
 - [ ] `ADM-003` **P0 Data integrity** — Booking hold stores an admin ID in a donor-user foreign key and joins the wrong table. Status: `FIXED` (dynamic migration/hold test pending). Evidence: schema/query correction and hold toggle test. Commit: current batch
 - [ ] `ADM-004` **P0 Security** — Reservation data reaches HTML/JavaScript without consistent escaping, enabling stored XSS. Status: `TODO`. Evidence: malicious-text rendering test. Commit: —
-- [ ] `ADM-005` **P0 Security** — Pricing notes are injected into inline JavaScript unsafely. Status: `TODO`. Evidence: quote/script payload test. Commit: —
+- [ ] `ADM-005` **P0 Security** — Pricing notes are injected into inline JavaScript unsafely. Status: `FIXED` (browser payload test pending). Evidence: quote/script payload test. Commit: current batch
 - [ ] `ADM-006` **P0 Reliability** — Standalone analytics queries a nonexistent `dhana_type` field. Status: `TODO`. Evidence: analytics page and endpoint smoke tests. Commit: —
 - [ ] `ADM-007` **P0 Logic** — Reservation status selector omits `receipt_submitted`. Status: `FIXED` (browser verification pending). Evidence: all schema statuses rendered and accepted. Commit: current batch
 - [ ] `ADM-008` **P0 UX/Data integrity** — Changing a status immediately submits with no review or recovery. Status: `FIXED` (browser verification pending). Evidence: explicit save/confirm flow. Commit: current batch
-- [ ] `ADM-009` **P0 Data integrity** — Approval processing is incomplete and non-atomic. Status: `TODO`. Evidence: each action type applies transactionally or is rejected. Commit: —
-- [ ] `ADM-010` **P0 Security** — Destructive settings actions are insufficiently protected. Status: `TODO`. Evidence: permission, CSRF, and confirmation tests. Commit: —
+- [ ] `ADM-009` **P0 Data integrity** — Approval processing is incomplete and non-atomic. Status: `FIXED` (concurrency/integration tests pending). Evidence: each action type applies transactionally or is rejected. Commit: current batch
+- [ ] `ADM-010` **P0 Security** — Destructive settings actions are insufficiently protected. Status: `FIXED` (integration tests pending). Evidence: permission, CSRF, and confirmation tests. Commit: current batch
 
 ## Phase 2 — Admin workflows and business logic
 
-- [ ] `ADM-011` **P1 Reliability** — Settings tabs depend on a browser-global `event`. Status: `TODO`. Evidence: mouse and keyboard tab tests. Commit: —
-- [ ] `ADM-012` **P1 Architecture** — Settings view silently alters the database schema. Status: `TODO`. Evidence: migration exists and GET is read-only. Commit: —
-- [ ] `ADM-013` **P1 Security** — Permission editing can lock every administrator out. Status: `TODO`. Evidence: last-admin permission safeguards. Commit: —
-- [ ] `ADM-014` **P1 Logic** — Multiple independent settings actions can execute from one POST. Status: `TODO`. Evidence: single action dispatch tests. Commit: —
+- [ ] `ADM-011` **P1 Reliability** — Settings tabs depend on a browser-global `event`. Status: `FIXED` (browser keyboard/mouse tests pending). Evidence: mouse and keyboard tab tests. Commit: current batch
+- [ ] `ADM-012` **P1 Architecture** — Settings view silently alters the database schema. Status: `FIXED` (GET smoke test pending). Evidence: migration exists and GET is read-only. Commit: current batch
+- [ ] `ADM-013` **P1 Security** — Permission editing can lock every administrator out. Status: `FIXED` (last-admin tests pending). Evidence: last-admin permission safeguards. Commit: current batch
+- [ ] `ADM-014` **P1 Logic** — Multiple independent settings actions can execute from one POST. Status: `FIXED` (crafted POST test pending). Evidence: single action dispatch tests. Commit: current batch
 - [ ] `ADM-015` **P1 UX** — Reservation edit modal can disable the wrong primary button. Status: `TODO`. Evidence: edit/save button state test. Commit: —
 - [ ] `ADM-016` **P1 Maintainability** — Booking details rendering is duplicated. Status: `TODO`. Evidence: one implementation and detail-modal regression test. Commit: —
 - [ ] `ADM-017` **P1 Reliability** — Global modal handlers overwrite each other. Status: `TODO`. Evidence: each modal closes independently by button/Escape/backdrop. Commit: —
@@ -54,9 +54,9 @@ Statuses: `TODO` → `IN PROGRESS` → `FIXED` → `VERIFIED`; use `BLOCKED` onl
 - [ ] `ADM-027` **P1 Security** — Reports do not enforce report/export permissions. Status: `TODO`. Evidence: role matrix endpoint tests. Commit: —
 - [ ] `ADM-028` **P1 Correctness** — The PDF report option returns HTML rather than a PDF. Status: `TODO`. Evidence: valid PDF signature/content or honest UI label. Commit: —
 - [ ] `ADM-029` **P1 Security** — CSV export is vulnerable to spreadsheet formula injection. Status: `TODO`. Evidence: cells beginning `= + - @` neutralized. Commit: —
-- [ ] `ADM-030` **P1 Data integrity** — Pricing updates are not transactional. Status: `TODO`. Evidence: rollback-on-failure test. Commit: —
-- [ ] `ADM-031` **P1 Validation** — Pricing inputs are weakly validated server-side. Status: `TODO`. Evidence: invalid amount/month/type boundary tests. Commit: —
-- [ ] `ADM-032` **P1 Logic** — Pricing-window calculation ignores direction/boundary cases. Status: `TODO`. Evidence: past/current/future month tests. Commit: —
+- [ ] `ADM-030` **P1 Data integrity** — Pricing updates are not transactional. Status: `FIXED` (rollback integration test pending). Evidence: rollback-on-failure test. Commit: current batch
+- [ ] `ADM-031` **P1 Validation** — Pricing inputs are weakly validated server-side. Status: `FIXED` (boundary integration tests pending). Evidence: invalid amount/month/type boundary tests. Commit: current batch
+- [ ] `ADM-032` **P1 Logic** — Pricing-window calculation ignores direction/boundary cases. Status: `FIXED` (date-boundary integration tests pending). Evidence: past/current/future month tests. Commit: current batch
 - [ ] `ADM-033` **P1 Deployment** — Backup flow lacks shared-hosting preflight and reliable `mysqldump` discovery. Status: `TODO`. Evidence: actionable failure/success diagnostics. Commit: —
 - [ ] `ADM-034` **P1 UX/Reliability** — Backend errors are frequently invisible or overly generic. Status: `TODO`. Evidence: consistent safe error surfaces and server logs. Commit: —
 - [ ] `ADM-035` **P1 Security** — APIs expose raw internal error details. Status: `TODO`. Evidence: production-safe JSON errors. Commit: —
@@ -86,9 +86,9 @@ Statuses: `TODO` → `IN PROGRESS` → `FIXED` → `VERIFIED`; use `BLOCKED` onl
 - [ ] `ADM-053` **P2 Accessibility** — Modals lack focus management, roles, labels, and Escape behavior. Status: `TODO`. Evidence: keyboard/screen-reader checklist. Commit: —
 - [ ] `ADM-054` **P2 UX** — Nested dialog scrolling creates confusing double-scroll layouts. Status: `TODO`. Evidence: short and tall viewport review. Commit: —
 - [ ] `ADM-055` **P2 UX** — Settings overloads routine and high-risk actions on one screen. Status: `TODO`. Evidence: reorganized information architecture. Commit: —
-- [ ] `ADM-056` **P2 Correctness** — Settings contains invalid nested style markup. Status: `TODO`. Evidence: HTML validation/source inspection. Commit: —
+- [ ] `ADM-056` **P2 Correctness** — Settings contains invalid nested style markup. Status: `FIXED` (render validation pending). Evidence: HTML validation/source inspection. Commit: current batch
 - [ ] `ADM-057` **P2 UX** — The 72-column pricing grid is not practically usable. Status: `TODO`. Evidence: focused period/type workflow and responsive review. Commit: —
-- [ ] `ADM-058` **P2 Edge case** — Empty pricing data displays January 1970. Status: `TODO`. Evidence: empty-state test. Commit: —
+- [ ] `ADM-058` **P2 Edge case** — Empty pricing data displays January 1970. Status: `FIXED` (empty-database render pending). Evidence: empty-state test. Commit: current batch
 - [ ] `ADM-059` **P2 UX** — Analytics is duplicated between dashboard and standalone page. Status: `TODO`. Evidence: one coherent analytics route/navigation. Commit: —
 - [ ] `ADM-060` **P2 Correctness** — Currency formatting uses `$` instead of Rs/LKR in places. Status: `TODO`. Evidence: cross-page currency audit. Commit: —
 - [ ] `ADM-061` **P2 Maintainability** — `admin.css` contains conflicting repeated definitions. Status: `TODO`. Evidence: cascade audit and visual regression review. Commit: —
@@ -110,3 +110,4 @@ Add dated entries here with command/browser evidence. Never include credentials,
 
 - 2026-09-14 — Tracker created from the audit of baseline `293df13`; no issues marked fixed without verification.
 - 2026-09-14 — Added shared admin security helpers; secured booking update/delete/hold/detail routes; added explicit status save and the missing receipt status; corrected hold ownership schema with a one-time migration; moved update email after commit. PHP lint and the elevated Node syntax check passed.
+- 2026-09-14 — Secured all settings/pricing/role/approval POST flows with one-action dispatch, CSRF, permission checks, and safe errors; made approvals atomic and reject unsupported types; protected the last administrator permissions/role; made pricing writes transactional with bounded input; fixed note encoding, signed pricing window calculation, settings tabs, invalid style nesting, and empty pricing dates. PHP lint passed.
