@@ -16,7 +16,7 @@ function adminProcessApproval($db, $actionId, $decision, $approverId) {
             [$actionId]
         );
         if (!$action) {
-            throw new RuntimeException('Action not found or already processed.');
+            throw new DomainException('Action not found or already processed.');
         }
 
         if ($decision === 'approve') {
@@ -25,12 +25,12 @@ function adminProcessApproval($db, $actionId, $decision, $approverId) {
                     $newValues = json_decode($action['new_values'], true);
                     $validStatuses = ['pending', 'receipt_submitted', 'payment_pending', 'confirmed', 'completed', 'cancelled'];
                     if (!is_array($newValues) || !in_array($newValues['status'] ?? '', $validStatuses, true)) {
-                        throw new RuntimeException('This approval contains an invalid reservation status.');
+                        throw new DomainException('This approval contains an invalid reservation status.');
                     }
 
                     $booking = $db->fetchOne("SELECT id FROM bookings WHERE id = ? FOR UPDATE", [(int)$action['target_id']]);
                     if (!$booking) {
-                        throw new RuntimeException('The target reservation no longer exists.');
+                        throw new DomainException('The target reservation no longer exists.');
                     }
 
                     $db->query(
@@ -40,7 +40,7 @@ function adminProcessApproval($db, $actionId, $decision, $approverId) {
                     break;
 
                 default:
-                    throw new RuntimeException('This action type is not supported and was not approved.');
+                    throw new DomainException('This action type is not supported and was not approved.');
             }
         }
 
@@ -52,7 +52,7 @@ function adminProcessApproval($db, $actionId, $decision, $approverId) {
         );
         $statement->execute([$status, $approverId, $actionId]);
         if ($statement->rowCount() !== 1) {
-            throw new RuntimeException('The action was processed by another administrator.');
+            throw new DomainException('The action was processed by another administrator.');
         }
 
         $pdo->commit();

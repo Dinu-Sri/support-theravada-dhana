@@ -248,7 +248,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_booking'])) {
                     $errorMessage = 'Dāna reservation not found';
                 }
             } catch (Exception $e) {
-                $errorMessage = 'Error submitting approval request: ' . $e->getMessage();
+                adminLogException('Approval request submission failed', $e);
+                $errorMessage = 'Unable to submit the approval request. Please try again.';
             }
         }
     }
@@ -1141,30 +1142,19 @@ $blockedDates = $db->fetchAll(
         // Load users via AJAX
         function loadUsers(filter = 'all') {
             currentFilter = filter;
-            console.log('Loading users with filter:', filter);
             
-            fetch('get-users.php?filter=' + filter)
-                .then(response => {
-                    console.log('Response status:', response.status);
-                    return response.json();
-                })
+            fetch('get-users.php?filter=' + encodeURIComponent(filter))
+                .then(response => readAdminJsonResponse(response, 'Unable to load users.'))
                 .then(data => {
-                    console.log('Response data:', data);
-                    if (data.success) {
-                        allUsers = data.users;
-                        filteredUsers = [...allUsers];
-                        totalUsers = filteredUsers.length;
-                        currentPage = 1;
-                        console.log('Loaded users count:', totalUsers);
-                        renderCurrentPage();
-                    } else {
-                        console.error('Error loading users:', data.error);
-                        alert('Error loading users: ' + (data.error || 'Unknown error'));
-                    }
+                    allUsers = Array.isArray(data.users) ? data.users : [];
+                    filteredUsers = [...allUsers];
+                    totalUsers = filteredUsers.length;
+                    currentPage = 1;
+                    renderCurrentPage();
                 })
                 .catch(error => {
                     console.error('Fetch error:', error);
-                    alert('Network error loading users. Please check console for details.');
+                    showNotification(error.message, 'error');
                 });
         }
 
@@ -1213,7 +1203,7 @@ $blockedDates = $db->fetchAll(
                 // Create role change dropdown
                 const roleOptions = user.source_table === 'users'
                     ? ['donor', 'agent']
-                    : ['donor', 'supervisor', 'editor', 'administrator'];
+                    : ['supervisor', 'editor', 'administrator'];
                 const roleLabels = { donor: 'Donor', agent: 'Reservation Agent', supervisor: 'Supervisor', editor: 'Editor', administrator: 'Administrator' };
                 const safeRole = Object.prototype.hasOwnProperty.call(roleLabels, user.role) ? user.role : 'donor';
                 const roleDropdown = roleOptions.map(role => 
@@ -1519,26 +1509,16 @@ $blockedDates = $db->fetchAll(
             `;
 
             fetch(`get-analytics-data.php?time_filter=${timeFilter}&status_filter=${statusFilter}`)
-                .then(response => response.json())
+                .then(response => readAdminJsonResponse(response, 'Unable to load analytics data.'))
                 .then(data => {
-                    if (data.success) {
-                        renderAnalyticsContent(data.data);
-                    } else {
-                        analyticsContent.innerHTML = `
-                            <div class="error-state">
-                                <i class="fas fa-exclamation-circle"></i>
-                                <p>Error loading analytics: ${escapeAdminHtml(data.error)}</p>
-                                <button onclick="loadAnalyticsData()" class="retry-btn">Retry</button>
-                            </div>
-                        `;
-                    }
+                    renderAnalyticsContent(data.data);
                 })
                 .catch(error => {
                     console.error('Analytics error:', error);
                     analyticsContent.innerHTML = `
                         <div class="error-state">
                             <i class="fas fa-exclamation-circle"></i>
-                            <p>Failed to load analytics data</p>
+                            <p>${escapeAdminHtml(error.message)}</p>
                             <button onclick="loadAnalyticsData()" class="retry-btn">Retry</button>
                         </div>
                     `;
@@ -1971,25 +1951,16 @@ $blockedDates = $db->fetchAll(
 
             // Fetch reservation details
             fetch(`get-booking-details.php?id=${bookingId}`)
-                .then(response => response.json())
+                .then(response => readAdminJsonResponse(response, 'Unable to load reservation details.'))
                 .then(data => {
-                    if (data.success) {
-                        displayBookingDetails(data.data);
-                    } else {
-                        content.innerHTML = `
-                            <div class="error-message">
-                                <i class="fas fa-exclamation-triangle"></i>
-                            <p>Error loading reservation details: ${escapeAdminHtml(data.error)}</p>
-                            </div>
-                        `;
-                    }
+                    displayBookingDetails(data.data);
                 })
                 .catch(error => {
                     console.error('Error:', error);
                     content.innerHTML = `
                         <div class="error-message">
                             <i class="fas fa-exclamation-triangle"></i>
-                            <p>Error loading reservation details. Please try again.</p>
+                            <p>${escapeAdminHtml(error.message)}</p>
                         </div>
                     `;
                 });
@@ -2294,32 +2265,15 @@ $blockedDates = $db->fetchAll(
                     csrf_token: window.ADMIN_CSRF_TOKEN || ''
                 })
             })
-            .then(response => response.json())
+            .then(response => readAdminJsonResponse(response, 'Unable to update the reservation hold.'))
             .then(data => {
-                if (data.success) {
-                    // Show success message
-                    alert(data.message);
-
-                    // Reload booking details to show updated information
-                    showBookingDetails(bookingId);
-
-                    // Reload the bookings table to reflect changes
-                    location.reload();
-                } else {
-                    alert('Error: ' + data.error);
-                    holdBtn.disabled = false;
-
-                    // Restore button state
-                    if (isCurrentlyOnHold) {
-                        holdBtn.innerHTML = '<i class="fas fa-play-circle"></i> <span id="holdBtnText">Remove Hold</span>';
-                    } else {
-                        holdBtn.innerHTML = '<i class="fas fa-pause-circle"></i> <span id="holdBtnText">Place on Hold</span>';
-                    }
-                }
+                showNotification(data.message || 'Reservation hold updated.', 'success');
+                showBookingDetails(bookingId);
+                if (isCalendarView) loadCalendarData();
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('An error occurred while updating the hold status.');
+                showNotification(error.message, 'error');
                 holdBtn.disabled = false;
 
                 // Restore button state

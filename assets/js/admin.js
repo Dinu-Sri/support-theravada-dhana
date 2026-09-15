@@ -22,6 +22,14 @@ function safeAdminStatus(value) {
     return statuses.includes(value) ? value : 'pending';
 }
 
+async function readAdminJsonResponse(response, fallbackMessage) {
+    const data = await response.json().catch(() => null);
+    if (!response.ok || !data || data.success === false) {
+        throw new Error(data?.error || fallbackMessage || `Request failed (${response.status}).`);
+    }
+    return data;
+}
+
 function getAdminDayAvailability(dayBookings, dhanaTypes, isBlocked) {
     if (isBlocked) return 'fully-booked';
 
@@ -564,13 +572,13 @@ function loadCalendarData() {
 
     // Fetch calendar data
     fetch(`admin-calendar-data.php?month=${currentCalendarMonth}&year=${currentCalendarYear}`)
-        .then(response => response.json())
+        .then(response => readAdminJsonResponse(response, 'Unable to load calendar data.'))
         .then(data => {
             renderCalendar(data);
         })
         .catch(error => {
             console.error('Error loading calendar data:', error);
-            calendarGrid.innerHTML = '<div class="calendar-error">Error loading calendar data</div>';
+            calendarGrid.innerHTML = `<div class="calendar-error">${escapeAdminHtml(error.message)}</div>`;
         });
 }
 
@@ -668,7 +676,7 @@ function showDayBookings(date) {
 
     // Fetch booking details for the selected date
     fetch(`admin-calendar-data.php?month=${currentCalendarMonth}&year=${currentCalendarYear}&date=${date}`)
-        .then(response => response.json())
+        .then(response => readAdminJsonResponse(response, 'Unable to load reservations for this date.'))
         .then(data => {
             const dayBookings = data.bookings.filter(b => b.booking_date === date);
 
@@ -714,7 +722,7 @@ function showDayBookings(date) {
         })
         .catch(error => {
             console.error('Error loading booking details:', error);
-            bookingDetailsList.innerHTML = '<p class="error">Error loading booking details.</p>';
+            bookingDetailsList.innerHTML = `<p class="error">${escapeAdminHtml(error.message)}</p>`;
             detailsContainer.style.display = 'block';
         });
 }
@@ -833,17 +841,13 @@ function applyMonthYearSelection() {
 function editBooking(bookingId) {
     // Fetch reservation details first
     fetch(`get-booking-details.php?id=${bookingId}`)
-        .then(response => response.json())
+        .then(response => readAdminJsonResponse(response, 'Unable to load reservation details.'))
         .then(booking => {
-            if (booking.success) {
-                showEditBookingModal(booking.data);
-            } else {
-                alert('Error loading reservation details: ' + booking.error);
-            }
+            showEditBookingModal(booking.data);
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Error loading reservation details');
+            showNotification(error.message, 'error');
         });
 }
 
@@ -990,20 +994,15 @@ function saveBookingChanges() {
         method: 'POST',
         body: formData
     })
-    .then(response => response.json())
+    .then(response => readAdminJsonResponse(response, 'Unable to update the reservation.'))
     .then(data => {
-        if (data.success) {
-            closeEditBookingModal();
-            loadCalendarData(); // Refresh calendar
-            showNotification('Reservation updated successfully!', 'success');
-        } else {
-            // Show detailed error message in a better formatted dialog
-            showBookingConflictError(data.error);
-        }
+        closeEditBookingModal();
+        loadCalendarData(); // Refresh calendar
+        showNotification(data.message || 'Reservation updated successfully!', 'success');
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Error updating reservation: ' + error.message);
+        showBookingConflictError(error.message);
     })
     .finally(() => {
         saveBtn.innerHTML = originalText;
@@ -1075,19 +1074,15 @@ function deleteBooking(bookingId) {
             csrf_token: window.ADMIN_CSRF_TOKEN || ''
         })
     })
-    .then(response => response.json())
+    .then(response => readAdminJsonResponse(response, 'Unable to delete the reservation.'))
     .then(data => {
-        if (data.success) {
-            closeEditBookingModal();
-            loadCalendarData(); // Refresh calendar
-            showNotification('Reservation deleted successfully!', 'success');
-        } else {
-            alert('Error deleting reservation: ' + data.error);
-        }
+        closeEditBookingModal();
+        loadCalendarData(); // Refresh calendar
+        showNotification(data.message || 'Reservation deleted successfully!', 'success');
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Error deleting reservation');
+        showNotification(error.message, 'error');
     });
 }
 

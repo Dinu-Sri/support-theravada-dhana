@@ -152,14 +152,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_month'])) {
                 $db->getConnection()->commit();
                 $successMessage = "Added {$monthsToAdd} months to the pricing table ({$insertedCount} entries created).";
             } else {
-                throw new RuntimeException('No base pricing month exists. Import the seed data before adding months.');
+                throw new DomainException('No base pricing month exists. Import the seed data before adding months.');
             }
         } catch (Throwable $e) {
             if ($db->getConnection()->inTransaction()) {
                 $db->getConnection()->rollBack();
             }
             adminLogException('Add pricing months failed', $e);
-            $errorMessage = $e instanceof InvalidArgumentException || $e instanceof RuntimeException
+            $errorMessage = $e instanceof InvalidArgumentException || $e instanceof DomainException
                 ? $e->getMessage()
                 : 'Unable to add pricing months. Please try again.';
         }
@@ -205,14 +205,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['remove_months'])) {
                 $db->getConnection()->commit();
                 $successMessage = "Removed {$deletedCount} months from the pricing table.";
             } else {
-                throw new RuntimeException('There are no pricing months to remove.');
+                throw new DomainException('There are no pricing months to remove.');
             }
         } catch (Throwable $e) {
             if ($db->getConnection()->inTransaction()) {
                 $db->getConnection()->rollBack();
             }
             adminLogException('Remove pricing months failed', $e);
-            $errorMessage = $e instanceof InvalidArgumentException || $e instanceof RuntimeException
+            $errorMessage = $e instanceof InvalidArgumentException || $e instanceof DomainException
                 ? $e->getMessage()
                 : 'Unable to remove pricing months. Please try again.';
         }

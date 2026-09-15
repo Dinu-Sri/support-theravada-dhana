@@ -79,26 +79,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         
         try {
-            if ($newRole === null) throw new RuntimeException($message);
+            if ($newRole === null) throw new DomainException($message);
             if ($userType === 'admin' && $userId === (int)$_SESSION['admin_id']) {
-                throw new RuntimeException('You cannot change your own staff role. Ask another administrator to make this change.');
+                throw new DomainException('You cannot change your own staff role. Ask another administrator to make this change.');
             }
             if ($newRole === 'agent') {
                 $roleColumn = $db->fetchOne("SHOW COLUMNS FROM users LIKE 'role'");
                 if (!$roleColumn || strpos((string)$roleColumn['Type'], "'agent'") === false) {
-                    throw new RuntimeException('Reservation agents require the database migration. Run database/migrations/2026-09-14-agent-reservations.sql once in phpMyAdmin.');
+                    throw new DomainException('Reservation agents require the database migration. Run database/migrations/2026-09-14-agent-reservations.sql once in phpMyAdmin.');
                 }
             }
             $db->getConnection()->beginTransaction();
             if ($userType === 'admin') {
                 $existingAdmin = $db->fetchOne("SELECT id, role FROM admin_users WHERE id = ? AND is_active = 1 FOR UPDATE", [$userId]);
                 if (!$existingAdmin) {
-                    throw new RuntimeException('The selected staff account no longer exists. Refresh the page and try again.');
+                    throw new DomainException('The selected staff account no longer exists. Refresh the page and try again.');
                 }
                 if ($existingAdmin['role'] === 'administrator' && $newRole !== 'administrator') {
                     $activeAdministrators = $db->fetchAll("SELECT id FROM admin_users WHERE role = 'administrator' AND is_active = 1 FOR UPDATE");
                     if (count($activeAdministrators) <= 1) {
-                        throw new RuntimeException('At least one active administrator must remain.');
+                        throw new DomainException('At least one active administrator must remain.');
                     }
                 }
                 // Update admin_users table
@@ -117,7 +117,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 $existingUser = $db->fetchOne("SELECT role FROM users WHERE id = ? AND is_active = 1 FOR UPDATE", [$userId]);
                 if (!$existingUser) {
-                    throw new RuntimeException('The selected user no longer exists. Refresh the page and try again.');
+                    throw new DomainException('The selected user no longer exists. Refresh the page and try again.');
                 }
                 $oldRole = $existingUser['role'] ?? 'donor';
                 // Update users table
@@ -143,7 +143,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $db->getConnection()->rollBack();
             }
             error_log('Role management update failed: ' . $e->getMessage());
-            $message = $e instanceof InvalidArgumentException || $e instanceof RuntimeException
+            $message = $e instanceof InvalidArgumentException || $e instanceof DomainException
                 ? $e->getMessage()
                 : 'Unable to update the role. Please try again.';
             $messageType = "error";
@@ -157,14 +157,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         try {
             if (!hasPermission('super_admin_approval')) {
-                throw new RuntimeException('You do not have permission to process approvals.');
+                throw new DomainException('You do not have permission to process approvals.');
             }
             $message = adminProcessApproval($db, $actionId, $decision, $_SESSION['admin_id']);
             $messageType = "success";
             
         } catch (Throwable $e) {
             error_log('Role management approval failed: ' . $e->getMessage());
-            $message = $e instanceof InvalidArgumentException || $e instanceof RuntimeException
+            $message = $e instanceof InvalidArgumentException || $e instanceof DomainException
                 ? $e->getMessage()
                 : 'Unable to process this approval. Please try again.';
             $messageType = "error";

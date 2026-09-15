@@ -1,25 +1,20 @@
 <?php
 session_start();
 require_once '../config/database.php';
+require_once __DIR__ . '/includes/security.php';
 header('Content-Type: application/json; charset=UTF-8');
 
-// Check if user is logged in and has proper permissions
-if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_role'] !== 'administrator') {
-    http_response_code(403);
-    echo json_encode(['success' => false, 'error' => 'Access denied']);
-    exit;
-}
+adminRequireLogin(true);
+$db = getDB();
+adminRequirePermission($db, 'manage_admins', true);
 
 $filter = $_GET['filter'] ?? 'all';
 $allowedFilters = ['all', 'donor', 'agent', 'supervisor', 'editor', 'administrator'];
 if (!in_array($filter, $allowedFilters, true)) {
-    http_response_code(400);
-    echo json_encode(['success' => false, 'error' => 'Invalid user filter']);
-    exit;
+    adminJsonResponse(['success' => false, 'error' => 'Invalid user filter.'], 400);
 }
 
 try {
-    $db = getDB();
     $pdo = $db->getConnection();
     
     // Check if role_permissions table exists
@@ -32,9 +27,7 @@ try {
     
     switch ($filter) {
         case 'donor':
-            // For donor filter, we need to check both tables
-            // - users table: role = 'donor' or role = ''
-            // - admin_users table: role = 'donor' (demoted admins)
+            // Donors and agents live only in the normal users table.
             $donorQuery = "SELECT id, first_name, last_name, email, contact_number,
                                  CASE
                                      WHEN role = '' OR role IS NULL THEN 'donor'
@@ -43,11 +36,6 @@ try {
                                  is_active, created_at, 'users' as source_table
                           FROM users
                           WHERE (role = 'donor' OR role = '' OR role IS NULL) AND is_active = 1
-                          UNION ALL
-                          SELECT id, username as first_name, '' as last_name, email, '' as contact_number,
-                                 role, is_active, created_at, 'admin_users' as source_table
-                          FROM admin_users
-                          WHERE role = 'donor' AND is_active = 1
                           ORDER BY created_at DESC";
 
             $stmt = $pdo->prepare($donorQuery);
@@ -219,8 +207,7 @@ try {
     ]);
     
 } catch (Throwable $e) {
-    http_response_code(500);
-    error_log('Unable to load admin users: ' . $e->getMessage());
-    echo json_encode(['success' => false, 'error' => 'Unable to load users. Please try again.']);
+    adminLogException('Unable to load admin users', $e);
+    adminJsonResponse(['success' => false, 'error' => 'Unable to load users. Please try again.'], 500);
 }
 ?>

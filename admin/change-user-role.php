@@ -1,30 +1,24 @@
 <?php
 session_start();
 require_once '../config/database.php';
+require_once __DIR__ . '/includes/security.php';
 
-header('Content-Type: application/json; charset=UTF-8');
-
-// Check if user is logged in and has administrator role
-if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_role'] !== 'administrator') {
-    http_response_code(403);
-    echo json_encode(['success' => false, 'error' => 'Access denied']);
-    exit;
+adminRequireLogin(true);
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    adminJsonResponse(['success' => false, 'error' => 'Role changes must be requested with POST.'], 405);
 }
+header('Content-Type: application/json; charset=UTF-8');
 
 // Get JSON input
 $input = json_decode(file_get_contents('php://input'), true);
 
-if (!isset($input['user_id']) || !isset($input['new_role']) || !isset($input['source_table'])) {
-    http_response_code(400);
-    echo json_encode(['success' => false, 'error' => 'Missing required parameters']);
-    exit;
+if (!is_array($input) || !isset($input['user_id'], $input['new_role'], $input['source_table'])) {
+    adminJsonResponse(['success' => false, 'error' => 'Missing required parameters.'], 400);
 }
 
-if (!is_string($input['csrf_token'] ?? null) || empty($_SESSION['admin_csrf_token']) || !hash_equals($_SESSION['admin_csrf_token'], $input['csrf_token'])) {
-    http_response_code(419);
-    echo json_encode(['success' => false, 'error' => 'Your admin session has expired. Refresh the page and try again.']);
-    exit;
-}
+$db = getDB();
+adminRequirePermission($db, 'manage_admins', true);
+adminRequireCsrf($input, true);
 
 $userId = (int)$input['user_id'];
 $newRole = $input['new_role'];
@@ -32,34 +26,27 @@ $sourceTable = $input['source_table'];
 
 // Validate role
 if (!in_array($sourceTable, ['users', 'admin_users'], true)) {
-    http_response_code(400);
-    echo json_encode(['success' => false, 'error' => 'Invalid account type']);
-    exit;
+    adminJsonResponse(['success' => false, 'error' => 'Invalid account type.'], 400);
 }
 
 $allowedRoles = $sourceTable === 'users'
     ? ['donor', 'agent']
     : ['supervisor', 'editor', 'administrator'];
 if (!in_array($newRole, $allowedRoles, true)) {
-    http_response_code(400);
-    echo json_encode(['success' => false, 'error' => 'Invalid role']);
-    exit;
+    adminJsonResponse(['success' => false, 'error' => 'Invalid role.'], 400);
 }
 
 if ($sourceTable === 'admin_users' && $userId === (int)($_SESSION['admin_id'] ?? 0)) {
-    http_response_code(400);
-    echo json_encode(['success' => false, 'error' => 'You cannot change your own staff role. Ask another administrator to make this change.']);
-    exit;
+    adminJsonResponse(['success' => false, 'error' => 'You cannot change your own staff role. Ask another administrator to make this change.'], 400);
 }
 
 try {
-    $db = getDB();
     $pdo = $db->getConnection();
 
     if ($newRole === 'agent') {
         $roleColumn = $db->fetchOne("SHOW COLUMNS FROM users LIKE 'role'");
         if (!$roleColumn || strpos((string)$roleColumn['Type'], "'agent'") === false) {
-            throw new RuntimeException('Reservation agents require the database migration file before they can be enabled. Please run database/migrations/2026-09-14-agent-reservations.sql once in phpMyAdmin.');
+            throw new DomainException('Reservation agents require the database migration file before they can be enabled. Please run database/migrations/2026-09-14-agent-reservations.sql once in phpMyAdmin.');
         }
     }
 
@@ -75,7 +62,7 @@ try {
     }
 
     if (!$account) {
-        throw new RuntimeException('The selected account no longer exists. Refresh the user list and try again.');
+        throw new DomainException('The selected account no longer exists. Refresh the user list and try again.');
     }
 
     $currentRole = $account['role'] ?: 'donor';
@@ -125,9 +112,9 @@ try {
     
     error_log("Role change error: " . $e->getMessage());
     http_response_code(500);
-    $message = $e instanceof RuntimeException
+    $message = $e instanceof DomainException
         ? $e->getMessage()
         : 'Unable to update the user role. Please try again.';
-    echo json_encode(['success' => false, 'error' => $message]);
+    adminJsonResponse(['success' => false, 'error' => $message], $e instanceof DomainException ? 400 : 500);
 }
 ?>

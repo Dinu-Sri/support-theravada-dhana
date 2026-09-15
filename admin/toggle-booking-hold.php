@@ -27,11 +27,11 @@ try {
     $holdReason = isset($input['hold_reason']) ? trim($input['hold_reason']) : '';
     
     if (!$bookingId) {
-        throw new Exception('Invalid booking ID');
+        throw new DomainException('Invalid booking ID');
     }
     
     if (!in_array($action, ['hold', 'unhold'])) {
-        throw new Exception('Invalid action. Must be "hold" or "unhold"');
+        throw new DomainException('Invalid action. Must be "hold" or "unhold"');
     }
     
     // Get current booking
@@ -41,14 +41,14 @@ try {
     );
     
     if (!$booking) {
-        throw new Exception('Booking not found');
+        throw new DomainException('Booking not found');
     }
     
     // Perform action
     if ($action === 'hold') {
         // Place booking on hold
         if ($booking['on_hold']) {
-            throw new Exception('Booking is already on hold');
+            throw new DomainException('Booking is already on hold');
         }
         
         if (empty($holdReason)) {
@@ -71,7 +71,7 @@ try {
     } else {
         // Remove hold
         if (!$booking['on_hold']) {
-            throw new Exception('Booking is not on hold');
+            throw new DomainException('Booking is not on hold');
         }
         
         $db->query(
@@ -116,10 +116,10 @@ try {
     
 } catch (Exception $e) {
     adminLogException('Toggle booking hold failed', $e);
-    http_response_code(400);
-    header('Content-Type: application/json; charset=UTF-8');
-    echo json_encode([
+    adminJsonResponse([
         'success' => false,
-        'error' => 'Unable to update the reservation hold. Please try again.'
-    ]);
+        'error' => $e instanceof DomainException
+            ? $e->getMessage()
+            : 'Unable to update the reservation hold. Please try again.'
+    ], $e instanceof DomainException ? 400 : 500);
 }

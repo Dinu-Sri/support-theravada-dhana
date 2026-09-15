@@ -19,7 +19,7 @@ try {
     $bookingId = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
     if (!$bookingId) {
-        throw new Exception('Invalid reservation ID');
+        adminJsonResponse(['success' => false, 'error' => 'Invalid reservation ID.'], 400);
     }
 
     // Get reservation details with related information
@@ -48,7 +48,7 @@ try {
     );
     
     if (!$booking) {
-        throw new Exception('Booking not found');
+        adminJsonResponse(['success' => false, 'error' => 'Reservation not found.'], 404);
     }
     
     // Convert boolean fields to proper boolean values

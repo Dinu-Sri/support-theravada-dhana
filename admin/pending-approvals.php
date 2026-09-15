@@ -19,8 +19,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $successMessage = adminProcessApproval($db, $actionId, $decision, $_SESSION['admin_id']);
         } catch (Throwable $e) {
-            error_log('Pending approval update failed: ' . $e->getMessage());
-            $errorMessage = $e instanceof InvalidArgumentException || $e instanceof RuntimeException
+            adminLogException('Pending approval update failed', $e);
+            $errorMessage = $e instanceof InvalidArgumentException || $e instanceof DomainException
                 ? $e->getMessage()
                 : 'Unable to process this approval. Please try again.';
         }
@@ -44,7 +44,7 @@ try {
     $pendingActions = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
 } catch (Throwable $e) {
-    error_log('Unable to load pending approvals: ' . $e->getMessage());
+    adminLogException('Unable to load pending approvals', $e);
     $errorMessage = 'Unable to load pending approvals. Please try again.';
     $pendingActions = [];
 }

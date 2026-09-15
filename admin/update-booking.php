@@ -30,32 +30,32 @@ try {
     
     // Validation
     if (!$bookingId) {
-        throw new Exception('Invalid reservation ID');
+        throw new DomainException('Invalid reservation ID');
     }
 
     $parsedBookingDate = DateTime::createFromFormat('!Y-m-d', $bookingDate);
     if (!$parsedBookingDate || $parsedBookingDate->format('Y-m-d') !== $bookingDate) {
-        throw new Exception('Invalid reservation date');
+        throw new DomainException('Invalid reservation date');
     }
     
     if (!$dhanaTypeId) {
-        throw new Exception('Please select a dhana type');
+        throw new DomainException('Please select a dhana type');
     }
     
     if (!in_array($bookingTimeSlot, ['morning', 'lunch', 'whole_day'])) {
-        throw new Exception('Invalid time slot');
+        throw new DomainException('Invalid time slot');
     }
     
     if (!in_array($status, ['pending', 'receipt_submitted', 'payment_pending', 'confirmed', 'completed', 'cancelled'])) {
-        throw new Exception('Invalid status');
+        throw new DomainException('Invalid status');
     }
     
     if ($totalAmount < 0) {
-        throw new Exception('Total amount cannot be negative');
+        throw new DomainException('Total amount cannot be negative');
     }
 
     if (!in_array($editScope, ['occurrence', 'series'], true)) {
-        throw new Exception('Invalid annual edit scope');
+        throw new DomainException('Invalid annual edit scope');
     }
     
     // Check if reservation exists and get full details for email
@@ -69,12 +69,12 @@ try {
     );
 
     if (!$existingBooking) {
-        throw new Exception('Booking not found');
+        throw new DomainException('Booking not found');
     }
 
     $isAnnualBooking = !empty($existingBooking['is_annual_event']);
     if ($editScope === 'series' && !$isAnnualBooking) {
-        throw new Exception('This reservation is not part of an annual series');
+        throw new DomainException('This reservation is not part of an annual series');
     }
 
     $structuralChange = $existingBooking['booking_date'] !== $bookingDate ||
@@ -82,7 +82,7 @@ try {
         $existingBooking['booking_time_slot'] !== $bookingTimeSlot;
 
     if ($isAnnualBooking && $editScope === 'occurrence' && $structuralChange) {
-        throw new Exception('Date, dāna type, and time slot changes must be applied to the entire annual series. Select “Entire annual series” and try again.');
+        throw new DomainException('Date, dāna type, and time slot changes must be applied to the entire annual series. Select “Entire annual series” and try again.');
     }
 
     $seriesBookings = [$existingBooking];
@@ -93,7 +93,7 @@ try {
             [$seriesRootId, $seriesRootId]
         );
         if (!$seriesBookings) {
-            throw new Exception('Annual reservation series not found');
+            throw new DomainException('Annual reservation series not found');
         }
     }
     
@@ -109,19 +109,19 @@ try {
         );
 
         if (!$dhanaType) {
-            throw new Exception('Invalid dhana type selected');
+            throw new DomainException('Invalid dhana type selected');
         }
 
         // Check if dhana type is available (price > 0)
         if ($dhanaType['price'] <= 0) {
-            throw new Exception('This dhana type is not available yet (Coming Soon)');
+            throw new DomainException('This dhana type is not available yet (Coming Soon)');
         }
 
         // Check if the requested time slot is compatible with the dhana type
         if ($dhanaType['time_slot'] !== 'extra' && $dhanaType['time_slot'] !== $bookingTimeSlot) {
             // Allow whole_day bookings to override morning/lunch slots
             if (!($bookingTimeSlot === 'whole_day' && in_array($dhanaType['time_slot'], ['morning', 'lunch']))) {
-                throw new Exception('Time slot "' . ucfirst($bookingTimeSlot) . '" is not compatible with dhana type "' . $dhanaType['name'] . '" (requires "' . ucfirst($dhanaType['time_slot']) . '")');
+                throw new DomainException('Time slot "' . ucfirst($bookingTimeSlot) . '" is not compatible with dhana type "' . $dhanaType['name'] . '" (requires "' . ucfirst($dhanaType['time_slot']) . '")');
             }
         }
 
@@ -133,7 +133,7 @@ try {
 
         if ($blockedDate) {
             $reason = $blockedDate['reason'] ? ': ' . $blockedDate['reason'] : '';
-            throw new Exception('This date is blocked and unavailable for bookings' . $reason);
+            throw new DomainException('This date is blocked and unavailable for bookings' . $reason);
         }
 
         // Check for booking conflicts based on time slot logic
@@ -200,7 +200,7 @@ try {
 
             $errorMsg .= "\n\nConflicting Bookings:\n" . implode("\n", $conflictDetails);
 
-            throw new Exception($errorMsg);
+            throw new DomainException($errorMsg);
         }
 
         // Check for annual event conflicts
@@ -236,7 +236,7 @@ try {
             }
 
             $errorMsg = "This date conflicts with annual (recurring) bookings:\n\n" . implode("\n", $conflictDetails);
-            throw new Exception($errorMsg);
+            throw new DomainException($errorMsg);
         }
     }
 
@@ -244,7 +244,7 @@ try {
     if ($editScope === 'series') {
         $requestedDate = DateTime::createFromFormat('!Y-m-d', $bookingDate);
         if (!$requestedDate || $requestedDate->format('Y-m-d') !== $bookingDate) {
-            throw new Exception('Invalid reservation date');
+            throw new DomainException('Invalid reservation date');
         }
 
         $seriesIds = array_map('intval', array_column($seriesBookings, 'id'));
@@ -255,7 +255,7 @@ try {
         foreach ($seriesBookings as $seriesBooking) {
             $instanceYear = (int)date('Y', strtotime($seriesBooking['booking_date']));
             if ($structuralChange && !checkdate($month, $day, $instanceYear)) {
-                throw new Exception('The selected calendar day is not valid in every year of this annual series.');
+                throw new DomainException('The selected calendar day is not valid in every year of this annual series.');
             }
             $instanceDate = $structuralChange
                 ? sprintf('%04d-%02d-%02d', $instanceYear, $month, $day)
@@ -264,7 +264,7 @@ try {
             if ($structuralChange && $status !== 'cancelled') {
                 $blockedDate = $db->fetchOne("SELECT id FROM blocked_dates WHERE blocked_date = ?", [$instanceDate]);
                 if ($blockedDate) {
-                    throw new Exception(date('F j, Y', strtotime($instanceDate)) . ' is blocked and cannot be used for this annual series.');
+                    throw new DomainException(date('F j, Y', strtotime($instanceDate)) . ' is blocked and cannot be used for this annual series.');
                 }
 
                 $conflictParams = array_merge([$instanceDate], $seriesIds);
@@ -282,7 +282,7 @@ try {
                     $conflictParams[] = $bookingTimeSlot;
                 }
                 if ($db->fetchOne($conflictSql, $conflictParams)) {
-                    throw new Exception(date('F j, Y', strtotime($instanceDate)) . ' conflicts with another reservation. No annual changes were saved.');
+                    throw new DomainException(date('F j, Y', strtotime($instanceDate)) . ' conflicts with another reservation. No annual changes were saved.');
                 }
             }
             $seriesDates[(int)$seriesBooking['id']] = $instanceDate;
@@ -296,16 +296,16 @@ try {
     );
     
     if (!$dhanaType) {
-        throw new Exception('Invalid or inactive dhana type');
+        throw new DomainException('Invalid or inactive dhana type');
     }
 
     if ((float)$dhanaType['price'] <= 0) {
-        throw new Exception('This dāna type is not currently bookable');
+        throw new DomainException('This dāna type is not currently bookable');
     }
 
     if ($dhanaType['time_slot'] !== 'extra' && $dhanaType['time_slot'] !== $bookingTimeSlot &&
         !($bookingTimeSlot === 'whole_day' && in_array($dhanaType['time_slot'], ['morning', 'lunch'], true))) {
-        throw new Exception('The selected time slot is not compatible with this dāna type');
+        throw new DomainException('The selected time slot is not compatible with this dāna type');
     }
     
     // Start transaction
@@ -450,13 +450,11 @@ try {
     
 } catch (Exception $e) {
     adminLogException('Update booking failed', $e);
-    http_response_code(500);
-    header('Content-Type: application/json; charset=UTF-8');
-    echo json_encode([
+    adminJsonResponse([
         'success' => false,
-        'error' => $e instanceof PDOException
-            ? 'Unable to update the reservation. Please try again.'
-            : $e->getMessage()
-    ]);
+        'error' => $e instanceof DomainException
+            ? $e->getMessage()
+            : 'Unable to update the reservation. Please try again.'
+    ], $e instanceof DomainException ? 400 : 500);
 }
 ?>

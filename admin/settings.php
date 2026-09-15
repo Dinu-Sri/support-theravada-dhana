@@ -110,7 +110,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     );
                 }
             } catch (Exception $e) {
-                $errorMessage = 'Error updating profile: ' . $e->getMessage();
+                adminLogException('Admin profile update failed', $e);
+                $errorMessage = 'Unable to update the profile. Please try again.';
             }
         }
     }
@@ -139,7 +140,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $successMessage = 'Password changed successfully!';
             } catch (Exception $e) {
-                $errorMessage = 'Error changing password: ' . $e->getMessage();
+                adminLogException('Admin password change failed', $e);
+                $errorMessage = 'Unable to change the password. Please try again.';
             }
         }
     }
@@ -194,7 +196,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     header('Location: settings.php?success=annual_years_updated');
                     exit;
                 } catch (Exception $e) {
-                    $errorMessage = 'Error updating annual booking years: ' . $e->getMessage();
+                    adminLogException('Annual booking setting update failed', $e);
+                    $errorMessage = 'Unable to update annual booking years. Please try again.';
                 }
             }
         }
@@ -240,7 +243,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 header('Location: settings.php?success=auto_cancel_updated');
                 exit;
             } catch (Exception $e) {
-                $errorMessage = 'Error updating auto-cancel setting: ' . $e->getMessage();
+                adminLogException('Auto-cancel setting update failed', $e);
+                $errorMessage = 'Unable to update auto-cancel settings. Please try again.';
             }
             }
         }
@@ -291,7 +295,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
                     } catch (Exception $fileError) {
                         // Log file deletion errors but don't stop the process
-                        error_log("Warning: Could not delete receipt file {$receipt['receipt_filename']}: " . $fileError->getMessage());
+                        adminLogException('Unable to remove a receipt while clearing bookings', $fileError);
                     }
                 }
 
@@ -308,8 +312,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($db->getConnection()->inTransaction()) {
                     $db->getConnection()->rollBack();
                 }
-                $errorMessage = 'Error clearing bookings: ' . $e->getMessage();
-                error_log("Clear all bookings failed: " . $e->getMessage());
+                adminLogException('Clear all bookings failed', $e);
+                $errorMessage = 'Unable to clear bookings. No incomplete database changes were kept.';
             }
             }
         }
@@ -344,7 +348,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 header('Location: settings.php?success=backup_retention_updated');
                 exit;
             } catch (Exception $e) {
-                $errorMessage = 'Error updating backup retention: ' . $e->getMessage();
+                adminLogException('Backup retention update failed', $e);
+                $errorMessage = 'Unable to update backup retention. Please try again.';
             }
         }
     }
@@ -372,7 +377,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
         } catch (Exception $e) {
-            $errorMessage = 'Backup failed: ' . $e->getMessage();
+            adminLogException('Manual backup failed', $e);
+            $errorMessage = 'Unable to start the backup. Review the backup readiness message below.';
         }
     }
 
