@@ -16,8 +16,8 @@ Statuses: `TODO` → `IN PROGRESS` → `FIXED` → `VERIFIED`; use `BLOCKED` onl
 
 - Audit baseline: `293df13`
 - Current phase: Phase 4 — shared admin design system and screen redesign
-- Next item: `ADM-042` establish and apply the shared admin design system
-- Progress: 44 fixed / 69 total; 2 runtime-verified
+- Next item: `ADM-045` clarify and complete donor-to-agent/staff assignment
+- Progress: 51 fixed / 69 total; 2 runtime-verified
 - Verification constraints: the local MySQL service still refuses connections; authenticated browser and database integration checks remain pending.
 
 ## Phase 1 — Security and data integrity
@@ -72,13 +72,13 @@ Statuses: `TODO` → `IN PROGRESS` → `FIXED` → `VERIFIED`; use `BLOCKED` onl
 
 ## Phase 4 — Shared admin design system and screen redesign
 
-- [ ] `ADM-042` **P2 UI** — The admin area has no single enforced design system. Status: `TODO`. Evidence: shared tokens/components across all pages. Commit: —
-- [ ] `ADM-043` **P2 UX** — Navigation is duplicated and inconsistent across pages. Status: `TODO`. Evidence: one shared shell/navigation. Commit: —
-- [ ] `ADM-044` **P2 Logic/UX** — Pending-approvals badge counts pending bookings rather than approval actions. Status: `TODO`. Evidence: badge query and empty-state test. Commit: —
+- [ ] `ADM-042` **P2 UI** — The admin area has no single enforced design system. Status: `FIXED` (cross-browser visual review pending); shared color, spacing, focus, radius, and elevation tokens plus a reusable header are applied across admin pages. Evidence: shared tokens/components across all pages. Commit: `7cc7fac`
+- [ ] `ADM-043` **P2 UX** — Navigation is duplicated and inconsistent across pages. Status: `FIXED` (browser navigation test pending); authenticated admin pages now use one permission-aware primary header and the duplicate analytics sidebar is removed. Evidence: one shared shell/navigation. Commit: `7cc7fac`
+- [ ] `ADM-044` **P2 Logic/UX** — Pending-approvals badge counts pending bookings rather than approval actions. Status: `FIXED` (database render test pending); the shared badge counts pending `admin_actions` and degrades to no badge if the optional table is unavailable. Evidence: badge query and empty-state test. Commit: `7cc7fac`
 - [ ] `ADM-045` **P2 UX** — Role management is misleading and does not clearly support donor-to-agent/staff assignment. Status: `TODO`. Evidence: end-to-end assignment flows. Commit: —
-- [ ] `ADM-046` **P2 UI** — Dashboard header is overloaded and poorly prioritized. Status: `TODO`. Evidence: responsive visual review. Commit: —
-- [ ] `ADM-047` **P2 UI** — Sidebar is excessively tall and vertically inefficient. Status: `TODO`. Evidence: 768px-height viewport review. Commit: —
-- [ ] `ADM-048` **P2 Accessibility** — Clickable `div` navigation is not keyboard/semantic accessible. Status: `TODO`. Evidence: keyboard-only navigation. Commit: —
+- [ ] `ADM-046` **P2 UI** — Dashboard header is overloaded and poorly prioritized. Status: `FIXED` (responsive visual review pending); compact brand, primary navigation, identity, and icon logout replace the crowded action strip. Evidence: responsive visual review. Commit: `7cc7fac`
+- [ ] `ADM-047` **P2 UI** — Sidebar is excessively tall and vertically inefficient. Status: `FIXED` (768px browser review pending); dashboard status filters are a compact responsive summary grid above full-width content. Evidence: 768px-height viewport review. Commit: `7cc7fac`
+- [ ] `ADM-048` **P2 Accessibility** — Clickable `div` navigation is not keyboard/semantic accessible. Status: `FIXED` (keyboard browser test pending); dashboard filters are real links with focus styling and current-page semantics. Evidence: keyboard-only navigation. Commit: `7cc7fac`
 - [ ] `ADM-049` **P2 UX** — Reservation table is too wide and action-heavy. Status: `TODO`. Evidence: desktop/tablet/mobile layout review. Commit: —
 - [ ] `ADM-050` **P2 UX** — Supervisors see duplicated/redundant status information. Status: `TODO`. Evidence: role-specific table review. Commit: —
 - [ ] `ADM-051` **P2 UI** — Button hierarchy is unclear and inconsistent. Status: `TODO`. Evidence: primary/secondary/danger component audit. Commit: —
@@ -92,7 +92,7 @@ Statuses: `TODO` → `IN PROGRESS` → `FIXED` → `VERIFIED`; use `BLOCKED` onl
 - [ ] `ADM-059` **P2 UX** — Analytics is duplicated between dashboard and standalone page. Status: `TODO`. Evidence: one coherent analytics route/navigation. Commit: —
 - [ ] `ADM-060` **P2 Correctness** — Currency formatting uses `$` instead of Rs/LKR in places. Status: `FIXED` (browser chart verification pending). Evidence: cross-page currency audit. Commit: `77f3ffe`
 - [ ] `ADM-061` **P2 Maintainability** — `admin.css` contains conflicting repeated definitions. Status: `TODO`. Evidence: cascade audit and visual regression review. Commit: —
-- [ ] `ADM-062` **P2 Correctness** — `admin-pro-ui` targets nonexistent classes and only affects part of the dashboard. Status: `TODO`. Evidence: selector audit and removal/integration. Commit: —
+- [ ] `ADM-062` **P2 Correctness** — `admin-pro-ui` targets nonexistent classes and only affects part of the dashboard. Status: `FIXED` (visual regression pending); the partial override is no longer loaded and its valid refinements were incorporated into the shared stylesheet. Evidence: selector audit and removal/integration. Commit: `7cc7fac`
 - [ ] `ADM-063` **P2 Maintainability** — Inline styles are widespread and block consistent theming. Status: `TODO`. Evidence: reusable component classes on admin screens. Commit: —
 - [ ] `ADM-064` **P2 UX** — Loading, error, success, and empty states are inconsistent. Status: `TODO`. Evidence: shared state patterns across screens. Commit: —
 
@@ -118,3 +118,4 @@ Add dated entries here with command/browser evidence. Never include credentials,
 - 2026-09-15 — Completed the admin API error audit: role endpoints now use shared login/permission/CSRF guards; expected domain errors are separated from PDO/unexpected failures; settings no longer renders raw exceptions; and calendar, analytics, booking details, edits, deletion, hold, and user loading surface safe server messages consistently. PHP and JavaScript syntax plus diff checks passed.
 - 2026-09-15 — Hardened admin authentication with session-ID rotation, inactivity expiry, live role/active-state refresh, persistent login throttling with a session fallback, and CSRF-protected POST logout. PHP lint passed; isolated CLI tests confirmed session rotation and timeout behavior.
 - 2026-09-15 — Added non-enumerating admin password recovery with one-hour hashed, single-use reset tokens, CSRF protection, cooldown, safe mail failures, password bounds, and autocomplete/loading feedback. PHP lint and invalid-token rejection checks passed; database/email/browser integration remains pending.
+- 2026-09-15 — Introduced shared admin design tokens and one responsive, permission-aware header across reservations, analytics, pricing, pricing history, settings, approvals, and roles. Corrected the approvals badge query, removed duplicate analytics navigation, stopped loading the partial pro-UI override, and converted dashboard summary navigation into compact semantic links. PHP lint and diff checks passed; browser/database review remains pending.
