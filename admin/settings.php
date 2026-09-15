@@ -562,19 +562,7 @@ if ($admin['role'] === 'administrator') {
 </head>
 <body>
     <div class="admin-panel">
-        <!-- Admin Header -->
-        <div class="admin-header">
-            <div class="admin-nav">
-                <h1><i class="fas fa-cog"></i> Admin Settings</h1>
-                <div class="admin-user">
-                    <span>Welcome, <?php echo htmlspecialchars($_SESSION['admin_username']); ?></span>
-                    <a href="index.php" class="back-btn">
-                        <i class="fas fa-arrow-left"></i> Back to Dashboard
-                    </a>
-                    <?php adminRenderLogoutButton(); ?>
-                </div>
-            </div>
-        </div>
+        <?php $adminPageTitle = 'Settings'; $adminPageIcon = 'fa-cog'; include 'includes/header.php'; ?>
 
         <!-- Main Content Layout -->
         <div class="admin-layout">

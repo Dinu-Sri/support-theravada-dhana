@@ -432,7 +432,6 @@ $blockedDates = $db->fetchAll(
     <?php include '../includes/favicon.php'; ?>
     <link rel="stylesheet" href="../assets/css/style.css">
     <link rel="stylesheet" href="../assets/css/admin.css?v=<?php echo time(); ?>">
-    <link rel="stylesheet" href="../assets/css/admin-pro-ui.css?v=20260914">
     <link rel="stylesheet" href="../assets/css/analytics.css">
     <link rel="stylesheet" href="../assets/css/supervisor-styles.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -440,44 +439,17 @@ $blockedDates = $db->fetchAll(
 </head>
 <body class="admin-dashboard">
     <div class="admin-panel">
-        <!-- Admin Header -->
-        <div class="admin-header">
-            <div class="admin-nav">
-                <h1><i class="fas fa-user-shield"></i> Admin Panel</h1>
-                <div class="admin-user">
-                    <span>Welcome, <?php echo htmlspecialchars($_SESSION['admin_username']); ?>
-                        <span class="role-badge role-<?php echo $_SESSION['admin_role']; ?>">
-                            <?php echo ucfirst($_SESSION['admin_role']); ?>
-                        </span>
-                    </span>
-                    <?php if ($_SESSION['admin_role'] === 'administrator'): ?>
-                        <button id="userManagementBtn" class="user-management-btn">
-                            <i class="fas fa-users-cog"></i> User Management
-                        </button>
-                        <a href="pending-approvals.php" class="approvals-btn">
-                            <i class="fas fa-tasks"></i> Pending Approvals
-                            <span class="approval-count" id="pendingApprovalsCount">0</span>
-                        </a>
-                    <?php endif; ?>
-                    <a href="pricing-table.php" class="pricing-btn">
-                        <i class="fas fa-dollar-sign"></i> Pricing Table
-                    </a>
-                    <a href="settings.php" class="settings-btn">
-                        <i class="fas fa-cog"></i> Settings
-                    </a>
-                    <?php adminRenderLogoutButton(); ?>
-                </div>
-            </div>
-        </div>
+        <?php $adminPageTitle = 'Reservations'; $adminPageIcon = 'fa-list'; include 'includes/header.php'; ?>
 
         <!-- Main Content Layout -->
         <div class="admin-layout">
             <!-- Left Sidebar with Stats -->
-            <div class="admin-sidebar">
+            <aside class="admin-sidebar admin-summary-rail" aria-label="Reservation summary filters">
                 <div class="sidebar-section">
-                    <h3><i class="fas fa-chart-bar"></i> Dashboard Statistics</h3>
+                    <h3><i class="fas fa-chart-bar"></i> Reservation overview</h3>
+                    <div class="admin-summary-grid">
 
-                    <div class="stat-card <?php echo ($statusFilter === 'all') ? 'active' : ''; ?>" onclick="filterBookings('all')">
+                    <a href="?status=all&amp;page=1" class="stat-card <?php echo ($statusFilter === 'all') ? 'active' : ''; ?>" <?php echo $statusFilter === 'all' ? 'aria-current="page"' : ''; ?>>
                         <div class="stat-icon total">
                             <i class="fas fa-calendar-alt"></i>
                         </div>
@@ -485,9 +457,9 @@ $blockedDates = $db->fetchAll(
                             <h4><?php echo $stats['total_bookings']; ?></h4>
                             <p>Total Reservations</p>
                         </div>
-                    </div>
+                    </a>
 
-                    <div class="stat-card <?php echo ($statusFilter === 'pending') ? 'active' : ''; ?>" onclick="filterBookings('pending')">
+                    <a href="?status=pending&amp;page=1" class="stat-card <?php echo ($statusFilter === 'pending') ? 'active' : ''; ?>" <?php echo $statusFilter === 'pending' ? 'aria-current="page"' : ''; ?>>
                         <div class="stat-icon pending">
                             <i class="fas fa-clock"></i>
                         </div>
@@ -495,9 +467,9 @@ $blockedDates = $db->fetchAll(
                             <h4><?php echo $stats['pending_bookings']; ?></h4>
                             <p>Pending Reservations</p>
                         </div>
-                    </div>
+                    </a>
 
-                    <div class="stat-card <?php echo ($statusFilter === 'receipt_submitted') ? 'active' : ''; ?>" onclick="filterBookings('receipt_submitted')">
+                    <a href="?status=receipt_submitted&amp;page=1" class="stat-card <?php echo ($statusFilter === 'receipt_submitted') ? 'active' : ''; ?>" <?php echo $statusFilter === 'receipt_submitted' ? 'aria-current="page"' : ''; ?>>
                         <div class="stat-icon receipt-submitted">
                             <i class="fas fa-file-upload"></i>
                         </div>
@@ -505,9 +477,9 @@ $blockedDates = $db->fetchAll(
                             <h4><?php echo $stats['receipt_submitted']; ?></h4>
                             <p>Receipt Submitted</p>
                         </div>
-                    </div>
+                    </a>
 
-                    <div class="stat-card <?php echo ($statusFilter === 'payment_pending') ? 'active' : ''; ?>" onclick="filterBookings('payment_pending')">
+                    <a href="?status=payment_pending&amp;page=1" class="stat-card <?php echo ($statusFilter === 'payment_pending') ? 'active' : ''; ?>" <?php echo $statusFilter === 'payment_pending' ? 'aria-current="page"' : ''; ?>>
                         <div class="stat-icon payment">
                             <i class="fas fa-credit-card"></i>
                         </div>
@@ -515,9 +487,9 @@ $blockedDates = $db->fetchAll(
                             <h4><?php echo $stats['payment_pending']; ?></h4>
                             <p>Payment Pending</p>
                         </div>
-                    </div>
+                    </a>
 
-                    <div class="stat-card <?php echo ($statusFilter === 'confirmed') ? 'active' : ''; ?>" onclick="filterBookings('confirmed')">
+                    <a href="?status=confirmed&amp;page=1" class="stat-card <?php echo ($statusFilter === 'confirmed') ? 'active' : ''; ?>" <?php echo $statusFilter === 'confirmed' ? 'aria-current="page"' : ''; ?>>
                         <div class="stat-icon confirmed">
                             <i class="fas fa-check-circle"></i>
                         </div>
@@ -525,11 +497,11 @@ $blockedDates = $db->fetchAll(
                             <h4><?php echo $stats['confirmed_bookings']; ?></h4>
                             <p>Confirmed</p>
                         </div>
-                    </div>
+                    </a>
 
                     <!-- Analytics Card -->
                     <?php if (hasPermission('view_analytics') || hasPermission('view_all_bookings')): ?>
-                    <div class="stat-card analytics-card stat-card-display" onclick="toggleAnalyticsView()" style="cursor: pointer;">
+                    <a href="analytics.php" class="stat-card analytics-card">
                         <div class="stat-icon analytics">
                             <i class="fas fa-chart-line"></i>
                         </div>
@@ -537,10 +509,11 @@ $blockedDates = $db->fetchAll(
                             <h4>Analytics</h4>
                             <p>View Analytics Dashboard</p>
                         </div>
-                    </div>
+                    </a>
                     <?php endif; ?>
+                    </div>
                 </div>
-            </div>
+            </aside>
 
             <!-- Main Content Area -->
             <div class="admin-main-content">
@@ -1077,10 +1050,16 @@ $blockedDates = $db->fetchAll(
         const userManagementModal = document.getElementById('userManagementModal');
         const closeUserManagement = document.getElementById('closeUserManagement');
 
-        userManagementBtn.addEventListener('click', function() {
+        function openUserManagement() {
             userManagementModal.style.display = 'block';
             loadUsers('all');
-        });
+        }
+
+        userManagementBtn.addEventListener('click', openUserManagement);
+
+        if (new URLSearchParams(window.location.search).get('manage_users') === '1') {
+            openUserManagement();
+        }
 
         closeUserManagement.addEventListener('click', function() {
             userManagementModal.style.display = 'none';

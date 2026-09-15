@@ -302,23 +302,7 @@ for ($i = 0; $i < $displayMonths; $i++) {
 </head>
 <body>
     <div class="admin-panel">
-        <!-- Admin Header -->
-        <div class="admin-header">
-            <div class="admin-nav">
-                <h1><i class="fas fa-dollar-sign"></i> Dynamic Pricing Table</h1>
-                <div class="admin-user">
-                    <span>Welcome, <?php echo htmlspecialchars($admin['username']); ?>
-                        <span class="role-badge role-<?php echo $_SESSION['admin_role']; ?>">
-                            <?php echo ucfirst($_SESSION['admin_role']); ?>
-                        </span>
-                    </span>
-                    <a href="index.php" class="back-btn">
-                        <i class="fas fa-arrow-left"></i> Back to Dashboard
-                    </a>
-                    <?php adminRenderLogoutButton(); ?>
-                </div>
-            </div>
-        </div>
+        <?php $adminPageTitle = 'Pricing'; $adminPageIcon = 'fa-tags'; include 'includes/header.php'; ?>
 
         <!-- Main Content Layout -->
         <div class="admin-layout">

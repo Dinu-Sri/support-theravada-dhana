@@ -1,5 +1,35 @@
 /* Admin Panel Styles for Dhana Booking System */
 
+:root {
+    --admin-gold: #c98522;
+    --admin-gold-dark: #9b670b;
+    --admin-gold-soft: #fff6e7;
+    --admin-ink: #24303d;
+    --admin-muted: #66717d;
+    --admin-surface: #ffffff;
+    --admin-canvas: #f6f3ee;
+    --admin-border: #e5e0d8;
+    --admin-danger: #b42318;
+    --admin-success: #18794e;
+    --admin-info: #176b87;
+    --admin-radius-sm: 8px;
+    --admin-radius: 12px;
+    --admin-shadow: 0 8px 24px rgba(54, 42, 26, 0.08);
+    --admin-focus: 0 0 0 3px rgba(212, 130, 42, 0.28);
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
 .admin-panel {
     min-height: 100vh;
     background: #f5f5f5;
@@ -11,7 +41,7 @@
 .admin-header {
     background: linear-gradient(135deg, #d4822a 0%, #b8860b 100%);
     color: white;
-    padding: 20px 0;
+    padding: 0;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     position: sticky;
     top: 0;
@@ -19,12 +49,13 @@
 }
 
 .admin-nav {
-    max-width: 1400px;
+    max-width: 1600px;
     margin: 0 auto;
-    padding: 0 20px;
+    min-height: 68px;
+    padding: 8px 22px;
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    gap: 18px;
 }
 
 .admin-nav h1 {
@@ -33,6 +64,54 @@
     display: flex;
     align-items: center;
     gap: 10px;
+}
+
+.admin-brand-block,
+.admin-brand,
+.admin-page-context,
+.admin-primary-nav,
+.admin-primary-link,
+.admin-account-menu,
+.admin-account-copy {
+    display: flex;
+    align-items: center;
+}
+
+.admin-brand-block { gap: 12px; min-width: max-content; }
+.admin-brand { gap: 8px; color: #fff; text-decoration: none; font-size: 1.08rem; font-weight: 750; }
+.admin-brand i { font-size: 1.35rem; }
+.admin-page-context { gap: 7px; padding-left: 12px; border-left: 1px solid rgba(255,255,255,.32); color: rgba(255,255,255,.9); font-size: .82rem; font-weight: 600; }
+.admin-primary-nav { flex: 1; justify-content: center; gap: 3px; }
+.admin-primary-link { gap: 7px; min-height: 38px; padding: 8px 10px; border-radius: var(--admin-radius-sm); color: rgba(255,255,255,.88); text-decoration: none; font-size: .82rem; font-weight: 650; white-space: nowrap; }
+.admin-primary-link:hover,
+.admin-primary-link:focus-visible { background: rgba(255,255,255,.15); color: #fff; outline: none; }
+.admin-primary-link:focus-visible,
+.admin-nav-toggle:focus-visible { box-shadow: 0 0 0 3px rgba(255,255,255,.38); }
+.admin-primary-link.active { background: #fff; color: #815707; box-shadow: 0 3px 10px rgba(63,38,8,.16); }
+.admin-primary-button { border: 0; background: transparent; font-family: inherit; cursor: pointer; }
+.admin-nav-badge { display: inline-grid; min-width: 19px; height: 19px; place-items: center; padding: 0 5px; border-radius: 10px; background: var(--admin-danger); color: #fff; font-size: .68rem; }
+.admin-account-menu { gap: 9px; margin-left: auto; }
+.admin-account-copy { align-items: flex-end; flex-direction: column; line-height: 1.15; }
+.admin-account-copy strong { font-size: .82rem; }
+.admin-account-copy small { color: rgba(255,255,255,.75); font-size: .68rem; }
+.admin-account-menu .logout-btn { width: 38px; min-height: 38px; justify-content: center; padding: 0; border: 1px solid rgba(255,255,255,.32); }
+.admin-account-menu .logout-btn span { display: none; }
+.admin-nav-toggle { display: none; width: 40px; height: 40px; place-items: center; margin-left: auto; border: 1px solid rgba(255,255,255,.38); border-radius: var(--admin-radius-sm); background: transparent; color: #fff; cursor: pointer; }
+
+@media (max-width: 1120px) {
+    .admin-page-context { display: none; }
+    .admin-nav { flex-wrap: wrap; gap: 8px 12px; }
+    .admin-nav-toggle { display: grid; }
+    .admin-primary-nav { display: none; order: 3; width: 100%; flex-basis: 100%; justify-content: flex-start; padding: 6px 0 2px; overflow-x: auto; }
+    .admin-primary-nav.is-open { display: flex; }
+}
+
+@media (max-width: 560px) {
+    .admin-nav { padding: 8px 12px; }
+    .admin-brand span { display: none; }
+    .admin-account-copy { display: none; }
+    .admin-primary-link span:not(.admin-nav-badge) { display: none; }
+    .admin-primary-link { min-width: 42px; justify-content: center; }
 }
 
 .admin-user {
@@ -135,12 +214,85 @@
     border: 1px solid #e9ecef;
     cursor: pointer;
     user-select: none;
+    color: inherit;
+    text-decoration: none;
 }
 
 .stat-card:hover {
     background: white;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     transform: translateX(5px);
+}
+
+.stat-card:focus-visible {
+    outline: none;
+    box-shadow: var(--admin-focus);
+}
+
+.admin-dashboard .admin-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+    width: 100%;
+    max-width: 1600px;
+    padding: 18px 22px 28px;
+}
+
+.admin-dashboard .admin-summary-rail {
+    width: auto;
+    padding: 14px;
+    overflow: visible;
+    border: 1px solid var(--admin-border);
+    border-radius: var(--admin-radius);
+    box-shadow: var(--admin-shadow);
+}
+
+.admin-dashboard .admin-summary-rail .sidebar-section h3 {
+    margin: 0 0 10px;
+    padding: 0 0 9px;
+    font-size: .82rem;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+}
+
+.admin-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 9px;
+}
+
+.admin-summary-grid .stat-card {
+    min-height: 74px;
+    margin: 0;
+    padding: 11px;
+    gap: 10px;
+    border-radius: 10px;
+}
+
+.admin-summary-grid .stat-card:hover,
+.admin-summary-grid .stat-card.active,
+.admin-summary-grid .stat-card.active:hover {
+    transform: translateY(-1px);
+}
+
+.admin-summary-grid .stat-icon {
+    width: 38px;
+    height: 38px;
+    font-size: 1rem;
+}
+
+.admin-summary-grid .stat-info h4 { margin-bottom: 2px; font-size: 1.08rem; }
+.admin-summary-grid .stat-info p { font-size: .74rem; }
+.admin-dashboard .admin-main-content { padding: 0; overflow: visible; }
+
+@media (max-width: 1050px) {
+    .admin-summary-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 620px) {
+    .admin-dashboard .admin-layout { padding: 12px; }
+    .admin-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .admin-summary-grid .stat-card { align-items: flex-start; flex-direction: column; }
 }
 
 /* Non-clickable display card (for Total Revenue) */

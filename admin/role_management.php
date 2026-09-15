@@ -217,6 +217,7 @@ $roleHierarchy = $db->fetchAll("
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Role Management - Dāna Admin</title>
     <link rel="stylesheet" href="../assets/css/style.css">
+    <link rel="stylesheet" href="../assets/css/admin.css?v=20260915">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         .role-management {
@@ -324,11 +325,11 @@ $roleHierarchy = $db->fetchAll("
     </style>
 </head>
 <body>
-    <div class="role-management">
-        <div class="header" style="text-align: center; margin-bottom: 30px;">
-            <h1><i class="fas fa-users-cog"></i> Role Management System</h1>
-            <p>Manage user roles and permissions for the Dāna Booking System</p>
-            <a href="index.php" class="btn btn-primary"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+    <div class="admin-panel">
+        <?php $adminPageTitle = 'Roles & Access'; $adminPageIcon = 'fa-user-shield'; include 'includes/header.php'; ?>
+        <main class="role-management">
+        <div class="admin-page-heading">
+            <div><h1>Roles &amp; access</h1><p>Manage staff permissions and reservation-agent access.</p></div>
         </div>
 
         <div class="role-card" style="border-left: 4px solid #d4822a;">
@@ -559,6 +560,7 @@ $roleHierarchy = $db->fetchAll("
                 <?php endforeach; ?>
             </div>
         </div>
+        </main>
     </div>
 </body>
 </html>

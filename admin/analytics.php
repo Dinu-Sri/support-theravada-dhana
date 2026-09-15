@@ -188,31 +188,10 @@ function getTimeFilterLabel($filter) {
 </head>
 <body>
     <div class="admin-panel">
-        <!-- Admin Header -->
-        <div class="admin-header">
-            <div class="admin-nav">
-                <h1><i class="fas fa-chart-line"></i> Analytics Dashboard</h1>
-                <div class="admin-user">
-                    <span>Welcome, <?php echo htmlspecialchars($_SESSION['admin_username']); ?>
-                        <?php if ($_SESSION['is_super_admin']): ?>
-                            <span class="super-admin-badge">SUPER ADMIN</span>
-                        <?php else: ?>
-                            <span class="admin-badge">ADMIN</span>
-                        <?php endif; ?>
-                    </span>
-                    <a href="settings.php" class="settings-btn">
-                        <i class="fas fa-cog"></i> Settings
-                    </a>
-                    <?php adminRenderLogoutButton(); ?>
-                </div>
-            </div>
-        </div>
+        <?php $adminPageTitle = 'Analytics'; $adminPageIcon = 'fa-chart-line'; include 'includes/header.php'; ?>
 
         <!-- Main Content Layout -->
         <div class="admin-layout">
-            <!-- Include Sidebar -->
-            <?php include 'includes/sidebar.php'; ?>
-
             <!-- Main Content Area -->
             <div class="admin-main-content">
                 <!-- Analytics Header -->

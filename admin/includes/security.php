@@ -69,7 +69,7 @@ function adminRenderLogoutButton($className = 'logout-btn') {
     echo '<form method="post" action="index.php" class="admin-logout-form">'
         . '<input type="hidden" name="csrf_token" value="' . $token . '">'
         . '<button type="submit" name="admin_logout" value="1" class="' . $class . '">'
-        . '<i class="fas fa-sign-out-alt"></i> Logout</button></form>';
+        . '<i class="fas fa-sign-out-alt" aria-hidden="true"></i><span>Logout</span></button></form>';
 }
 
 function adminRefreshIdentity($db, $jsonResponse = false) {

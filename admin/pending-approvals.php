@@ -150,19 +150,7 @@ try {
 </head>
 <body>
     <div class="admin-panel">
-        <!-- Admin Header -->
-        <div class="approval-header-banner">
-            <div class="approval-header-title">
-                <i class="fas fa-tasks"></i>
-                <h1>Pending Approvals</h1>
-            </div>
-            <div class="approval-header-actions">
-                <a href="index.php" class="header-btn">
-                    <i class="fas fa-arrow-left"></i> Back to Dashboard
-                </a>
-                <?php adminRenderLogoutButton('header-btn'); ?>
-            </div>
-        </div>
+        <?php $adminPageTitle = 'Approvals'; $adminPageIcon = 'fa-clipboard-check'; include 'includes/header.php'; ?>
 
         <div class="admin-content">
             <div class="main-content">

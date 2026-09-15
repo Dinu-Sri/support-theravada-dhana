@@ -263,23 +263,7 @@ $years = $db->fetchAll("SELECT DISTINCT year FROM pricing_history ORDER BY year 
 </head>
 <body>
     <div class="admin-panel">
-        <!-- Admin Header -->
-        <div class="admin-header">
-            <div class="admin-nav">
-                <h1><i class="fas fa-history"></i> Pricing History</h1>
-                <div class="admin-user">
-                    <span>Welcome, <?php echo htmlspecialchars($admin['username']); ?>
-                        <span class="role-badge role-<?php echo $_SESSION['admin_role']; ?>">
-                            <?php echo ucfirst($_SESSION['admin_role']); ?>
-                        </span>
-                    </span>
-                    <a href="pricing-table.php" class="back-btn">
-                        <i class="fas fa-arrow-left"></i> Back to Pricing Table
-                    </a>
-                    <?php adminRenderLogoutButton(); ?>
-                </div>
-            </div>
-        </div>
+        <?php $adminPageTitle = 'Pricing History'; $adminPageIcon = 'fa-history'; include 'includes/header.php'; ?>
 
         <!-- Main Content Layout -->
         <div class="admin-layout">
