@@ -9,7 +9,7 @@ $db = getDB();
 adminRequirePermission($db, 'manage_admins', true);
 
 $filter = $_GET['filter'] ?? 'all';
-$allowedFilters = ['all', 'donor', 'agent', 'supervisor', 'editor', 'administrator'];
+$allowedFilters = ['all', 'donor', 'agent', 'staff', 'supervisor', 'editor', 'administrator'];
 if (!in_array($filter, $allowedFilters, true)) {
     adminJsonResponse(['success' => false, 'error' => 'Invalid user filter.'], 400);
 }
@@ -71,6 +71,21 @@ try {
                 'success' => true,
                 'users' => $users
             ]);
+            exit;
+
+        case 'staff':
+            $staffQuery = "SELECT id, username as first_name, '' as last_name, email, '' as contact_number,
+                                  role, is_active, created_at, 'admin_users' as source_table
+                           FROM admin_users
+                           WHERE is_active = 1
+                           ORDER BY FIELD(role, 'administrator', 'editor', 'supervisor'), created_at DESC";
+            $stmt = $pdo->prepare($staffQuery);
+            $stmt->execute();
+            $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($users as &$user) {
+                $user['permissions'] = [];
+            }
+            echo json_encode(['success' => true, 'users' => $users]);
             exit;
 
         case 'supervisor':

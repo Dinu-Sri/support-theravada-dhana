@@ -18,6 +18,14 @@
     --admin-focus: 0 0 0 3px rgba(212, 130, 42, 0.28);
 }
 
+body,
+button,
+input,
+select,
+textarea {
+    font-family: Inter, "Noto Sans Sinhala", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
 .sr-only {
     position: absolute;
     width: 1px;
@@ -847,6 +855,13 @@
     outline: none;
     border-color: #d4822a;
 }
+
+.status-form .status-save-btn[hidden] { display: none !important; }
+.status-form .status-save-btn { min-width: 72px; white-space: nowrap; }
+.status-form:not(.is-dirty) select { border-color: var(--admin-border); }
+.status-form.is-dirty select { border-color: var(--admin-gold); box-shadow: 0 0 0 3px rgba(212,130,42,.12); }
+.details-btn { gap: 6px; white-space: nowrap; }
+.read-only-label { display: inline-flex; align-items: center; gap: 5px; color: var(--admin-muted); font-size: .76rem; white-space: nowrap; }
 
 /* Status Badges (reuse from main styles) */
 .status-badge {
@@ -2212,6 +2227,13 @@
     gap: 10px;
 }
 
+.user-management-header > div { min-width: 0; }
+.user-management-header p { margin: 3px 0 0; color: rgba(255,255,255,.82); font-size: .78rem; }
+.account-kind { display: inline-flex; padding: 4px 8px; border-radius: 999px; background: #f2eee8; color: #625448; font-size: .75rem; font-weight: 650; }
+.admin-empty-cell { padding: 42px 18px !important; text-align: center; color: var(--admin-muted); }
+.btn-change-role[hidden] { display: none !important; }
+.modal-open { overflow: hidden; }
+
 .close {
     font-size: 28px;
     font-weight: bold;
@@ -2355,6 +2377,7 @@
 
 .users-table {
     width: 100%;
+    min-width: 720px;
     border-collapse: collapse;
     margin: 0;
 }

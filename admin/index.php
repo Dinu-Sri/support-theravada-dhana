@@ -432,10 +432,8 @@ $blockedDates = $db->fetchAll(
     <?php include '../includes/favicon.php'; ?>
     <link rel="stylesheet" href="../assets/css/style.css">
     <link rel="stylesheet" href="../assets/css/admin.css?v=<?php echo time(); ?>">
-    <link rel="stylesheet" href="../assets/css/analytics.css">
     <link rel="stylesheet" href="../assets/css/supervisor-styles.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="admin-dashboard">
     <div class="admin-panel">
@@ -567,8 +565,8 @@ $blockedDates = $db->fetchAll(
                                     <th>Amount</th>
                                     <th>Status</th>
                                     <th>Receipt</th>
-                                    <th>Actions</th>
-                                    <th>Details</th>
+                                    <th>Status update</th>
+                                    <th>Manage</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -616,7 +614,7 @@ $blockedDates = $db->fetchAll(
                                             <form method="POST" class="status-form">
                                                 <input type="hidden" name="booking_id" value="<?php echo $booking['id']; ?>">
                                                 <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['admin_csrf_token']); ?>">
-                                                <select name="status" aria-label="Status for reservation <?php echo $booking['id']; ?>">
+                                                <select name="status" data-original-status="<?php echo htmlspecialchars($booking['status']); ?>" aria-label="New status for reservation <?php echo $booking['id']; ?>">
                                                     <option value="pending" <?php echo $booking['status'] === 'pending' ? 'selected' : ''; ?>>Pending</option>
                                                     <option value="receipt_submitted" <?php echo $booking['status'] === 'receipt_submitted' ? 'selected' : ''; ?>>Receipt Submitted</option>
                                                     <option value="payment_pending" <?php echo $booking['status'] === 'payment_pending' ? 'selected' : ''; ?>>Payment Pending</option>
@@ -625,20 +623,17 @@ $blockedDates = $db->fetchAll(
                                                     <option value="cancelled" <?php echo $booking['status'] === 'cancelled' ? 'selected' : ''; ?>>Cancelled</option>
                                                 </select>
                                                 <input type="hidden" name="update_booking" value="1">
-                                                <button type="submit" class="btn btn-sm btn-primary" title="Save status" aria-label="Save reservation status">
-                                                    <i class="fas fa-check"></i>
+                                                <button type="submit" class="btn btn-sm btn-primary status-save-btn" hidden aria-label="Save changed reservation status">
+                                                    <i class="fas fa-check"></i><span>Save</span>
                                                 </button>
                                             </form>
                                             <?php else: ?>
-                                                <!-- Supervisors see status as read-only -->
-                                                <span class="status-badge status-<?php echo $booking['status']; ?>">
-                                                    <?php echo ucfirst(str_replace('_', ' ', $booking['status'])); ?>
-                                                </span>
+                                                <span class="read-only-label"><i class="fas fa-lock"></i> Read only</span>
                                             <?php endif; ?>
                                         </td>
                                         <td>
-                                            <button class="btn btn-sm btn-info details-btn" onclick="showBookingDetails(<?php echo $booking['id']; ?>)" title="View Details">
-                                                <i class="fas fa-info-circle"></i>
+                                            <button type="button" class="btn btn-sm btn-info details-btn" onclick="showBookingDetails(<?php echo $booking['id']; ?>)">
+                                                <i class="fas fa-sliders-h"></i><span>Manage</span>
                                             </button>
                                         </td>
                                     </tr>
@@ -688,53 +683,6 @@ $blockedDates = $db->fetchAll(
                                     <?php endif; ?>
                                 </div>
                             <?php endif; ?>
-                        </div>
-                    </div>
-
-                    <!-- Analytics View (Hidden by default) -->
-                    <div class="analytics-view-container" id="analyticsViewContainer" style="display: none;">
-                        <div class="analytics-header">
-                            <div class="analytics-title">
-                                <h2><i class="fas fa-chart-line"></i> Analytics Dashboard</h2>
-                                <p>Comprehensive insights into dāna reservations and donor activity</p>
-                            </div>
-
-                            <!-- Filters -->
-                            <div class="analytics-filters">
-                                <div class="filter-group">
-                                    <label for="timeFilter">Time Period:</label>
-                                    <select id="timeFilter" onchange="loadAnalyticsData()">
-                                        <option value="7_days">Last 7 Days</option>
-                                        <option value="30_days" selected>Last 30 Days</option>
-                                        <option value="90_days">Last 90 Days</option>
-                                        <option value="1_year">Last Year</option>
-                                        <option value="all_time">All Time</option>
-                                    </select>
-                                </div>
-
-                                <div class="filter-group">
-                                    <label for="statusFilter">Status:</label>
-                                    <select id="statusFilterAnalytics" onchange="loadAnalyticsData()">
-                                        <option value="all" selected>All Statuses</option>
-                                        <option value="pending">Pending</option>
-                                        <option value="confirmed">Confirmed</option>
-                                        <option value="completed">Completed</option>
-                                        <option value="cancelled">Cancelled</option>
-                                    </select>
-                                </div>
-
-                                <button class="refresh-btn" onclick="loadAnalyticsData()">
-                                    <i class="fas fa-sync-alt"></i> Refresh
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Analytics Content -->
-                        <div class="analytics-content" id="analyticsContent">
-                            <div class="loading-state">
-                                <i class="fas fa-spinner fa-spin"></i>
-                                <p>Loading analytics data...</p>
-                            </div>
                         </div>
                     </div>
 
@@ -968,25 +916,23 @@ $blockedDates = $db->fetchAll(
 
     <?php if ($_SESSION['is_super_admin']): ?>
     <!-- User Management Modal -->
-    <div id="userManagementModal" class="user-management-modal">
-        <div class="user-management-content">
+    <div id="userManagementModal" class="user-management-modal" role="dialog" aria-modal="true" aria-labelledby="userManagementTitle" aria-hidden="true">
+        <div class="user-management-content" tabindex="-1">
             <div class="user-management-header">
-                <h3><i class="fas fa-users-cog"></i> User Management</h3>
-                <span class="close" id="closeUserManagement">&times;</span>
+                <div><h3 id="userManagementTitle"><i class="fas fa-users-cog"></i> People &amp; access</h3><p>Assign reservation-agent or staff access.</p></div>
+                <button type="button" class="close" id="closeUserManagement" aria-label="Close people and access dialog"><i class="fas fa-times"></i></button>
             </div>
             <div class="user-management-body">
                 <div class="user-management-guidance" role="note">
                     <i class="fas fa-circle-info"></i>
-                    <span><strong>Reservation agents</strong> use the normal donor dashboard and may place bookings for other people. Select a donor account, choose <strong>Reservation Agent</strong>, then save the role.</span>
+                    <span><strong>Reservation Agent</strong> is for a donor who books for other people. Staff roles sign in through the separate admin login.</span>
                 </div>
                 <div class="user-controls">
                     <div class="user-filters">
-                        <button class="filter-btn active" data-filter="all">All Users</button>
+                        <button type="button" class="filter-btn active" data-filter="all">All</button>
                         <button class="filter-btn" data-filter="donor">Donors</button>
                         <button class="filter-btn" data-filter="agent">Reservation Agents</button>
-                        <button class="filter-btn" data-filter="supervisor">Supervisors</button>
-                        <button class="filter-btn" data-filter="editor">Editors</button>
-                        <button class="filter-btn" data-filter="administrator">Administrators</button>
+                        <button class="filter-btn" data-filter="staff">Admin staff</button>
                     </div>
 
                     <div class="user-search-container">
@@ -1004,12 +950,10 @@ $blockedDates = $db->fetchAll(
                     <table class="users-table">
                         <thead>
                             <tr>
-                                <th style="width: 60px;">ID</th>
-                                <th style="width: 180px;">User</th>
-                                <th style="width: 120px;">Contact</th>
-                                <th style="width: 100px;">Role</th>
-                                <th style="width: 200px;">Permissions</th>
-                                <th style="width: 150px;">Actions</th>
+                                <th>Person</th>
+                                <th>Account</th>
+                                <th>Current access</th>
+                                <th>Change access</th>
                             </tr>
                         </thead>
                         <tbody id="usersTableBody">
@@ -1052,7 +996,17 @@ $blockedDates = $db->fetchAll(
 
         function openUserManagement() {
             userManagementModal.style.display = 'block';
+            userManagementModal.setAttribute('aria-hidden', 'false');
+            document.body.classList.add('modal-open');
             loadUsers('all');
+            requestAnimationFrame(() => userManagementModal.querySelector('.user-management-content')?.focus());
+        }
+
+        function closeUserManagementDialog() {
+            userManagementModal.style.display = 'none';
+            userManagementModal.setAttribute('aria-hidden', 'true');
+            document.body.classList.remove('modal-open');
+            userManagementBtn?.focus();
         }
 
         userManagementBtn.addEventListener('click', openUserManagement);
@@ -1061,14 +1015,16 @@ $blockedDates = $db->fetchAll(
             openUserManagement();
         }
 
-        closeUserManagement.addEventListener('click', function() {
-            userManagementModal.style.display = 'none';
-        });
+        closeUserManagement.addEventListener('click', closeUserManagementDialog);
 
         window.addEventListener('click', function(event) {
             if (event.target === userManagementModal) {
-                userManagementModal.style.display = 'none';
+                closeUserManagementDialog();
             }
+        });
+
+        userManagementModal.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') closeUserManagementDialog();
         });
 
         // Filter buttons
@@ -1170,7 +1126,7 @@ $blockedDates = $db->fetchAll(
             if (users.length === 0) {
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td colspan="6" style="text-align: center; padding: 40px; color: #6c757d;">
+                    <td colspan="4" class="admin-empty-cell">
                         <i class="fas fa-users" style="font-size: 2rem; margin-bottom: 10px; opacity: 0.5;"></i>
                         <br>No users found
                     </td>
@@ -1183,18 +1139,6 @@ $blockedDates = $db->fetchAll(
                 const row = document.createElement('tr');
                 row.style.animationDelay = `${index * 0.05}s`;
                 
-                // Get role permissions display
-                let permissionsDisplay = '';
-                if (user.permissions && user.permissions.length > 0) {
-                    const keyPermissions = user.permissions.slice(0, 3);
-                    permissionsDisplay = keyPermissions.map(p => `<span class="permission-tag">${escapeUserText(p)}</span>`).join(' ');
-                    if (user.permissions.length > 3) {
-                        permissionsDisplay += ` <span class="permission-more">+${user.permissions.length - 3} more</span>`;
-                    }
-                } else {
-                    permissionsDisplay = '<span class="no-permissions">No permissions</span>';
-                }
-
                 // Create role change dropdown
                 const roleOptions = user.source_table === 'users'
                     ? ['donor', 'agent']
@@ -1206,26 +1150,23 @@ $blockedDates = $db->fetchAll(
                 ).join('');
 
                 row.innerHTML = `
-                    <td><strong>#${user.id}</strong></td>
                     <td>
                         <div class="user-info">
                             <div class="user-name">${escapeUserText(user.first_name)} ${escapeUserText(user.last_name)}</div>
                             <div class="user-email">${escapeUserText(user.email)}</div>
+                            ${user.contact_number ? `<div class="user-contact">${escapeUserText(user.contact_number)}</div>` : ''}
                         </div>
                     </td>
-                    <td class="user-contact">${escapeUserText(user.contact_number)}</td>
+                    <td><span class="account-kind">${user.source_table === 'users' ? 'Donor portal' : 'Admin portal'}</span></td>
                     <td>
                         <span class="role-badge role-${safeRole}">${roleLabels[safeRole]}</span>
-                    </td>
-                    <td class="permissions-cell">
-                        ${permissionsDisplay}
                     </td>
                     <td class="action-buttons">
                         <select class="role-change-select" data-user-id="${user.id}" data-source-table="${user.source_table}" data-current-role="${user.role}">
                             ${roleDropdown}
                         </select>
-                        <button class="btn-change-role" type="button" onclick="changeUserRole(this)">
-                            <i class="fas fa-save"></i> Update
+                        <button class="btn-change-role" type="button" hidden onclick="changeUserRole(this)">
+                            <i class="fas fa-check"></i> Apply
                         </button>
                     </td>
                 `;
@@ -1238,16 +1179,8 @@ $blockedDates = $db->fetchAll(
                     const updateBtn = this.parentElement.querySelector('.btn-change-role');
                     const currentRole = this.dataset.currentRole;
                     const newRole = this.value;
-                    
-                    if (currentRole !== newRole) {
-                        updateBtn.style.backgroundColor = '#28a745';
-                        updateBtn.style.color = 'white';
-                        updateBtn.innerHTML = '<i class="fas fa-save"></i> Save';
-                    } else {
-                        updateBtn.style.backgroundColor = '#6c757d';
-                        updateBtn.style.color = 'white';
-                        updateBtn.innerHTML = '<i class="fas fa-save"></i> Update';
-                    }
+                    updateBtn.hidden = currentRole === newRole;
+                    updateBtn.innerHTML = '<i class="fas fa-check"></i> Apply';
                 });
             });
         }
@@ -1402,7 +1335,8 @@ $blockedDates = $db->fetchAll(
                     
                     // Reset button style
                     button.style.backgroundColor = '#6c757d';
-                    button.innerHTML = '<i class="fas fa-save"></i> Update';
+                    button.innerHTML = '<i class="fas fa-check"></i> Apply';
+                    button.hidden = true;
                     button.disabled = false;
                     select.disabled = false;
 

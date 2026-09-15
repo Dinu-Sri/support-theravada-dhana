@@ -11,6 +11,54 @@
     margin-bottom: 30px;
 }
 
+/* Shared-shell analytics layout */
+.admin-analytics-page { background: var(--admin-canvas); color: var(--admin-ink); }
+.admin-analytics-page .admin-layout { width: 100%; max-width: 1600px; padding: 18px 22px 28px; }
+.admin-analytics-page .admin-main-content { width: 100%; padding: 0; overflow: visible; }
+.admin-analytics-page .analytics-header {
+    margin: 0 0 14px;
+    padding: 18px 20px;
+    align-items: center;
+    border: 1px solid var(--admin-border);
+    border-radius: var(--admin-radius);
+    background: var(--admin-surface);
+    color: var(--admin-ink);
+    box-shadow: var(--admin-shadow);
+}
+.admin-analytics-page .analytics-title h1 { font-size: 1.35rem; color: var(--admin-ink); }
+.admin-analytics-page .analytics-title p { color: var(--admin-muted); opacity: 1; }
+.admin-analytics-page .filter-group label { color: var(--admin-muted); opacity: 1; }
+.admin-analytics-page .filter-group select {
+    min-width: 150px;
+    min-height: 40px;
+    border: 1px solid var(--admin-border);
+    background: #fff;
+    color: var(--admin-ink);
+}
+.admin-analytics-page .filter-group select option { background: #fff; color: var(--admin-ink); }
+.admin-analytics-page .refresh-btn { min-height: 40px; border: 0; background: var(--admin-gold); color: #fff; }
+.admin-analytics-page .analytics-content { padding: 0; }
+.admin-analytics-page .summary-cards { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
+.admin-analytics-page .summary-card { min-height: 84px; padding: 13px; border: 1px solid var(--admin-border); border-left: 3px solid var(--admin-gold); box-shadow: none; }
+.admin-analytics-page .charts-carousel { border: 1px solid var(--admin-border); box-shadow: var(--admin-shadow); }
+.admin-analytics-page .carousel-header { padding: 13px 17px; }
+.admin-analytics-page .carousel-content { height: 360px; }
+.admin-analytics-page .chart-slide { padding: 18px; }
+
+@media (max-width: 900px) {
+    .admin-analytics-page .analytics-header { align-items: stretch; flex-direction: column; }
+    .admin-analytics-page .summary-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 560px) {
+    .admin-analytics-page .admin-layout { padding: 12px; }
+    .admin-analytics-page .analytics-filters { display: grid; grid-template-columns: 1fr; width: 100%; gap: 9px; }
+    .admin-analytics-page .filter-group select,
+    .admin-analytics-page .refresh-btn { width: 100%; }
+    .admin-analytics-page .summary-cards { grid-template-columns: 1fr; }
+    .admin-analytics-page .carousel-content { height: 320px; }
+}
+
 .analytics-title h1 {
     margin: 0 0 8px 0;
     font-size: 1.8rem;

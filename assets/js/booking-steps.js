@@ -47,7 +47,8 @@ function safeQuerySelector(selector) {
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🔄 Booking system initializing...');
 
-    // Give extra time for all elements to load
+    // Initialize as soon as the DOM is ready. Delaying this allowed CSS from an
+    // inactive step to flash before step 1 was restored.
     setTimeout(() => {
         try {
             console.log('✅ Starting enhanced initialization...');
@@ -92,7 +93,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (error) {
             console.error('❌ Error during initialization:', error);
         }
-    }, 800);
+    }, 0);
 });
 
 // Ultra-safe function to show a specific step
@@ -2366,14 +2367,26 @@ async function showAnnualPriceBreakdown() {
     summaryContainer.innerHTML = '<div class="loading-inline"><i class="fas fa-spinner fa-spin"></i> Loading price breakdown...</div>';
 
     try {
-        // Fetch annual prices from API
-        const response = await fetch(`api/get-annual-prices.php?dhana_type_id=${dhanaTypeId}&start_date=${bookingDate}`);
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+        const endpoint = new URL('api/get-annual-prices.php', window.location.href);
+        endpoint.search = new URLSearchParams({
+            dhana_type_id: String(dhanaTypeId),
+            start_date: bookingDate
+        }).toString();
+        const response = await fetch(endpoint.toString(), {
+            headers: { 'Accept': 'application/json' },
+            credentials: 'same-origin'
+        });
+        const responseText = await response.text();
+        let data;
+        try {
+            data = JSON.parse(responseText);
+        } catch (parseError) {
+            throw new Error('The pricing service returned an invalid response.');
         }
 
-        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || `Unable to load annual prices (${response.status}).`);
+        }
 
         if (data.success) {
             displayAnnualPriceInline(data);
@@ -2382,7 +2395,7 @@ async function showAnnualPriceBreakdown() {
         }
     } catch (error) {
         console.error('Error fetching annual prices:', error);
-        summaryContainer.innerHTML = '<div class="error-inline"><i class="fas fa-exclamation-triangle"></i> Failed to load prices. Please try again.</div>';
+        summaryContainer.innerHTML = `<div class="error-inline"><i class="fas fa-exclamation-triangle"></i> ${escapeHtml(error.message || 'Failed to load prices. Please try again.')}</div>`;
     }
 }
 

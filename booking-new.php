@@ -50,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
     <link rel="stylesheet" href="assets/css/booking-steps.css?v=20260913">
     <link rel="stylesheet" href="assets/css/review-enhancements.css?v=20260913">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="assets/css/pro-ui.css?v=20260916">
+    <link rel="stylesheet" href="assets/css/pro-ui.css?v=20260917">
     <style>
         .review-navigation .btn:first-child {
             margin-right: auto !important;
@@ -1674,6 +1674,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
             }
         });
     </script>
-    <script src="assets/js/booking-steps.js?v=20260916"></script>
+    <script src="assets/js/booking-steps.js?v=20260917"></script>
 </body>
 </html>

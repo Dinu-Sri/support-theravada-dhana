@@ -186,7 +186,7 @@ function getTimeFilterLabel($filter) {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/date-fns@2.29.3/index.min.js"></script>
 </head>
-<body>
+<body class="admin-analytics-page">
     <div class="admin-panel">
         <?php $adminPageTitle = 'Analytics'; $adminPageIcon = 'fa-chart-line'; include 'includes/header.php'; ?>
 

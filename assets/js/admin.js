@@ -153,6 +153,15 @@ document.addEventListener('DOMContentLoaded', function() {
     statusForms.forEach(form => {
         const select = form.querySelector('select');
         const submitButton = form.querySelector('button[type="submit"]');
+        const originalStatus = select?.dataset.originalStatus || select?.value;
+        const updateDirtyState = () => {
+            if (!select || !submitButton) return;
+            const changed = select.value !== originalStatus;
+            submitButton.hidden = !changed;
+            form.classList.toggle('is-dirty', changed);
+        };
+        select?.addEventListener('change', updateDirtyState);
+        updateDirtyState();
         form.addEventListener('submit', function(event) {
             let confirmationMessage = '';
             if (select.value === 'cancelled') {
