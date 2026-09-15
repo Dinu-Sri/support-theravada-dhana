@@ -1,17 +1,24 @@
 <?php
 session_start();
 require_once '../config/database.php';
+require_once __DIR__ . '/includes/security.php';
 
-// Check if user is logged in as admin
-if (!isset($_SESSION['admin_logged_in'])) {
-    http_response_code(401);
-    echo json_encode(['error' => 'Unauthorized']);
-    exit;
-}
+adminRequireLogin(true);
+$db = getDB();
+adminRequirePermission($db, 'view_analytics', true);
+header('Content-Type: application/json; charset=UTF-8');
 
 // Get filter parameters
 $timeFilter = $_GET['time_filter'] ?? '30_days';
 $statusFilter = $_GET['status_filter'] ?? 'all';
+$validTimeFilters = ['7_days', '30_days', '90_days', '1_year', 'all_time'];
+if (!in_array($timeFilter, $validTimeFilters, true)) {
+    adminJsonResponse(['success' => false, 'error' => 'Invalid time filter.'], 400);
+}
+$validStatuses = ['all', 'pending', 'receipt_submitted', 'payment_pending', 'confirmed', 'completed', 'cancelled'];
+if (!in_array($statusFilter, $validStatuses, true)) {
+    adminJsonResponse(['success' => false, 'error' => 'Invalid status filter.'], 400);
+}
 
 // Calculate date range based on time filter
 $dateCondition = '';
@@ -44,8 +51,6 @@ if ($statusFilter !== 'all') {
 }
 
 try {
-    $db = getDB();
-    
     // Get total statistics
     $totalQuery = "SELECT
         COUNT(*) as total_reservations,
@@ -95,7 +100,7 @@ try {
         FROM bookings b
         JOIN dhana_types dt ON b.dhana_type_id = dt.id
         WHERE 1=1 " . str_replace('created_at', 'b.created_at', $dateCondition) . " " . str_replace('status', 'b.status', $statusCondition) . "
-        GROUP BY dt.name
+        GROUP BY dt.id, dt.name
         ORDER BY count DESC";
     
     $dhanaTypeStats = $db->fetchAll($dhanaTypeQuery, $params);
@@ -110,7 +115,7 @@ try {
         FROM bookings b
         JOIN users u ON b.user_id = u.id
         WHERE 1=1 " . str_replace('created_at', 'b.created_at', $dateCondition) . " " . str_replace('status', 'b.status', $statusCondition) . "
-        GROUP BY b.user_id
+        GROUP BY b.user_id, u.first_name, u.last_name, u.email
         ORDER BY total_donated DESC
         LIMIT 10";
     
@@ -149,14 +154,14 @@ try {
         ]
     ];
     
-    header('Content-Type: application/json');
     echo json_encode($response);
     
 } catch (Exception $e) {
+    adminLogException('Analytics data failed', $e);
     http_response_code(500);
     echo json_encode([
         'success' => false,
-        'error' => 'Error loading analytics: ' . $e->getMessage()
+        'error' => 'Unable to load analytics data. Please try again.'
     ]);
 }
 ?>

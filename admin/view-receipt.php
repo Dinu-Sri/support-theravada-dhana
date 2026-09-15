@@ -6,34 +6,11 @@
 
 session_start();
 require_once '../config/database.php';
+require_once 'includes/security.php';
 
-// Check if admin is logged in
-if (!isset($_SESSION['admin_logged_in'])) {
-    header('HTTP/1.0 403 Forbidden');
-    exit('Access denied. Please log in as admin.');
-}
-
+adminRequireLogin(false);
 $db = getDB();
-
-// Permission checking function
-function hasPermission($permission) {
-    global $db;
-    $role = $_SESSION['admin_role'];
-
-    $check = $db->fetchOne(
-        "SELECT COUNT(*) as has_permission FROM role_permissions
-         WHERE role_name = ? AND permission_name = ?",
-        [$role, $permission]
-    );
-
-    return $check['has_permission'] > 0;
-}
-
-// Check if user has permission to view receipt files
-if (!hasPermission('view_receipt_files')) {
-    header('HTTP/1.0 403 Forbidden');
-    exit('Access denied. You do not have permission to view receipt files.');
-}
+adminRequirePermission($db, 'view_receipt_files', false);
 
 // Get receipt filename from query parameter
 $filename = $_GET['file'] ?? '';
@@ -46,11 +23,27 @@ if (empty($filename)) {
 // Sanitize filename to prevent directory traversal attacks
 $filename = basename($filename);
 
-// Build full file path
-$filePath = '../' . UPLOAD_DIR . $filename;
+// Resolve the configured receipt directory and enforce path containment.
+$receiptDirectory = realpath(__DIR__ . '/../' . rtrim(UPLOAD_DIR, '/\\'));
+$filePath = $receiptDirectory === false
+    ? false
+    : realpath($receiptDirectory . DIRECTORY_SEPARATOR . $filename);
 
-// Check if file exists
-if (!file_exists($filePath)) {
+if (
+    $filePath === false ||
+    strpos($filePath, $receiptDirectory . DIRECTORY_SEPARATOR) !== 0 ||
+    !is_file($filePath)
+) {
+    header('HTTP/1.0 404 Not Found');
+    exit('Receipt file not found.');
+}
+
+// Only stream files that are registered as payment receipts.
+$receipt = $db->fetchOne(
+    'SELECT id FROM payment_receipts WHERE receipt_filename = ? LIMIT 1',
+    [$filename]
+);
+if (!$receipt) {
     header('HTTP/1.0 404 Not Found');
     exit('Receipt file not found.');
 }
@@ -77,10 +70,11 @@ $contentType = $contentTypes[$fileExtension] ?? 'application/octet-stream';
 // Set headers
 header('Content-Type: ' . $contentType);
 header('Content-Length: ' . filesize($filePath));
-header('Content-Disposition: inline; filename="' . $filename . '"');
+header('Content-Disposition: inline; filename="receipt.' . $fileExtension . '"');
 header('Cache-Control: private, max-age=3600');
+header('X-Content-Type-Options: nosniff');
+header("Content-Security-Policy: sandbox; default-src 'none'; img-src 'self' data:");
 
 // Output file
 readfile($filePath);
 exit;
-

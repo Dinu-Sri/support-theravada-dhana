@@ -178,7 +178,7 @@ try {
             "SELECT b.id, b.booking_time_slot, b.dhana_type_id, dt.name as dhana_type_name,
                     u.first_name, u.last_name, ab.year_start, ab.year_end
              FROM bookings b
-             JOIN annual_bookings ab ON (b.id = ab.booking_id OR b.parent_booking_id = ab.booking_id)
+             JOIN annual_bookings ab ON ab.booking_id = COALESCE(b.parent_booking_id, b.id)
              JOIN dhana_types dt ON b.dhana_type_id = dt.id
              JOIN users u ON b.user_id = u.id
              WHERE MONTH(b.booking_date) = MONTH(?)

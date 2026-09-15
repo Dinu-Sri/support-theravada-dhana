@@ -35,8 +35,13 @@ try {
          JOIN dhana_types dt ON b.dhana_type_id = dt.id
          JOIN users u ON b.user_id = u.id
          LEFT JOIN users agent ON b.booked_by_agent_id = agent.id
-         LEFT JOIN payment_receipts pr ON b.id = pr.booking_id
-         LEFT JOIN annual_bookings ab ON (b.id = ab.booking_id OR b.parent_booking_id = ab.booking_id)
+         LEFT JOIN payment_receipts pr ON pr.id = (
+         SELECT pr_latest.id FROM payment_receipts pr_latest
+         WHERE pr_latest.booking_id = b.id
+         ORDER BY pr_latest.upload_date DESC, pr_latest.id DESC
+         LIMIT 1
+     )
+         LEFT JOIN annual_bookings ab ON ab.booking_id = COALESCE(b.parent_booking_id, b.id)
          LEFT JOIN admin_users holder ON b.held_by = holder.id
          WHERE b.id = ?",
         [$bookingId]

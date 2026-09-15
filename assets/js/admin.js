@@ -2,6 +2,26 @@
  * Admin Panel JavaScript for Dhana Booking System
  */
 
+function escapeAdminHtml(value) {
+    return String(value == null ? '' : value).replace(/[&<>'"]/g, character => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        "'": '&#39;',
+        '"': '&quot;'
+    }[character]));
+}
+
+function safeAdminId(value) {
+    const id = Number.parseInt(value, 10);
+    return Number.isSafeInteger(id) && id > 0 ? id : 0;
+}
+
+function safeAdminStatus(value) {
+    const statuses = ['pending', 'receipt_submitted', 'payment_pending', 'confirmed', 'completed', 'cancelled'];
+    return statuses.includes(value) ? value : 'pending';
+}
+
 // Export CSV functionality
 function exportCSV() {
     const table = document.getElementById('bookingsTable');
@@ -99,45 +119,25 @@ function filterBookings() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Add loading animation to status forms
     const statusForms = document.querySelectorAll('.status-form');
     statusForms.forEach(form => {
         const select = form.querySelector('select');
-        
-        select.addEventListener('change', function() {
-            form.classList.add('loading');
-            
-            // Remove loading after form submission (or timeout)
-            setTimeout(() => {
-                form.classList.remove('loading');
-            }, 3000);
-        });
-    });
-    
-    // Add confirmation for status changes
-    const statusSelects = document.querySelectorAll('.status-form select');
-    statusSelects.forEach(select => {
-        select.addEventListener('change', function(e) {
-            const newStatus = this.value;
-            const bookingId = this.form.querySelector('input[name="booking_id"]').value;
-            
-            // Show confirmation for certain status changes
-            if (newStatus === 'cancelled') {
-                if (!confirm('Are you sure you want to cancel this reservation?')) {
-                    e.preventDefault();
-                    // Reset to previous value
-                    this.selectedIndex = 0;
-                    return false;
-                }
+        const submitButton = form.querySelector('button[type="submit"]');
+        form.addEventListener('submit', function(event) {
+            let confirmationMessage = '';
+            if (select.value === 'cancelled') {
+                confirmationMessage = 'Cancel this reservation?';
+            } else if (select.value === 'confirmed') {
+                confirmationMessage = 'Confirm this reservation and mark its payment receipt as verified?';
             }
 
-            if (newStatus === 'confirmed') {
-                if (!confirm('Confirm this reservation? This will mark the payment as verified.')) {
-                    e.preventDefault();
-                    this.selectedIndex = 0;
-                    return false;
-                }
+            if (confirmationMessage && !window.confirm(confirmationMessage)) {
+                event.preventDefault();
+                return;
             }
+
+            form.classList.add('loading');
+            if (submitButton) submitButton.disabled = true;
         });
     });
     
@@ -368,7 +368,7 @@ function showNotification(message, type = 'success') {
     notification.innerHTML = `
         <div class="notification-content">
             <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
-            <span>${message}</span>
+            <span>${escapeAdminHtml(message)}</span>
         </div>
         <button class="notification-close" onclick="this.parentElement.remove()">
             <i class="fas fa-times"></i>
@@ -609,11 +609,12 @@ function renderCalendar(data) {
         dayBookings.slice(0, 3).forEach(booking => {
             const isAnnual = booking.is_annual_event || booking.year_start;
             const isMonk = booking.is_monk == 1;
-            const statusClass = booking.status.replace('_', '-');
+            const statusClass = safeAdminStatus(booking.status).replace('_', '-');
+            const bookingId = safeAdminId(booking.id);
 
             calendarHTML += `
                 <div class="booking-thumbnail ${isAnnual ? 'annual' : ''} ${isMonk ? 'monk-booking' : ''}"
-                     onclick="event.stopPropagation(); showBookingDetails(${booking.id});"
+                     onclick="event.stopPropagation(); showBookingDetails(${bookingId});"
                      title="Click to view full details">
                     <div class="thumbnail-header">
                         <span class="thumbnail-status status-${statusClass}"></span>
@@ -621,8 +622,8 @@ function renderCalendar(data) {
                         ${isMonk ? '<i class="fas fa-user-tie monk-icon"></i>' : ''}
                     </div>
                     <div class="thumbnail-content">
-                        <div class="thumbnail-donor">${booking.first_name} ${booking.last_name}</div>
-                        <div class="thumbnail-dhana">${booking.dhana_type_name}</div>
+                        <div class="thumbnail-donor">${escapeAdminHtml(booking.first_name)} ${escapeAdminHtml(booking.last_name)}</div>
+                        <div class="thumbnail-dhana">${escapeAdminHtml(booking.dhana_type_name)}</div>
                     </div>
                 </div>
             `;
@@ -668,30 +669,33 @@ function showDayBookings(date) {
 
                 dayBookings.forEach(booking => {
                     const isAnnual = booking.is_annual_event || booking.year_start;
-                    const statusClass = booking.status.replace('_', '-');
+                    const safeStatus = safeAdminStatus(booking.status);
+                    const statusClass = safeStatus.replace('_', '-');
+                    const bookingId = safeAdminId(booking.id);
 
                     detailsHTML += `
                         <div class="booking-detail-card ${isAnnual ? 'annual-booking' : ''}">
                             <div class="booking-header">
-                                <h5>${booking.dhana_type_name}</h5>
+                                <h5>${escapeAdminHtml(booking.dhana_type_name)}</h5>
                                 <span class="status-badge status-${statusClass}">
-                                    ${booking.status.replace('_', ' ').toUpperCase()}
+                                    ${escapeAdminHtml(safeStatus.replace('_', ' ').toUpperCase())}
                                 </span>
                             </div>
                             <div class="booking-info">
-                                <p><strong>Customer:</strong> ${booking.first_name} ${booking.last_name}</p>
-                                <p><strong>Email:</strong> ${booking.email}</p>
+                                <p><strong>Customer:</strong> ${escapeAdminHtml(booking.first_name)} ${escapeAdminHtml(booking.last_name)}</p>
+                                <p><strong>Email:</strong> ${escapeAdminHtml(booking.email)}</p>
                                 <p><strong>Amount:</strong> Rs. ${Number(booking.total_amount).toLocaleString()}</p>
-                                <p><strong>Time Slot:</strong> ${booking.booking_time_slot.replace('_', ' ').toUpperCase()}</p>
-                                ${booking.special_requests ? `<p><strong>Special Requests:</strong> ${booking.special_requests}</p>` : ''}
+                                <p><strong>Time Slot:</strong> ${escapeAdminHtml(String(booking.booking_time_slot || '').replace('_', ' ').toUpperCase())}</p>
+                                ${booking.special_requests ? `<p><strong>Special Requests:</strong> ${escapeAdminHtml(booking.special_requests)}</p>` : ''}
                                 ${isAnnual ? '<p class="annual-badge"><i class="fas fa-calendar-check"></i> Annual Event</p>' : ''}
                             </div>
                             <div class="booking-actions">
-                                <button class="btn btn-sm btn-primary" onclick="editBooking(${booking.id})">
-                                    <i class="fas fa-edit"></i> Edit
-                                </button>
+                                ${window.ADMIN_CAPABILITIES?.canEditBookings ? `
+                                    <button class="btn btn-sm btn-primary" onclick="editBooking(${bookingId})">
+                                        <i class="fas fa-edit"></i> Edit
+                                    </button>` : ''}
                                 ${booking.receipt_filename ?
-                                    `<a href="../uploads/receipts/${booking.receipt_filename}" target="_blank" class="btn btn-sm btn-info">
+                                    `<a href="view-receipt.php?file=${encodeURIComponent(booking.receipt_filename)}" target="_blank" rel="noopener" class="btn btn-sm btn-info">
                                         <i class="fas fa-file-image"></i> Receipt
                                     </a>` : ''
                                 }
@@ -842,25 +846,28 @@ function editBooking(bookingId) {
 }
 
 function showEditBookingModal(booking) {
+    const bookingId = safeAdminId(booking.id);
+    const bookingDate = escapeAdminHtml(booking.booking_date);
+    const totalAmount = Number.isFinite(Number(booking.total_amount)) ? Number(booking.total_amount) : 0;
     const modal = document.createElement('div');
     modal.className = 'edit-booking-modal';
     modal.innerHTML = `
         <div class="edit-booking-content">
             <div class="modal-header">
-                <h4>Edit Booking #${String(booking.id).padStart(6, '0')}</h4>
+                <h4>Edit Booking #${String(bookingId).padStart(6, '0')}</h4>
                 <button class="close-modal" onclick="closeEditBookingModal()">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
             <div class="modal-body">
                 <form id="editBookingForm">
-                    <input type="hidden" name="booking_id" value="${booking.id}">
+                    <input type="hidden" name="booking_id" value="${bookingId}">
 
                     <div class="form-row">
                         <div class="form-group">
                             <label for="edit_booking_date">Booking Date:</label>
                             <input type="date" id="edit_booking_date" name="booking_date"
-                                   value="${booking.booking_date}" required>
+                                   value="${bookingDate}" required>
                         </div>
                         <div class="form-group">
                             <label for="edit_dhana_type">Dhana Type:</label>
@@ -883,6 +890,7 @@ function showEditBookingModal(booking) {
                             <label for="edit_status">Status:</label>
                             <select id="edit_status" name="status" required>
                                 <option value="pending" ${booking.status === 'pending' ? 'selected' : ''}>Pending</option>
+                                <option value="receipt_submitted" ${booking.status === 'receipt_submitted' ? 'selected' : ''}>Receipt Submitted</option>
                                 <option value="payment_pending" ${booking.status === 'payment_pending' ? 'selected' : ''}>Payment Pending</option>
                                 <option value="confirmed" ${booking.status === 'confirmed' ? 'selected' : ''}>Confirmed</option>
                                 <option value="completed" ${booking.status === 'completed' ? 'selected' : ''}>Completed</option>
@@ -894,13 +902,13 @@ function showEditBookingModal(booking) {
                     <div class="form-group">
                         <label for="edit_total_amount">Total Amount (Rs.):</label>
                         <input type="number" id="edit_total_amount" name="total_amount"
-                               value="${booking.total_amount}" step="0.01" required>
+                               value="${totalAmount}" step="0.01" required>
                     </div>
 
                     <div class="form-group">
                         <label for="edit_special_requests">Special Requests:</label>
                         <textarea id="edit_special_requests" name="special_requests"
-                                  rows="3">${booking.special_requests || ''}</textarea>
+                                  rows="3">${escapeAdminHtml(booking.special_requests || '')}</textarea>
                     </div>
 
                     <div class="form-row">
@@ -923,8 +931,10 @@ function showEditBookingModal(booking) {
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeEditBookingModal()">Cancel</button>
-                <button class="btn btn-danger" onclick="deleteBooking(${booking.id})">Delete</button>
-                <button class="btn btn-primary" onclick="saveBookingChanges()">Save Changes</button>
+                ${window.ADMIN_CAPABILITIES?.canDeleteBookings
+                    ? `<button class="btn btn-danger" onclick="deleteBooking(${bookingId})">Delete</button>`
+                    : ''}
+                <button class="btn btn-primary edit-booking-save" onclick="saveBookingChanges()">Save Changes</button>
             </div>
         </div>
     `;
@@ -940,7 +950,7 @@ function generateDhanaTypeOptions(selectedId) {
     let options = '';
     window.adminCalendarData.dhanaTypes.forEach(type => {
         const selected = type.id == selectedId ? 'selected' : '';
-        options += `<option value="${type.id}" ${selected}>${type.name} - Rs. ${Number(type.price).toLocaleString()}</option>`;
+        options += `<option value="${safeAdminId(type.id)}" ${selected}>${escapeAdminHtml(type.name)} - Rs. ${Number(type.price).toLocaleString()}</option>`;
     });
 
     return options;
@@ -959,7 +969,7 @@ function saveBookingChanges() {
     formData.set('csrf_token', window.ADMIN_CSRF_TOKEN || '');
 
     // Show loading state
-    const saveBtn = document.querySelector('.modal-footer .btn-primary');
+    const saveBtn = form.closest('.edit-booking-modal').querySelector('.edit-booking-save');
     const originalText = saveBtn.innerHTML;
     saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
     saveBtn.disabled = true;
@@ -997,7 +1007,7 @@ function showBookingConflictError(errorMessage) {
     errorModal.style.zIndex = '10001'; // Higher than edit modal
 
     // Format the error message (preserve line breaks)
-    const formattedError = errorMessage.replace(/\n/g, '<br>');
+    const formattedError = escapeAdminHtml(errorMessage).replace(/\n/g, '<br>');
 
     errorModal.innerHTML = `
         <div class="edit-booking-content" style="max-width: 600px;">
@@ -1146,16 +1156,21 @@ function showDateOption(reportType) {
     document.querySelector(`.${reportType}-option`).style.display = 'block';
 }
 
-function generateReport(format) {
+function generateReport(format, generateBtn) {
     const form = document.getElementById('reportGeneratorForm');
+    const modal = form?.closest('.report-generator-modal');
+    if (!form || !modal || !generateBtn) {
+        showNotification('The report form is unavailable. Refresh the page and try again.', 'error');
+        return;
+    }
     const formData = new FormData(form);
-    formData.append('format', format);
+    formData.set('format', format);
+    formData.set('csrf_token', window.ADMIN_CSRF_TOKEN || '');
 
     // Show loading state
-    const buttons = document.querySelectorAll('.modal-footer .btn');
+    const buttons = modal.querySelectorAll('.modal-footer .btn');
     buttons.forEach(btn => btn.disabled = true);
 
-    const generateBtn = event.target;
     const originalText = generateBtn.innerHTML;
     generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
 
@@ -1195,7 +1210,8 @@ function generateReport(format) {
         // Add all form data as hidden inputs
         const reportForm = document.getElementById('reportGeneratorForm');
         const reportFormData = new FormData(reportForm);
-        reportFormData.append('format', 'print');
+        reportFormData.set('format', 'print');
+        reportFormData.set('csrf_token', window.ADMIN_CSRF_TOKEN || '');
 
         for (let [key, value] of reportFormData.entries()) {
             const input = document.createElement('input');
@@ -1224,9 +1240,13 @@ function generateReport(format) {
         method: 'POST',
         body: formData
     })
-    .then(response => {
+    .then(async response => {
         if (!response.ok) {
-            throw new Error('Network response was not ok');
+            const contentType = response.headers.get('Content-Type') || '';
+            const data = contentType.includes('application/json')
+                ? await response.json().catch(() => null)
+                : null;
+            throw new Error(data?.error || `Report request failed (${response.status}).`);
         }
 
         // Get filename from response headers
@@ -1240,7 +1260,8 @@ function generateReport(format) {
             }
         }
 
-        return response.blob().then(blob => ({ blob, filename }));
+        const blob = await response.blob();
+        return { blob, filename };
     })
     .then(({ blob, filename }) => {
         // Create download link
@@ -1259,7 +1280,7 @@ function generateReport(format) {
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Error generating report. Please try again.');
+        showNotification(error.message || 'Error generating report. Please try again.', 'error');
     })
     .finally(() => {
         buttons.forEach(btn => btn.disabled = false);

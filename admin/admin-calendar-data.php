@@ -6,27 +6,35 @@
 
 session_start();
 require_once '../config/database.php';
+require_once __DIR__ . '/includes/security.php';
 
-// Check if admin is logged in
-if (!isset($_SESSION['admin_logged_in'])) {
-    http_response_code(401);
-    echo json_encode(['error' => 'Unauthorized']);
-    exit;
-}
-
-header('Content-Type: application/json');
+adminRequireLogin(true);
+header('Content-Type: application/json; charset=UTF-8');
 
 try {
     $db = getDB();
+    adminRequirePermission($db, ['view_calendar', 'view_booking_dates', 'view_availability'], true);
     
     // Get parameters
     $month = isset($_GET['month']) ? (int)$_GET['month'] : date('n');
     $year = isset($_GET['year']) ? (int)$_GET['year'] : date('Y');
     $specificDate = isset($_GET['date']) ? $_GET['date'] : null;
     
-    // Validate month and year
-    if ($month < 1 || $month > 12 || $year < 2020 || $year > 2030) {
-        throw new Exception('Invalid month or year');
+    $bookingWindow = $db->fetchOne("SELECT setting_value FROM settings WHERE setting_key = 'booking_advance_days'");
+    $annualWindow = $db->fetchOne("SELECT setting_value FROM settings WHERE setting_key = 'annual_booking_years'");
+    $minimumYear = (int)date('Y') - 20;
+    $maximumYear = (int)date('Y')
+        + (int)ceil(max(1, (int)($bookingWindow['setting_value'] ?? 30)) / 365)
+        + max(1, (int)($annualWindow['setting_value'] ?? 2));
+    if ($month < 1 || $month > 12 || $year < $minimumYear || $year > $maximumYear) {
+        adminJsonResponse(['success' => false, 'error' => 'The requested month is outside the configured calendar range.'], 400);
+    }
+    if ($specificDate !== null) {
+        $parsedDate = DateTime::createFromFormat('!Y-m-d', $specificDate);
+        if (!$parsedDate || $parsedDate->format('Y-m-d') !== $specificDate ||
+            (int)$parsedDate->format('n') !== $month || (int)$parsedDate->format('Y') !== $year) {
+            adminJsonResponse(['success' => false, 'error' => 'Invalid calendar date.'], 400);
+        }
     }
     
     // Get dhana types
@@ -40,8 +48,13 @@ try {
          FROM bookings b
          JOIN dhana_types dt ON b.dhana_type_id = dt.id
          JOIN users u ON b.user_id = u.id
-         LEFT JOIN payment_receipts pr ON b.id = pr.booking_id
-         LEFT JOIN annual_bookings ab ON (b.id = ab.booking_id OR b.parent_booking_id = ab.booking_id)
+         LEFT JOIN payment_receipts pr ON pr.id = (
+         SELECT pr_latest.id FROM payment_receipts pr_latest
+         WHERE pr_latest.booking_id = b.id
+         ORDER BY pr_latest.upload_date DESC, pr_latest.id DESC
+         LIMIT 1
+     )
+         LEFT JOIN annual_bookings ab ON ab.booking_id = COALESCE(b.parent_booking_id, b.id)
          WHERE MONTH(b.booking_date) = ? AND YEAR(b.booking_date) = ?
          AND b.status NOT IN ('cancelled')
          ORDER BY b.booking_date, dt.price DESC",
@@ -56,8 +69,13 @@ try {
          FROM bookings b
          JOIN dhana_types dt ON b.dhana_type_id = dt.id
          JOIN users u ON b.user_id = u.id
-         LEFT JOIN payment_receipts pr ON b.id = pr.booking_id
-         JOIN annual_bookings ab ON (b.id = ab.booking_id OR b.parent_booking_id = ab.booking_id)
+         LEFT JOIN payment_receipts pr ON pr.id = (
+         SELECT pr_latest.id FROM payment_receipts pr_latest
+         WHERE pr_latest.booking_id = b.id
+         ORDER BY pr_latest.upload_date DESC, pr_latest.id DESC
+         LIMIT 1
+     )
+         JOIN annual_bookings ab ON ab.booking_id = COALESCE(b.parent_booking_id, b.id)
          WHERE MONTH(b.booking_date) = ?
          AND ? BETWEEN ab.year_start AND ab.year_end
          AND b.status NOT IN ('cancelled')
@@ -79,8 +97,11 @@ try {
         
         if (!$found) {
             // Create a virtual booking entry for the annual event
-            $virtualDate = $year . '-' . str_pad($month, 2, '0', STR_PAD_LEFT) . '-' .
-                          str_pad(date('d', strtotime($annualBooking['booking_date'])), 2, '0', STR_PAD_LEFT);
+            $annualDay = (int)date('d', strtotime($annualBooking['booking_date']));
+            if (!checkdate($month, $annualDay, $year)) {
+                continue;
+            }
+            $virtualDate = sprintf('%04d-%02d-%02d', $year, $month, $annualDay);
             $annualBooking['booking_date'] = $virtualDate;
             $bookings[] = $annualBooking;
         }
@@ -121,10 +142,11 @@ try {
     echo json_encode($response);
     
 } catch (Exception $e) {
+    adminLogException('Admin calendar data failed', $e);
     http_response_code(500);
     echo json_encode([
         'success' => false,
-        'error' => $e->getMessage()
+        'error' => 'Unable to load calendar data. Please try again.'
     ]);
 }
 ?>

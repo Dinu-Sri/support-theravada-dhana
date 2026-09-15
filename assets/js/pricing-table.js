@@ -56,12 +56,12 @@ function closeModal(modalId) {
 }
 
 // Close modal when clicking outside
-window.onclick = function(event) {
+window.addEventListener('click', function(event) {
     if (event.target.classList.contains('modal')) {
         event.target.classList.remove('show');
         event.target.style.display = 'none';
     }
-}
+});
 
 // Close modal on Escape key
 document.addEventListener('keydown', function(event) {
@@ -159,4 +159,3 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
-

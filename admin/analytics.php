@@ -1,12 +1,9 @@
 <?php
 session_start();
 require_once '../config/database.php';
+require_once __DIR__ . '/includes/security.php';
 
-// Check if user is logged in as admin
-if (!isset($_SESSION['admin_logged_in'])) {
-    header('Location: index.php');
-    exit;
-}
+adminRequireLogin(false);
 
 // Initialize database connection for permission checking
 $db = getDB();
@@ -14,15 +11,7 @@ $db = getDB();
 // Add permission checking function
 function hasPermission($permission) {
     global $db;
-    $role = $_SESSION['admin_role'];
-    
-    $check = $db->fetchOne(
-        "SELECT COUNT(*) as has_permission FROM role_permissions 
-         WHERE role_name = ? AND permission_name = ?",
-        [$role, $permission]
-    );
-    
-    return $check['has_permission'] > 0;
+    return adminHasPermission($db, $permission);
 }
 
 // Check if user has permission to view analytics
@@ -41,6 +30,14 @@ if (isset($_GET['logout'])) {
 // Get filter parameters
 $timeFilter = $_GET['time_filter'] ?? '30_days';
 $statusFilter = $_GET['status_filter'] ?? 'all';
+$validTimeFilters = ['7_days', '30_days', '90_days', '1_year', 'all_time'];
+$validStatuses = ['all', 'pending', 'receipt_submitted', 'payment_pending', 'confirmed', 'completed', 'cancelled'];
+if (!in_array($timeFilter, $validTimeFilters, true)) {
+    $timeFilter = '30_days';
+}
+if (!in_array($statusFilter, $validStatuses, true)) {
+    $statusFilter = 'all';
+}
 
 // Calculate date range based on time filter
 $dateCondition = '';
@@ -73,30 +70,31 @@ if ($statusFilter !== 'all') {
 }
 
 try {
-    $db = getDB();
+    $bookingDateCondition = str_replace('created_at', 'b.created_at', $dateCondition);
+    $bookingStatusCondition = str_replace('status', 'b.status', $statusCondition);
     
     // Get total statistics
     $totalQuery = "SELECT 
         COUNT(*) as total_reservations,
-        SUM(total_amount) as total_revenue,
-        AVG(total_amount) as avg_reservation_value,
-        COUNT(DISTINCT user_id) as unique_donors
-        FROM bookings 
-        WHERE 1=1 $dateCondition $statusCondition";
+        COALESCE(SUM(b.total_amount), 0) as total_revenue,
+        COALESCE(AVG(b.total_amount), 0) as avg_reservation_value,
+        COUNT(DISTINCT b.user_id) as unique_donors
+        FROM bookings b
+        WHERE 1=1 $bookingDateCondition $bookingStatusCondition";
     
     $totalStats = $db->fetchOne($totalQuery, $params);
     
     // Get status distribution
     $statusQuery = "SELECT 
-        status,
+        b.status,
         COUNT(*) as count,
-        SUM(total_amount) as revenue
-        FROM bookings 
-        WHERE 1=1 $dateCondition
-        GROUP BY status
+        COALESCE(SUM(b.total_amount), 0) as revenue
+        FROM bookings b
+        WHERE 1=1 $bookingDateCondition $bookingStatusCondition
+        GROUP BY b.status
         ORDER BY count DESC";
-    
-    $statusStats = $db->fetchAll($statusQuery);
+
+    $statusStats = $db->fetchAll($statusQuery, $params);
     
     // Get monthly trends (last 12 months)
     $monthlyQuery = "SELECT 
@@ -112,12 +110,13 @@ try {
     
     // Get dhana type distribution
     $dhanaTypeQuery = "SELECT 
-        dhana_type,
+        dt.name AS dhana_type,
         COUNT(*) as count,
-        SUM(total_amount) as revenue
-        FROM bookings 
-        WHERE 1=1 $dateCondition $statusCondition
-        GROUP BY dhana_type
+        COALESCE(SUM(b.total_amount), 0) as revenue
+        FROM bookings b
+        JOIN dhana_types dt ON dt.id = b.dhana_type_id
+        WHERE 1=1 $bookingDateCondition $bookingStatusCondition
+        GROUP BY dt.id, dt.name
         ORDER BY count DESC";
     
     $dhanaTypeStats = $db->fetchAll($dhanaTypeQuery, $params);
@@ -131,8 +130,8 @@ try {
         SUM(b.total_amount) as total_donated
         FROM bookings b
         JOIN users u ON b.user_id = u.id
-        WHERE 1=1 $dateCondition $statusCondition
-        GROUP BY b.user_id
+        WHERE 1=1 $bookingDateCondition $bookingStatusCondition
+        GROUP BY b.user_id, u.first_name, u.last_name, u.email
         ORDER BY total_donated DESC
         LIMIT 10";
     
@@ -141,24 +140,27 @@ try {
     // Get recent activity
     $recentQuery = "SELECT 
         b.*,
+        dt.name AS dhana_type_name,
         u.first_name,
         u.last_name,
         u.email
         FROM bookings b
         JOIN users u ON b.user_id = u.id
-        WHERE 1=1 $dateCondition $statusCondition
+        JOIN dhana_types dt ON dt.id = b.dhana_type_id
+        WHERE 1=1 $bookingDateCondition $bookingStatusCondition
         ORDER BY b.created_at DESC
         LIMIT 10";
     
     $recentActivity = $db->fetchAll($recentQuery, $params);
     
 } catch (Exception $e) {
-    $errorMessage = 'Error loading analytics: ' . $e->getMessage();
+    adminLogException('Analytics page failed', $e);
+    $errorMessage = 'Unable to load analytics. Please try again.';
 }
 
 // Format numbers for display
 function formatCurrency($amount) {
-    return '$' . number_format($amount, 2);
+    return 'LKR ' . number_format((float)$amount, 2);
 }
 
 function formatNumber($number) {
@@ -247,6 +249,8 @@ function getTimeFilterLabel($filter) {
                         <select id="statusFilter" onchange="applyFilters()">
                             <option value="all" <?php echo $statusFilter === 'all' ? 'selected' : ''; ?>>All Statuses</option>
                             <option value="pending" <?php echo $statusFilter === 'pending' ? 'selected' : ''; ?>>Pending</option>
+                            <option value="receipt_submitted" <?php echo $statusFilter === 'receipt_submitted' ? 'selected' : ''; ?>>Receipt Submitted</option>
+                            <option value="payment_pending" <?php echo $statusFilter === 'payment_pending' ? 'selected' : ''; ?>>Payment Pending</option>
                             <option value="confirmed" <?php echo $statusFilter === 'confirmed' ? 'selected' : ''; ?>>Confirmed</option>
                             <option value="completed" <?php echo $statusFilter === 'completed' ? 'selected' : ''; ?>>Completed</option>
                             <option value="cancelled" <?php echo $statusFilter === 'cancelled' ? 'selected' : ''; ?>>Cancelled</option>

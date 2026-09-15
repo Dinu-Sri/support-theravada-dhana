@@ -151,10 +151,12 @@ if ($currentPage === 'index.php') {
                 <span>Calendar</span>
             </button>
             
+            <?php if (function_exists('hasPermission') && hasPermission('export_data')): ?>
             <button class="quick-action-btn" onclick="showReportGenerator()" title="Generate Reports">
                 <i class="fas fa-file-alt"></i>
                 <span>Reports</span>
             </button>
+            <?php endif; ?>
             <?php endif; ?>
             
             <?php if ($currentPage === 'analytics.php'): ?>

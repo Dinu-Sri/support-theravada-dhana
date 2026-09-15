@@ -145,7 +145,7 @@ function createMonthlyChart() {
                     yAxisID: 'y'
                 },
                 {
-                    label: 'Revenue ($)',
+                    label: 'Revenue (LKR)',
                     data: revenueData,
                     borderColor: colors.success,
                     backgroundColor: colors.success + '20',
@@ -175,7 +175,7 @@ function createMonthlyChart() {
                     callbacks: {
                         label: function(context) {
                             if (context.datasetIndex === 1) {
-                                return `${context.dataset.label}: $${context.parsed.y.toFixed(2)}`;
+                                return `${context.dataset.label}: LKR ${context.parsed.y.toFixed(2)}`;
                             }
                             return `${context.dataset.label}: ${context.parsed.y}`;
                         }
@@ -211,7 +211,7 @@ function createMonthlyChart() {
                     position: 'right',
                     title: {
                         display: true,
-                        text: 'Revenue ($)'
+                        text: 'Revenue (LKR)'
                     },
                     grid: {
                         drawOnChartArea: false,
@@ -290,7 +290,7 @@ function createRevenueChart() {
         data: {
             labels: labels,
             datasets: [{
-                label: 'Revenue ($)',
+                label: 'Revenue (LKR)',
                 data: data,
                 backgroundColor: backgroundColors,
                 borderColor: backgroundColors.map(color => color + 'CC'),
@@ -309,7 +309,7 @@ function createRevenueChart() {
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            return `Revenue: $${context.parsed.y.toFixed(2)}`;
+                            return `Revenue: LKR ${context.parsed.y.toFixed(2)}`;
                         }
                     }
                 }
@@ -324,14 +324,14 @@ function createRevenueChart() {
                     beginAtZero: true,
                     title: {
                         display: true,
-                        text: 'Revenue ($)'
+                        text: 'Revenue (LKR)'
                     },
                     grid: {
                         color: '#f1f3f4'
                     },
                     ticks: {
                         callback: function(value) {
-                            return '$' + value.toFixed(0);
+                            return 'LKR ' + value.toFixed(0);
                         }
                     }
                 }
@@ -350,9 +350,9 @@ function capitalizeFirst(str) {
 }
 
 function formatCurrency(amount) {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-LK', {
         style: 'currency',
-        currency: 'USD'
+        currency: 'LKR'
     }).format(amount);
 }
 

@@ -312,7 +312,12 @@ $recentBookings = $db->fetchAll(
      JOIN dhana_types dt ON b.dhana_type_id = dt.id
      JOIN users u ON b.user_id = u.id
      LEFT JOIN users agent ON b.booked_by_agent_id = agent.id
-     LEFT JOIN payment_receipts pr ON b.id = pr.booking_id
+     LEFT JOIN payment_receipts pr ON pr.id = (
+         SELECT pr_latest.id FROM payment_receipts pr_latest
+         WHERE pr_latest.booking_id = b.id
+         ORDER BY pr_latest.upload_date DESC, pr_latest.id DESC
+         LIMIT 1
+     )
      $whereClause
      ORDER BY b.created_at DESC
      LIMIT ? OFFSET ?",
@@ -334,8 +339,13 @@ $calendarBookings = $db->fetchAll(
      FROM bookings b
      JOIN dhana_types dt ON b.dhana_type_id = dt.id
      JOIN users u ON b.user_id = u.id
-     LEFT JOIN payment_receipts pr ON b.id = pr.booking_id
-     LEFT JOIN annual_bookings ab ON (b.id = ab.booking_id OR b.parent_booking_id = ab.booking_id)
+     LEFT JOIN payment_receipts pr ON pr.id = (
+         SELECT pr_latest.id FROM payment_receipts pr_latest
+         WHERE pr_latest.booking_id = b.id
+         ORDER BY pr_latest.upload_date DESC, pr_latest.id DESC
+         LIMIT 1
+     )
+     LEFT JOIN annual_bookings ab ON ab.booking_id = COALESCE(b.parent_booking_id, b.id)
      WHERE MONTH(b.booking_date) = ? AND YEAR(b.booking_date) = ?
      AND b.status NOT IN ('cancelled')
      ORDER BY b.booking_date, dt.price DESC",
@@ -350,8 +360,13 @@ $annualCalendarBookings = $db->fetchAll(
      FROM bookings b
      JOIN dhana_types dt ON b.dhana_type_id = dt.id
      JOIN users u ON b.user_id = u.id
-     LEFT JOIN payment_receipts pr ON b.id = pr.booking_id
-     JOIN annual_bookings ab ON (b.id = ab.booking_id OR b.parent_booking_id = ab.booking_id)
+     LEFT JOIN payment_receipts pr ON pr.id = (
+         SELECT pr_latest.id FROM payment_receipts pr_latest
+         WHERE pr_latest.booking_id = b.id
+         ORDER BY pr_latest.upload_date DESC, pr_latest.id DESC
+         LIMIT 1
+     )
+     JOIN annual_bookings ab ON ab.booking_id = COALESCE(b.parent_booking_id, b.id)
      WHERE MONTH(b.booking_date) = ?
      AND ? BETWEEN ab.year_start AND ab.year_end
      AND b.status NOT IN ('cancelled')
@@ -520,9 +535,11 @@ $blockedDates = $db->fetchAll(
                             <button class="btn btn-info" onclick="toggleCalendarView()" id="calendarViewBtn">
                                 <i class="fas fa-calendar-alt"></i> Calendar View
                             </button>
+                            <?php if (hasPermission('export_data')): ?>
                             <button class="btn btn-secondary" onclick="showReportGenerator()">
                                 <i class="fas fa-chart-line"></i> Generate Reports
                             </button>
+                            <?php endif; ?>
                             <button class="btn btn-primary" onclick="refreshBookings()">
                                 <i class="fas fa-sync-alt"></i> Auto Refresh
                             </button>
@@ -777,6 +794,7 @@ $blockedDates = $db->fetchAll(
         </div>
     </div>
 
+    <?php if (hasPermission('export_data')): ?>
     <!-- Report Generation Modal -->
     <div class="report-generator-modal" id="reportGeneratorModal" style="display: none;">
         <div class="report-generator-content">
@@ -788,6 +806,7 @@ $blockedDates = $db->fetchAll(
             </div>
             <div class="modal-body">
                 <form id="reportGeneratorForm">
+                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['admin_csrf_token']); ?>">
                     <div class="report-type-section">
                         <h5>Report Type</h5>
                         <div class="report-type-options">
@@ -894,6 +913,8 @@ $blockedDates = $db->fetchAll(
                                     <option value="confirmed">Confirmed Only</option>
                                     <option value="completed">Completed Only</option>
                                     <option value="pending">Pending Only</option>
+                                    <option value="receipt_submitted">Receipt Submitted Only</option>
+                                    <option value="payment_pending">Payment Pending Only</option>
                                     <option value="cancelled">Cancelled Only</option>
                                 </select>
                             </div>
@@ -925,18 +946,24 @@ $blockedDates = $db->fetchAll(
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeReportGenerator()">Cancel</button>
-                <button class="btn btn-info" onclick="generateReport('csv')">
+                <button type="button" class="btn btn-info" onclick="generateReport('csv', this)">
                     <i class="fas fa-file-csv"></i> Download CSV
                 </button>
-                <button class="btn btn-success" onclick="generateReport('print')">
+                <button type="button" class="btn btn-success" onclick="generateReport('print', this)">
                     <i class="fas fa-print"></i> Print Ready Report
                 </button>
             </div>
         </div>
     </div>
+    <?php endif; ?>
 
     <script>
         window.ADMIN_CSRF_TOKEN = <?php echo json_encode($_SESSION['admin_csrf_token']); ?>;
+        window.ADMIN_CAPABILITIES = <?php echo json_encode([
+            'canEditBookings' => hasPermission('edit_personal_data'),
+            'canDeleteBookings' => hasPermission('delete_bookings'),
+            'canHoldBookings' => hasPermission('update_booking_status')
+        ]); ?>;
 
         // Pass PHP data to JavaScript for calendar functionality
         window.adminCalendarData = {
@@ -1422,40 +1449,6 @@ $blockedDates = $db->fetchAll(
             });
         }
 
-        // Show notification function
-        function showNotification(message, type = 'success') {
-            const notification = document.createElement('div');
-            notification.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background: ${type === 'success' ? '#28a745' : '#dc3545'};
-                color: white;
-                padding: 15px 20px;
-                border-radius: 5px;
-                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-                z-index: 10000;
-                font-weight: 500;
-                max-width: 400px;
-            `;
-            notification.innerHTML = `
-                <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
-                ${message}
-            `;
-            
-            document.body.appendChild(notification);
-            
-            setTimeout(() => {
-                notification.style.opacity = '0';
-                notification.style.transform = 'translateX(100%)';
-                setTimeout(() => {
-                    if (notification.parentNode) {
-                        notification.parentNode.removeChild(notification);
-                    }
-                }, 300);
-            }, 3000);
-        }
-
         // Check for pending approvals
         function checkPendingApprovals() {
             fetch('get-pending-approvals-count.php')
@@ -1534,7 +1527,7 @@ $blockedDates = $db->fetchAll(
                         analyticsContent.innerHTML = `
                             <div class="error-state">
                                 <i class="fas fa-exclamation-circle"></i>
-                                <p>Error loading analytics: ${data.error}</p>
+                                <p>Error loading analytics: ${escapeAdminHtml(data.error)}</p>
                                 <button onclick="loadAnalyticsData()" class="retry-btn">Retry</button>
                             </div>
                         `;
@@ -1656,12 +1649,12 @@ $blockedDates = $db->fetchAll(
                                     <p>Most active donors and contributors</p>
                                 </div>
                                 <div class="donors-list" style="max-height: 300px; overflow-y: auto;">
-                                    ${data.topDonors.map((donor, index) => `
+                                    ${(Array.isArray(data.topDonors) ? data.topDonors : []).map((donor, index) => `
                                         <div class="donor-item">
                                             <span class="donor-rank">#${index + 1}</span>
                                             <div class="donor-info">
-                                                <strong>${donor.first_name} ${donor.last_name}</strong>
-                                                <small>${donor.email}</small>
+                                                <strong>${escapeAdminHtml(donor.first_name)} ${escapeAdminHtml(donor.last_name)}</strong>
+                                                <small>${escapeAdminHtml(donor.email)}</small>
                                             </div>
                                             <div class="donor-stats">
                                                 <span class="donor-count">${donor.reservation_count} reservations</span>
@@ -1946,12 +1939,16 @@ $blockedDates = $db->fetchAll(
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" onclick="closeBookingDetailsModal()">Close</button>
+                <?php if (hasPermission('update_booking_status')): ?>
                 <button type="button" class="btn btn-warning" id="holdBookingBtn" onclick="toggleBookingHold()" style="display: none;">
                     <i class="fas fa-pause-circle"></i> <span id="holdBtnText">Place on Hold</span>
                 </button>
+                <?php endif; ?>
+                <?php if (hasPermission('edit_personal_data')): ?>
                 <button type="button" class="btn btn-primary" id="editBookingBtn" onclick="editBookingFromDetails()">
                     <i class="fas fa-edit"></i> Edit Reservation
                 </button>
+                <?php endif; ?>
             </div>
         </div>
     </div>
@@ -1982,7 +1979,7 @@ $blockedDates = $db->fetchAll(
                         content.innerHTML = `
                             <div class="error-message">
                                 <i class="fas fa-exclamation-triangle"></i>
-                                <p>Error loading reservation details: ${data.error}</p>
+                            <p>Error loading reservation details: ${escapeAdminHtml(data.error)}</p>
                             </div>
                         `;
                     }
@@ -2005,12 +2002,13 @@ $blockedDates = $db->fetchAll(
             const holdBtnText = document.getElementById('holdBtnText');
 
             // Store booking ID for edit function
-            editBtn.setAttribute('data-booking-id', booking.id);
-            holdBtn.setAttribute('data-booking-id', booking.id);
+            const bookingId = safeAdminId(booking.id);
+            if (editBtn) editBtn.setAttribute('data-booking-id', bookingId);
+            if (holdBtn) holdBtn.setAttribute('data-booking-id', bookingId);
 
             // Show/hide hold button based on booking status
             // Only show for pending bookings
-            if (booking.status === 'pending') {
+            if (holdBtn && booking.status === 'pending') {
                 holdBtn.style.display = 'inline-block';
 
                 // Update button text and style based on hold status
@@ -2023,11 +2021,12 @@ $blockedDates = $db->fetchAll(
                     holdBtn.className = 'btn btn-warning';
                     holdBtn.innerHTML = '<i class="fas fa-pause-circle"></i> <span id="holdBtnText">Place on Hold</span>';
                 }
-            } else {
+            } else if (holdBtn) {
                 holdBtn.style.display = 'none';
             }
 
-            const statusClass = booking.status.replace('_', '-');
+            const safeStatus = safeAdminStatus(booking.status);
+            const statusClass = safeStatus.replace('_', '-');
             const bookingDate = new Date(booking.booking_date).toLocaleDateString('en-US', {
                 weekday: 'long',
                 year: 'numeric',
@@ -2066,13 +2065,13 @@ $blockedDates = $db->fetchAll(
                         <h4><i class="fas fa-info-circle"></i> Basic Information</h4>
                         <div class="details-row">
                             <span class="label">Reservation ID:</span>
-                            <span class="value">#${String(booking.id).padStart(6, '0')}</span>
+                            <span class="value">#${String(bookingId).padStart(6, '0')}</span>
                         </div>
                         <div class="details-row">
                             <span class="label">Status:</span>
                             <span class="value">
                                 <span class="status-badge status-${statusClass}">
-                                    ${booking.status.replace('_', ' ').toUpperCase()}
+                                    ${escapeAdminHtml(safeStatus.replace('_', ' ').toUpperCase())}
                                 </span>
                                 ${booking.on_hold ? `
                                     <span class="status-badge status-hold" style="background: #ff9800; margin-left: 10px;">
@@ -2084,15 +2083,15 @@ $blockedDates = $db->fetchAll(
                         ${booking.on_hold ? `
                         <div class="details-row">
                             <span class="label">Hold Reason:</span>
-                            <span class="value">${booking.hold_info.hold_reason || 'No reason provided'}</span>
+                            <span class="value">${escapeAdminHtml(booking.hold_info?.hold_reason || 'No reason provided')}</span>
                         </div>
                         <div class="details-row">
                             <span class="label">Held By:</span>
-                            <span class="value">${booking.hold_info.held_by_name}</span>
+                            <span class="value">${escapeAdminHtml(booking.hold_info?.held_by_name || 'Unknown administrator')}</span>
                         </div>
                         <div class="details-row">
                             <span class="label">Held At:</span>
-                            <span class="value">${new Date(booking.hold_info.held_at).toLocaleString()}</span>
+                            <span class="value">${escapeAdminHtml(new Date(booking.hold_info?.held_at).toLocaleString())}</span>
                         </div>
                         ` : ''}
                         <div class="details-row">
@@ -2106,15 +2105,15 @@ $blockedDates = $db->fetchAll(
                         <h4><i class="fas fa-user"></i> Donor Information</h4>
                         <div class="details-row">
                             <span class="label">Name:</span>
-                            <span class="value">${booking.first_name} ${booking.last_name}</span>
+                            <span class="value">${escapeAdminHtml(booking.first_name)} ${escapeAdminHtml(booking.last_name)}</span>
                         </div>
                         <div class="details-row">
                             <span class="label">Email:</span>
-                            <span class="value">${booking.email}</span>
+                            <span class="value">${escapeAdminHtml(booking.email)}</span>
                         </div>
                         <div class="details-row">
                             <span class="label">Contact:</span>
-                            <span class="value">${booking.contact_number || 'Not provided'}</span>
+                            <span class="value">${escapeAdminHtml(booking.contact_number || 'Not provided')}</span>
                         </div>
                         <div class="details-row">
                             <span class="label">Is Monk:</span>
@@ -2134,7 +2133,7 @@ $blockedDates = $db->fetchAll(
                         <h4><i class="fas fa-calendar-alt"></i> Reservation Information</h4>
                         <div class="details-row">
                             <span class="label">Dāna Type:</span>
-                            <span class="value">${booking.dhana_type_name}</span>
+                            <span class="value">${escapeAdminHtml(booking.dhana_type_name)}</span>
                         </div>
                         <div class="details-row">
                             <span class="label">Date:</span>
@@ -2142,7 +2141,7 @@ $blockedDates = $db->fetchAll(
                         </div>
                         <div class="details-row">
                             <span class="label">Time Slot:</span>
-                            <span class="value">${booking.booking_time_slot.replace('_', ' ').toUpperCase()}</span>
+                            <span class="value">${escapeAdminHtml(String(booking.booking_time_slot || '').replace('_', ' ').toUpperCase())}</span>
                         </div>
                         <div class="details-row">
                             <span class="label">Travel Support:</span>
@@ -2207,7 +2206,7 @@ $blockedDates = $db->fetchAll(
                                 <div class="info-content annual-event">
                                     <p><strong>This is an annual dāna event reservation.</strong></p>
                                     ${booking.year_start && booking.year_end ?
-                                        `<p>Event period: ${booking.year_start} - ${booking.year_end}</p>` :
+                                        `<p>Event period: ${escapeAdminHtml(booking.year_start)} - ${escapeAdminHtml(booking.year_end)}</p>` :
                                         '<p>Annual event details will be confirmed separately.</p>'
                                     }
                                 </div>
@@ -2230,7 +2229,7 @@ $blockedDates = $db->fetchAll(
                             <h5><i class="fas fa-edit"></i> Special Requests</h5>
                             <div class="info-content special-requests">
                                 ${booking.special_requests ?
-                                    booking.special_requests :
+                                    `<p>${escapeAdminHtml(booking.special_requests)}</p>` :
                                     '<p class="no-requests">No special requests provided.</p>'
                                 }
                             </div>
@@ -2247,13 +2246,16 @@ $blockedDates = $db->fetchAll(
         }
 
         function editBookingFromDetails() {
-            const bookingId = document.getElementById('editBookingBtn').getAttribute('data-booking-id');
+            const editButton = document.getElementById('editBookingBtn');
+            if (!editButton) return;
+            const bookingId = editButton.getAttribute('data-booking-id');
             closeBookingDetailsModal();
             editBooking(bookingId);
         }
 
         function toggleBookingHold() {
             const holdBtn = document.getElementById('holdBookingBtn');
+            if (!holdBtn) return;
             const bookingId = holdBtn.getAttribute('data-booking-id');
             const holdBtnText = document.getElementById('holdBtnText');
             const isCurrentlyOnHold = holdBtnText.textContent === 'Remove Hold';
@@ -2330,12 +2332,12 @@ $blockedDates = $db->fetchAll(
         }
 
         // Close modal when clicking outside
-        window.onclick = function(event) {
+        window.addEventListener('click', function(event) {
             const modal = document.getElementById('bookingDetailsModal');
             if (event.target === modal) {
                 closeBookingDetailsModal();
             }
-        }
+        });
     </script>
 </body>
 </html>

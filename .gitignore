@@ -12,6 +12,7 @@ supporttheravada_dhana_booking.sql
 uploads/receipts/*
 !uploads/receipts/index.php
 !uploads/receipts/.gitkeep
+!uploads/receipts/.htaccess
 admin/uploads/receipts/*
 
 # Backup payloads
