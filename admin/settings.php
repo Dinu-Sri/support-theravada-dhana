@@ -10,14 +10,8 @@ require_once __DIR__ . '/includes/security.php';
 
 adminRequireLogin(false);
 
-// Handle logout
-if (isset($_GET['logout'])) {
-    session_destroy();
-    header('Location: index.php');
-    exit;
-}
-
 $db = getDB();
+adminRefreshIdentity($db, false);
 $successMessage = '';
 $errorMessage = '';
 
@@ -577,9 +571,7 @@ if ($admin['role'] === 'administrator') {
                     <a href="index.php" class="back-btn">
                         <i class="fas fa-arrow-left"></i> Back to Dashboard
                     </a>
-                    <a href="?logout=1" class="logout-btn">
-                        <i class="fas fa-sign-out-alt"></i> Logout
-                    </a>
+                    <?php adminRenderLogoutButton(); ?>
                 </div>
             </div>
         </div>

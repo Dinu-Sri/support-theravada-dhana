@@ -6,12 +6,9 @@
 
 session_start();
 require_once '../config/database.php';
+require_once __DIR__ . '/includes/security.php';
 
-// Check if admin is logged in
-if (!isset($_SESSION['admin_logged_in'])) {
-    header('Location: index.php');
-    exit;
-}
+adminRequireLogin(false);
 
 $db = getDB();
 
@@ -22,27 +19,12 @@ $admin = $db->fetchOne("SELECT * FROM admin_users WHERE id = ?", [$adminId]);
 // Permission checking function
 function hasPermission($permission) {
     global $db;
-    $role = $_SESSION['admin_role'];
-
-    $check = $db->fetchOne(
-        "SELECT COUNT(*) as has_permission FROM role_permissions
-         WHERE role_name = ? AND permission_name = ?",
-        [$role, $permission]
-    );
-
-    return $check['has_permission'] > 0;
+    return adminHasPermission($db, $permission);
 }
 
 // Check if user has permission to view pricing history
 if (!hasPermission('view_pricing_history')) {
     header('Location: index.php?error=access_denied');
-    exit;
-}
-
-// Handle logout
-if (isset($_GET['logout'])) {
-    session_destroy();
-    header('Location: index.php');
     exit;
 }
 
@@ -294,9 +276,7 @@ $years = $db->fetchAll("SELECT DISTINCT year FROM pricing_history ORDER BY year 
                     <a href="pricing-table.php" class="back-btn">
                         <i class="fas fa-arrow-left"></i> Back to Pricing Table
                     </a>
-                    <a href="?logout=1" class="logout-btn">
-                        <i class="fas fa-sign-out-alt"></i> Logout
-                    </a>
+                    <?php adminRenderLogoutButton(); ?>
                 </div>
             </div>
         </div>
@@ -442,4 +422,3 @@ $years = $db->fetchAll("SELECT DISTINCT year FROM pricing_history ORDER BY year 
     </div><!-- .admin-panel -->
 </body>
 </html>
-

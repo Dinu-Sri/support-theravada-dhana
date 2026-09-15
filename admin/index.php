@@ -7,32 +7,47 @@ session_start();
 require_once '../config/database.php';
 require_once __DIR__ . '/includes/security.php';
 
-// Simple admin authentication (in production, use proper authentication)
+adminEnsureCsrfToken();
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['admin_logout'])) {
+    adminRequireLogin(false);
+    adminRequireCsrf(null, false);
+    adminDestroySession();
+    header('Location: index.php?logged_out=1');
+    exit;
+}
+
 if (!isset($_SESSION['admin_logged_in'])) {
+    if (isset($_GET['expired'])) {
+        $loginError = 'Your admin session expired after being inactive. Please sign in again.';
+    } elseif (isset($_GET['account'])) {
+        $loginError = 'This admin account is no longer active.';
+    }
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['admin_login'])) {
-        $username = $_POST['username'];
-        $password = $_POST['password'];
+        adminRequireCsrf(null, false);
+        $username = trim((string)($_POST['username'] ?? ''));
+        $password = (string)($_POST['password'] ?? '');
         
         $db = getDB();
-        $admin = $db->fetchOne(
-            "SELECT * FROM admin_users WHERE username = ? AND is_active = 1",
-            [$username]
-        );
+        $throttle = adminLoginThrottleStatus($db, $username);
+        $admin = null;
+        if (!$throttle['blocked']) {
+            $admin = $db->fetchOne(
+                "SELECT * FROM admin_users WHERE username = ? AND is_active = 1",
+                [$username]
+            );
+        }
         
         if ($admin && password_verify($password, $admin['password_hash'])) {
-            $_SESSION['admin_logged_in'] = true;
-            $_SESSION['admin_id'] = $admin['id'];
-            $_SESSION['admin_username'] = $admin['username'];
-            $_SESSION['admin_role'] = $admin['role'];
-            $_SESSION['is_administrator'] = ($admin['role'] === 'administrator');
-            $_SESSION['is_editor'] = ($admin['role'] === 'editor');
-            $_SESSION['is_supervisor'] = ($admin['role'] === 'supervisor');
-            // Keep backward compatibility
-            $_SESSION['is_super_admin'] = ($admin['role'] === 'administrator');
+            adminClearLoginFailures($db, $username);
+            adminEstablishSession($admin);
             header('Location: index.php');
             exit;
         } else {
-            $loginError = 'Invalid username or password';
+            if (!$throttle['blocked']) adminRecordLoginFailure($db, $username);
+            $loginError = $throttle['blocked']
+                ? 'Too many sign-in attempts. Please wait 15 minutes and try again.'
+                : 'Invalid username or password';
         }
     }
     
@@ -98,6 +113,7 @@ if (!isset($_SESSION['admin_logged_in'])) {
                 
                 <form method="POST" class="auth-form active">
                     <input type="hidden" name="admin_login" value="1">
+                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['admin_csrf_token']); ?>">
                     
                     <?php if (isset($loginError)): ?>
                         <div class="error-message">
@@ -108,15 +124,15 @@ if (!isset($_SESSION['admin_logged_in'])) {
                     
                     <div class="form-group">
                         <label for="username">Username</label>
-                        <input type="text" id="username" name="username" required>
+                        <input type="text" id="username" name="username" autocomplete="username" required autofocus>
                     </div>
                     
                     <div class="form-group">
                         <label for="password">Password</label>
-                        <input type="password" id="password" name="password" required>
+                        <input type="password" id="password" name="password" autocomplete="current-password" required>
                     </div>
                     
-                    <button type="submit" class="btn btn-primary">
+                    <button type="submit" class="btn btn-primary" id="adminLoginButton">
                         <i class="fas fa-sign-in-alt"></i> Login
                     </button>
                     
@@ -126,20 +142,21 @@ if (!isset($_SESSION['admin_logged_in'])) {
                 </form>
             </div>
         </div>
+        <script>
+            document.querySelector('.auth-form').addEventListener('submit', function () {
+                const button = document.getElementById('adminLoginButton');
+                button.disabled = true;
+                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Signing in…';
+            });
+        </script>
     </body>
     </html>
     <?php
     exit;
 }
 
-// Handle logout
-if (isset($_GET['logout'])) {
-    session_destroy();
-    header('Location: index.php');
-    exit;
-}
-
 $db = getDB();
+adminRefreshIdentity($db, false);
 
 // This token protects JSON mutations initiated from the User Management modal.
 adminEnsureCsrfToken();
@@ -447,9 +464,7 @@ $blockedDates = $db->fetchAll(
                     <a href="settings.php" class="settings-btn">
                         <i class="fas fa-cog"></i> Settings
                     </a>
-                    <a href="?logout=1" class="logout-btn">
-                        <i class="fas fa-sign-out-alt"></i> Logout
-                    </a>
+                    <?php adminRenderLogoutButton(); ?>
                 </div>
             </div>
         </div>

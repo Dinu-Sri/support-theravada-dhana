@@ -160,9 +160,7 @@ try {
                 <a href="index.php" class="header-btn">
                     <i class="fas fa-arrow-left"></i> Back to Dashboard
                 </a>
-                <a href="?logout=1" class="header-btn">
-                    <i class="fas fa-sign-out-alt"></i> Logout
-                </a>
+                <?php adminRenderLogoutButton('header-btn'); ?>
             </div>
         </div>
 

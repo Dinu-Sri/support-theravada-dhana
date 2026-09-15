@@ -20,13 +20,6 @@ if (!hasPermission('view_analytics') && !hasPermission('view_all_bookings')) {
     exit;
 }
 
-// Handle logout
-if (isset($_GET['logout'])) {
-    session_destroy();
-    header('Location: index.php');
-    exit;
-}
-
 // Get filter parameters
 $timeFilter = $_GET['time_filter'] ?? '30_days';
 $statusFilter = $_GET['status_filter'] ?? 'all';
@@ -210,9 +203,7 @@ function getTimeFilterLabel($filter) {
                     <a href="settings.php" class="settings-btn">
                         <i class="fas fa-cog"></i> Settings
                     </a>
-                    <a href="?logout=1" class="logout-btn">
-                        <i class="fas fa-sign-out-alt"></i> Logout
-                    </a>
+                    <?php adminRenderLogoutButton(); ?>
                 </div>
             </div>
         </div>

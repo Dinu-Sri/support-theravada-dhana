@@ -30,13 +30,6 @@ if (!hasPermission('view_pricing_table')) {
     exit;
 }
 
-// Handle logout
-if (isset($_GET['logout'])) {
-    session_destroy();
-    header('Location: index.php');
-    exit;
-}
-
 adminEnsureCsrfToken();
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     adminRequireCsrf(null, false);
@@ -322,9 +315,7 @@ for ($i = 0; $i < $displayMonths; $i++) {
                     <a href="index.php" class="back-btn">
                         <i class="fas fa-arrow-left"></i> Back to Dashboard
                     </a>
-                    <a href="?logout=1" class="logout-btn">
-                        <i class="fas fa-sign-out-alt"></i> Logout
-                    </a>
+                    <?php adminRenderLogoutButton(); ?>
                 </div>
             </div>
         </div>
