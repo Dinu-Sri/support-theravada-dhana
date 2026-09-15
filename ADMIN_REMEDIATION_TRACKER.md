@@ -16,8 +16,8 @@ Statuses: `TODO` → `IN PROGRESS` → `FIXED` → `VERIFIED`; use `BLOCKED` onl
 
 - Audit baseline: `293df13`
 - Current phase: Phase 2 — admin workflows and business logic
-- Next item: `ADM-016` consolidate duplicated booking-detail rendering
-- Progress: 30 fixed / 69 total; 0 integration-verified
+- Next item: `ADM-018` make annual parent/occurrence edits explicit and consistent
+- Progress: 34 fixed / 69 total; 0 integration-verified
 - Verification constraints: the local MySQL service still refuses connections; authenticated browser and database integration checks remain pending.
 
 ## Phase 1 — Security and data integrity
@@ -40,15 +40,15 @@ Statuses: `TODO` → `IN PROGRESS` → `FIXED` → `VERIFIED`; use `BLOCKED` onl
 - [ ] `ADM-013` **P1 Security** — Permission editing can lock every administrator out. Status: `FIXED` (last-admin tests pending). Evidence: last-admin permission safeguards. Commit: `cde0085`
 - [ ] `ADM-014` **P1 Logic** — Multiple independent settings actions can execute from one POST. Status: `FIXED` (crafted POST test pending). Evidence: single action dispatch tests. Commit: `cde0085`
 - [ ] `ADM-015` **P1 UX** — Reservation edit modal can disable the wrong primary button. Status: `FIXED` (browser verification pending). Evidence: edit/save button state test. Commit: `77f3ffe`
-- [ ] `ADM-016` **P1 Maintainability** — Booking details rendering is duplicated. Status: `TODO`. Evidence: one implementation and detail-modal regression test. Commit: —
+- [ ] `ADM-016` **P1 Maintainability** — Booking details rendering is duplicated. Status: `FIXED` (browser regression test pending); calendar summaries now route into the single full-details workflow. Evidence: one implementation and detail-modal regression test. Commit: `7e0bb46`
 - [ ] `ADM-017` **P1 Reliability** — Global modal handlers overwrite each other. Status: `FIXED` (browser verification pending). Evidence: each modal closes independently by button/Escape/backdrop. Commit: `77f3ffe`
 - [ ] `ADM-018` **P1 Logic** — Annual-booking edits are inconsistent across parent and child rows. Status: `TODO`. Evidence: parent/child update scenarios. Commit: —
 - [ ] `ADM-019` **P1 Reliability** — Email is sent inside the booking edit transaction. Status: `FIXED` (failure-path integration test pending). Evidence: DB commit remains correct when mail fails. Commit: `76f334d`
-- [ ] `ADM-020` **P1 Privacy** — Deleting a booking leaves physical receipt files behind. Status: `TODO`. Evidence: safe file cleanup test. Commit: —
-- [ ] `ADM-021` **P1 Auditability** — Booking deletion has no durable audit trail. Status: `TODO`. Evidence: actor, target, time, and before-state recorded. Commit: —
+- [ ] `ADM-020` **P1 Privacy** — Deleting a booking leaves physical receipt files behind. Status: `FIXED` (filesystem integration test pending). Evidence: safe file cleanup test. Commit: `d5556a4`
+- [ ] `ADM-021` **P1 Auditability** — Booking deletion has no durable audit trail. Status: `FIXED` (migration/database test pending). Evidence: actor, target, time, and before-state recorded. Commit: `d5556a4`
 - [ ] `ADM-022` **P1 Logic** — Admin calendar has a hard 2030 year ceiling. Status: `FIXED` (settings-boundary integration test pending). Evidence: settings-driven range boundary tests. Commit: `77f3ffe`
 - [ ] `ADM-023` **P1 Edge case** — Annual calendar behavior is undefined for February 29. Status: `FIXED` (database recurrence test pending). Evidence: leap-day recurrence test. Commit: `77f3ffe`
-- [ ] `ADM-024` **P1 Logic** — Calendar full/partial availability calculation does not match slot-conflict rules. Status: `TODO`. Evidence: whole-day/morning/lunch matrix. Commit: —
+- [ ] `ADM-024` **P1 Logic** — Calendar full/partial availability calculation does not match slot-conflict rules. Status: `FIXED` (browser verification pending); five pure-JavaScript slot cases pass. Evidence: whole-day/morning/lunch matrix. Commit: `d5556a4`
 - [ ] `ADM-025` **P1 Data integrity** — Receipt/annual joins can duplicate booking rows. Status: `FIXED` (multi-row database test pending). Evidence: multi-receipt/annual query test. Commit: `77f3ffe`
 - [ ] `ADM-026` **P1 Security** — Receipt access is inconsistent and direct upload paths are exposed. Status: `FIXED` (Apache and role integration tests pending). Evidence: authorized streaming only; direct access denied. Commit: `77f3ffe`
 - [ ] `ADM-027` **P1 Security** — Reports do not enforce report/export permissions. Status: `FIXED` (role-matrix integration test pending). Evidence: role matrix endpoint tests. Commit: `77f3ffe`
@@ -112,3 +112,4 @@ Add dated entries here with command/browser evidence. Never include credentials,
 - 2026-09-14 — Added shared admin security helpers; secured booking update/delete/hold/detail routes; added explicit status save and the missing receipt status; corrected hold ownership schema with a one-time migration; moved update email after commit. PHP lint and the elevated Node syntax check passed.
 - 2026-09-14 — Secured all settings/pricing/role/approval POST flows with one-action dispatch, CSRF, permission checks, and safe errors; made approvals atomic and reject unsupported types; protected the last administrator permissions/role; made pricing writes transactional with bounded input; fixed note encoding, signed pricing window calculation, settings tabs, invalid style nesting, and empty pricing dates. PHP lint passed.
 - 2026-09-15 — Escaped dynamic booking/analytics/report output; corrected analytics schema queries and LKR labels; constrained report options and protected exports with permission/CSRF checks; neutralized CSV formulas; removed the misleading PDF path; derived calendar bounds from settings; handled invalid annual recurrence dates; de-duplicated receipt/annual joins; and routed receipts through an authorized viewer while deploying direct-access denial. PHP lint, JavaScript syntax checks, and `git diff --check` passed. Database integration remains pending because local MySQL refused the connection.
+- 2026-09-15 — Added a durable `admin_audit_log` schema/migration, atomic deletion audit snapshots, post-commit receipt-file cleanup, and an actionable missing-migration response. Replaced the calendar count heuristic with slot-conflict evaluation and consolidated day summaries into the full booking-details workflow. PHP lint, JavaScript syntax, diff checks, and five calendar rule cases passed.
