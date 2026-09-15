@@ -256,6 +256,7 @@ $dateRange = $db->fetchOne(
 
 // Determine which months to display (default: next 12 months from current month)
 $displayMonths = isset($_GET['display_months']) ? (int)$_GET['display_months'] : 12;
+$displayMonths = in_array($displayMonths, [6, 12], true) ? $displayMonths : 12;
 $startOffset = isset($_GET['start_offset']) ? (int)$_GET['start_offset'] : 0;
 
 $currentDate = new DateTime();
@@ -374,11 +375,6 @@ for ($i = 0; $i < $displayMonths; $i++) {
                     <select onchange="changeDisplayMonths(this.value)" class="form-control" style="width: auto; display: inline-block;">
                         <option value="6" <?php echo $displayMonths == 6 ? 'selected' : ''; ?>>6 Months</option>
                         <option value="12" <?php echo $displayMonths == 12 ? 'selected' : ''; ?>>12 Months</option>
-                        <option value="24" <?php echo $displayMonths == 24 ? 'selected' : ''; ?>>24 Months</option>
-                        <option value="36" <?php echo $displayMonths == 36 ? 'selected' : ''; ?>>36 Months</option>
-                        <option value="48" <?php echo $displayMonths == 48 ? 'selected' : ''; ?>>48 Months</option>
-                        <option value="60" <?php echo $displayMonths == 60 ? 'selected' : ''; ?>>60 Months</option>
-                        <option value="72" <?php echo $displayMonths == 72 ? 'selected' : ''; ?>>72 Months</option>
                     </select>
 
                     <button class="btn btn-sm" onclick="navigateMonths(-<?php echo $displayMonths; ?>)" <?php echo $startOffset <= 0 ? 'disabled' : ''; ?>>
@@ -469,11 +465,11 @@ for ($i = 0; $i < $displayMonths; $i++) {
     </div><!-- .admin-panel -->
 
     <!-- Edit Price Modal -->
-    <div id="editPriceModal" class="modal">
-        <div class="modal-content">
+    <div id="editPriceModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="editPriceTitle" aria-hidden="true">
+        <div class="modal-content" tabindex="-1">
             <div class="modal-header">
-                <h2><i class="fas fa-edit"></i> Edit Price</h2>
-                <span class="close" onclick="closeModal('editPriceModal')">&times;</span>
+                <h2 id="editPriceTitle"><i class="fas fa-edit"></i> Edit Price</h2>
+                <button type="button" class="close" onclick="closeModal('editPriceModal')" aria-label="Close edit price dialog"><i class="fas fa-times"></i></button>
             </div>
             <form method="POST" class="modal-form">
                 <input type="hidden" name="pricing_id" id="edit_pricing_id">
@@ -500,11 +496,11 @@ for ($i = 0; $i < $displayMonths; $i++) {
     </div>
 
     <!-- Add Month Modal -->
-    <div id="addMonthModal" class="modal">
-        <div class="modal-content">
+    <div id="addMonthModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="addMonthTitle" aria-hidden="true">
+        <div class="modal-content" tabindex="-1">
             <div class="modal-header">
-                <h2><i class="fas fa-plus"></i> Add Months to Pricing Table</h2>
-                <span class="close" onclick="closeModal('addMonthModal')">&times;</span>
+                <h2 id="addMonthTitle"><i class="fas fa-plus"></i> Add Months to Pricing Table</h2>
+                <button type="button" class="close" onclick="closeModal('addMonthModal')" aria-label="Close add months dialog"><i class="fas fa-times"></i></button>
             </div>
             <form method="POST" class="modal-form">
                 <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['admin_csrf_token']); ?>">
@@ -530,13 +526,13 @@ for ($i = 0; $i < $displayMonths; $i++) {
     </div>
 
     <!-- Remove Month Modal -->
-    <div id="removeMonthModal" class="modal">
-        <div class="modal-content">
+    <div id="removeMonthModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="removeMonthTitle" aria-hidden="true">
+        <div class="modal-content" tabindex="-1">
             <div class="modal-header">
-                <h2><i class="fas fa-minus"></i> Remove Months from Pricing Table</h2>
-                <span class="close" onclick="closeModal('removeMonthModal')">&times;</span>
+                <h2 id="removeMonthTitle"><i class="fas fa-minus"></i> Remove Months from Pricing Table</h2>
+                <button type="button" class="close" onclick="closeModal('removeMonthModal')" aria-label="Close remove months dialog"><i class="fas fa-times"></i></button>
             </div>
-            <form method="POST" class="modal-form" onsubmit="return confirmRemoveMonths()">
+            <form method="POST" class="modal-form" data-admin-confirm="This permanently deletes pricing records from the end of the configured range." data-admin-confirm-title="Remove pricing months?" data-admin-confirm-button="Remove months" data-admin-confirm-danger="1">
                 <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['admin_csrf_token']); ?>">
                 <div class="form-group">
                     <label for="months_to_remove">Number of Months to Remove</label>

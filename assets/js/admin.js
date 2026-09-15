@@ -162,7 +162,7 @@ document.addEventListener('DOMContentLoaded', function() {
         };
         select?.addEventListener('change', updateDirtyState);
         updateDirtyState();
-        form.addEventListener('submit', function(event) {
+        form.addEventListener('submit', async function(event) {
             let confirmationMessage = '';
             if (select.value === 'cancelled') {
                 confirmationMessage = 'Cancel this reservation?';
@@ -170,8 +170,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 confirmationMessage = 'Confirm this reservation and mark its payment receipt as verified?';
             }
 
-            if (confirmationMessage && !window.confirm(confirmationMessage)) {
+            if (confirmationMessage && form.dataset.confirmedStatus !== select.value) {
                 event.preventDefault();
+                const confirmed = await window.adminConfirm(confirmationMessage, {
+                    title: select.value === 'cancelled' ? 'Cancel reservation?' : 'Confirm reservation?',
+                    confirmText: select.value === 'cancelled' ? 'Cancel reservation' : 'Confirm reservation',
+                    danger: select.value === 'cancelled'
+                });
+                if (!confirmed) return;
+                form.dataset.confirmedStatus = select.value;
+                form.requestSubmit();
                 return;
             }
 
@@ -184,9 +192,6 @@ document.addEventListener('DOMContentLoaded', function() {
     addSearchFunctionality();
     
     // Export functionality is now in HTML
-    
-    // Add real-time stats updates
-    updateStatsRealTime();
     
     // Add keyboard shortcuts
     addKeyboardShortcuts();
@@ -349,24 +354,6 @@ function exportToCSV() {
     window.URL.revokeObjectURL(url);
 }
 
-// Update stats in real-time (simulated)
-function updateStatsRealTime() {
-    const statCards = document.querySelectorAll('.stat-card');
-    
-    // Add pulse animation to stats when they might change
-    const statusForms = document.querySelectorAll('.status-form');
-    statusForms.forEach(form => {
-        form.addEventListener('submit', function() {
-            statCards.forEach(card => {
-                card.style.animation = 'pulse 0.5s ease';
-                setTimeout(() => {
-                    card.style.animation = '';
-                }, 500);
-            });
-        });
-    });
-}
-
 // Add keyboard shortcuts
 function addKeyboardShortcuts() {
     document.addEventListener('keydown', function(e) {
@@ -466,19 +453,6 @@ function showNotification(message, type = 'success') {
         }
     }, 5000);
 }
-
-// Monitor form submissions for notifications
-document.addEventListener('DOMContentLoaded', function() {
-    const statusForms = document.querySelectorAll('.status-form');
-    statusForms.forEach(form => {
-        form.addEventListener('submit', function() {
-            // Show success notification after form submission
-            setTimeout(() => {
-                showNotification('Reservation status updated successfully!');
-            }, 500);
-        });
-    });
-});
 
 // Add auto-refresh functionality
 let autoRefreshInterval;
@@ -1068,10 +1042,13 @@ function showBookingConflictError(errorMessage) {
     document.body.appendChild(errorModal);
 }
 
-function deleteBooking(bookingId) {
-    if (!confirm('Are you sure you want to delete this reservation? This action cannot be undone.')) {
-        return;
-    }
+async function deleteBooking(bookingId) {
+    const confirmed = await window.adminConfirm('This permanently removes the reservation and its receipt. This action cannot be undone.', {
+        title: 'Delete reservation?',
+        confirmText: 'Delete reservation',
+        danger: true
+    });
+    if (!confirmed) return;
 
     fetch('delete-booking.php', {
         method: 'POST',
@@ -1096,9 +1073,14 @@ function deleteBooking(bookingId) {
 }
 
 // Report Generator Functions
+let reportGeneratorTrigger = null;
 function showReportGenerator() {
     const modal = document.getElementById('reportGeneratorModal');
+    reportGeneratorTrigger = document.activeElement;
     modal.style.display = 'flex';
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('modal-open');
+    requestAnimationFrame(() => modal.querySelector('.report-generator-content')?.focus());
 
     // Initialize form
     initializeReportGenerator();
@@ -1107,7 +1089,17 @@ function showReportGenerator() {
 function closeReportGenerator() {
     const modal = document.getElementById('reportGeneratorModal');
     modal.style.display = 'none';
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('modal-open');
+    reportGeneratorTrigger?.focus?.();
 }
+
+document.getElementById('reportGeneratorModal')?.addEventListener('click', event => {
+    if (event.target === event.currentTarget) closeReportGenerator();
+});
+document.getElementById('reportGeneratorModal')?.addEventListener('keydown', event => {
+    if (event.key === 'Escape') closeReportGenerator();
+});
 
 function initializeReportGenerator() {
     // Populate year dropdowns
@@ -1209,7 +1201,7 @@ function generateReport(format, generateBtn) {
     }
 
     if (!isValid) {
-        alert(errorMessage);
+        window.adminNotify(errorMessage, 'error');
         buttons.forEach(btn => btn.disabled = false);
         generateBtn.innerHTML = originalText;
         return;

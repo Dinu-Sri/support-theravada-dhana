@@ -2233,6 +2233,19 @@ textarea {
 .admin-empty-cell { padding: 42px 18px !important; text-align: center; color: var(--admin-muted); }
 .btn-change-role[hidden] { display: none !important; }
 .modal-open { overflow: hidden; }
+.admin-app-dialog[hidden] { display: none !important; }
+.admin-app-dialog { position: fixed; inset: 0; z-index: 12000; display: grid; place-items: center; padding: 18px; background: rgba(28,31,35,.58); }
+.admin-app-dialog-card { width: min(450px, 100%); display: grid; grid-template-columns: 42px minmax(0,1fr); gap: 14px; padding: 22px; border-radius: 15px; background: #fff; box-shadow: 0 24px 70px rgba(0,0,0,.3); }
+.admin-app-dialog-icon { display: grid; width: 42px; height: 42px; place-items: center; border-radius: 50%; background: var(--admin-gold-soft); color: var(--admin-gold-dark); }
+.admin-app-dialog-copy h2 { margin: 0 0 7px; font-size: 1.12rem; }
+.admin-app-dialog-copy p { margin: 0; color: var(--admin-muted); line-height: 1.5; white-space: pre-line; }
+.admin-app-dialog-field { display: grid; gap: 6px; margin-top: 14px; font-size: .82rem; font-weight: 650; }
+.admin-app-dialog-field input { min-height: 42px; border: 1px solid var(--admin-border); border-radius: 8px; padding: 8px 10px; }
+.admin-app-dialog-actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+.admin-toast { position: fixed; top: 84px; right: 18px; z-index: 13000; max-width: 380px; padding: 11px 14px; border-radius: 9px; background: var(--admin-ink); color: #fff; box-shadow: var(--admin-shadow); opacity: 0; transform: translateY(-8px); transition: .18s ease; }
+.admin-toast.show { opacity: 1; transform: none; }
+.admin-toast-error { background: var(--admin-danger); }
+.admin-toast-success { background: var(--admin-success); }
 
 .close {
     font-size: 28px;
@@ -3319,7 +3332,9 @@ textarea {
     border-radius: 8px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
     max-height: 90vh;
-    overflow-y: auto;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
     position: relative;
     animation: modalSlideIn 0.3s ease-out;
 }
@@ -3371,7 +3386,18 @@ textarea {
     padding: 25px;
     max-height: 60vh;
     overflow-y: auto;
+    min-height: 0;
 }
+
+.report-generator-modal,
+.edit-booking-modal,
+.modal { padding: 16px; overflow: hidden; }
+.report-generator-content,
+.edit-booking-content,
+.booking-details-modal { margin: auto; min-height: 0; }
+.report-generator-content > .modal-body,
+.edit-booking-content > .modal-body,
+.booking-details-modal > .modal-body { min-height: 0; overflow-y: auto; }
 
 .modal-footer {
     background: #f8f9fa;

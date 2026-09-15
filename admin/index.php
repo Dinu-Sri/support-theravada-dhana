@@ -734,11 +734,11 @@ $blockedDates = $db->fetchAll(
 
     <?php if (hasPermission('export_data')): ?>
     <!-- Report Generation Modal -->
-    <div class="report-generator-modal" id="reportGeneratorModal" style="display: none;">
-        <div class="report-generator-content">
+    <div class="report-generator-modal" id="reportGeneratorModal" role="dialog" aria-modal="true" aria-labelledby="reportGeneratorTitle" aria-hidden="true" style="display: none;">
+        <div class="report-generator-content" tabindex="-1">
             <div class="modal-header">
-                <h4><i class="fas fa-chart-line"></i> Generate Reports</h4>
-                <button class="close-modal" onclick="closeReportGenerator()">
+                <h4 id="reportGeneratorTitle"><i class="fas fa-chart-line"></i> Generate Reports</h4>
+                <button type="button" class="close-modal" onclick="closeReportGenerator()" aria-label="Close report dialog">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -1282,7 +1282,7 @@ $blockedDates = $db->fetchAll(
         }
 
         // Change user role
-        function changeUserRole(button) {
+        async function changeUserRole(button) {
             const select = button.closest('.action-buttons')?.querySelector('.role-change-select');
             if (!select) {
                 showNotification('Unable to identify this user row. Please refresh and try again.', 'error');
@@ -1294,12 +1294,17 @@ $blockedDates = $db->fetchAll(
             const sourceTable = select.dataset.sourceTable;
             
             if (newRole === currentRole) {
-                alert('No changes to save. Please select a different role.');
+                window.adminNotify('Select a different access level before applying.', 'info');
                 return;
             }
 
-            if (!confirm(`Are you sure you want to change this user's role from ${currentRole} to ${newRole}?`)) {
+            const confirmed = await window.adminConfirm(`Change access from ${currentRole} to ${newRole}?`, {
+                title: 'Change account access?',
+                confirmText: 'Apply change'
+            });
+            if (!confirmed) {
                 select.value = currentRole; // Reset to original value
+                button.hidden = true;
                 return;
             }
 
@@ -1834,11 +1839,11 @@ $blockedDates = $db->fetchAll(
     <?php endif; ?>
 
     <!-- Reservation Details Modal -->
-    <div id="bookingDetailsModal" class="modal" style="display: none;">
-        <div class="modal-content booking-details-modal">
+    <div id="bookingDetailsModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="bookingDetailsTitle" aria-hidden="true" style="display: none;">
+        <div class="modal-content booking-details-modal" tabindex="-1">
             <div class="modal-header">
-                <h3><i class="fas fa-info-circle"></i> Dāna Reservation Details</h3>
-                <span class="close" onclick="closeBookingDetailsModal()">&times;</span>
+                <h3 id="bookingDetailsTitle"><i class="fas fa-info-circle"></i> Dāna Reservation Details</h3>
+                <button type="button" class="close" onclick="closeBookingDetailsModal()" aria-label="Close reservation details"><i class="fas fa-times"></i></button>
             </div>
             <div class="modal-body" id="bookingDetailsContent">
                 <div class="loading-spinner">
@@ -1871,6 +1876,9 @@ $blockedDates = $db->fetchAll(
             // Show modal with loading state
             modal.classList.add('show');
             modal.style.display = 'block';
+            modal.setAttribute('aria-hidden', 'false');
+            document.body.classList.add('modal-open');
+            requestAnimationFrame(() => modal.querySelector('.modal-content')?.focus());
             content.innerHTML = `
                 <div class="loading-spinner">
                     <i class="fas fa-spinner fa-spin"></i>
@@ -2143,6 +2151,8 @@ $blockedDates = $db->fetchAll(
             const modal = document.getElementById('bookingDetailsModal');
             modal.classList.remove('show');
             modal.style.display = 'none';
+            modal.setAttribute('aria-hidden', 'true');
+            document.body.classList.remove('modal-open');
         }
 
         function editBookingFromDetails() {
@@ -2153,7 +2163,7 @@ $blockedDates = $db->fetchAll(
             editBooking(bookingId);
         }
 
-        function toggleBookingHold() {
+        async function toggleBookingHold() {
             const holdBtn = document.getElementById('holdBookingBtn');
             if (!holdBtn) return;
             const bookingId = holdBtn.getAttribute('data-booking-id');
@@ -2165,16 +2175,22 @@ $blockedDates = $db->fetchAll(
 
             // If placing on hold, ask for reason
             if (action === 'hold') {
-                holdReason = prompt('Please enter a reason for placing this booking on hold (optional):');
+                holdReason = await window.adminPrompt('Add an optional note explaining why this reservation is on hold.', {
+                    title: 'Place reservation on hold',
+                    promptLabel: 'Hold reason (optional)',
+                    confirmText: 'Place on hold'
+                });
                 if (holdReason === null) {
                     // User cancelled
                     return;
                 }
             } else {
                 // Confirm removal
-                if (!confirm('Are you sure you want to remove the hold from this booking?')) {
-                    return;
-                }
+                const confirmed = await window.adminConfirm('The reservation will return to its normal pending workflow.', {
+                    title: 'Remove reservation hold?',
+                    confirmText: 'Remove hold'
+                });
+                if (!confirmed) return;
             }
 
             // Disable button during request
@@ -2220,6 +2236,9 @@ $blockedDates = $db->fetchAll(
             if (event.target === modal) {
                 closeBookingDetailsModal();
             }
+        });
+        document.getElementById('bookingDetailsModal')?.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') closeBookingDetailsModal();
         });
     </script>
 </body>

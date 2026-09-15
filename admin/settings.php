@@ -1057,8 +1057,9 @@ if ($admin['role'] === 'administrator') {
                                 </ul>
                             </div>
 
-                            <form method="POST" class="settings-form" onsubmit="return confirmClearAllBookings();">
+                            <form method="POST" class="settings-form" id="clearBookingsForm">
                                 <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['admin_csrf_token']); ?>">
+                                <input type="hidden" name="clear_all_bookings" value="1">
                                 <div class="form-group" style="margin-top: 20px;">
                                     <label for="confirm_text" style="color: #d32f2f; font-weight: bold;">
                                         Type "DELETE ALL BOOKINGS" to confirm
@@ -1092,7 +1093,7 @@ if ($admin['role'] === 'administrator') {
                             Default settings are pre-configured for optimal security. Changes affect all users with that role immediately.
                         </div>
 
-                        <form method="POST" class="settings-form" onsubmit="return confirm('Are you sure you want to update role permissions? This will affect all users with these roles immediately.');">
+                        <form method="POST" class="settings-form" data-admin-confirm="These permission changes take effect for every account using the affected roles." data-admin-confirm-title="Update role permissions?" data-admin-confirm-button="Update permissions">
                         <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['admin_csrf_token']); ?>">
                         <div class="permissions-table-container" style="overflow-x: auto; margin: 20px 0;">
                             <table class="permissions-table" style="width: 100%; border-collapse: collapse; background: white; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
@@ -1397,15 +1398,16 @@ if ($admin['role'] === 'administrator') {
         });
 
         // Clear All Bookings Confirmation
-        function confirmClearAllBookings() {
+        async function confirmClearAllBookings(event) {
+            event.preventDefault();
             const confirmText = document.getElementById('confirm_text').value.trim();
             const totalBookings = <?php echo $bookingCount ?? 0; ?>;
             const totalReceipts = <?php echo $receiptCount ?? 0; ?>;
 
             // Check if confirmation text matches
             if (confirmText !== 'DELETE ALL BOOKINGS') {
-                alert('❌ Confirmation text does not match!\n\nYou must type exactly: DELETE ALL BOOKINGS');
-                return false;
+                window.adminNotify('Confirmation text must exactly match: DELETE ALL BOOKINGS', 'error');
+                return;
             }
 
             let message = '🚨 CRITICAL WARNING - PERMANENT DELETION 🚨\n\n';
@@ -1418,15 +1420,16 @@ if ($admin['role'] === 'administrator') {
             message += '⚠️ ALL DATA WILL BE LOST FOREVER!\n\n';
             message += 'Are you ABSOLUTELY SURE you want to proceed?';
 
-            if (!confirm(message)) {
-                return false;
-            }
-
-            // Double confirmation
-            const doubleConfirm = confirm('⚠️ FINAL CONFIRMATION\n\nThis is your last chance to cancel.\n\nClick OK to DELETE ALL BOOKINGS permanently.\nClick Cancel to abort.');
-
-            return doubleConfirm;
+            const confirmed = await window.adminConfirm(message, {
+                title: 'Permanently clear reservation data?',
+                confirmText: 'Delete all reservation data',
+                danger: true
+            });
+            if (!confirmed) return;
+            event.currentTarget.submit();
         }
+
+        document.getElementById('clearBookingsForm')?.addEventListener('submit', confirmClearAllBookings);
     </script>
 </body>
 </html>

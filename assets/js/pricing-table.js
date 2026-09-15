@@ -26,23 +26,22 @@ function showRemoveMonthModal() {
     showModal('removeMonthModal');
 }
 
-// Confirm Remove Months
-function confirmRemoveMonths() {
-    const monthsToRemove = document.getElementById('months_to_remove').value;
-    return confirm(`Are you sure you want to remove ${monthsToRemove} month(s) from the pricing table?\n\nThis will permanently delete all pricing data for these months and cannot be undone!`);
-}
-
 // Show Pricing History
 function showPricingHistory() {
     window.location.href = 'pricing-history.php';
 }
 
 // Show Modal
+let pricingModalTrigger = null;
 function showModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
+        pricingModalTrigger = document.activeElement;
         modal.classList.add('show');
         modal.style.display = 'flex';
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('modal-open');
+        requestAnimationFrame(() => modal.querySelector('.modal-content')?.focus());
     }
 }
 
@@ -52,8 +51,23 @@ function closeModal(modalId) {
     if (modal) {
         modal.classList.remove('show');
         modal.style.display = 'none';
+        modal.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('modal-open');
+        pricingModalTrigger?.focus?.();
     }
 }
+
+document.addEventListener('click', event => {
+    if (event.target.classList?.contains('modal') && event.target.classList.contains('show')) {
+        closeModal(event.target.id);
+    }
+});
+
+document.addEventListener('keydown', event => {
+    if (event.key !== 'Escape') return;
+    const openModal = document.querySelector('.modal.show');
+    if (openModal) closeModal(openModal.id);
+});
 
 // Close modal when clicking outside
 window.addEventListener('click', function(event) {
@@ -110,15 +124,18 @@ function navigateMonths(offset) {
 document.addEventListener('DOMContentLoaded', function() {
     const bulkForm = document.querySelector('form[name="bulk_update"]');
     if (bulkForm) {
-        bulkForm.addEventListener('submit', function(e) {
+        bulkForm.addEventListener('submit', async function(e) {
             const dhanaType = document.getElementById('bulk_dhana_type').selectedOptions[0].text;
             const updateType = document.getElementById('bulk_update_type').value;
             const updateValue = document.getElementById('bulk_update_value').value;
             
             const message = `Are you sure you want to apply a ${updateType} ${updateType === 'percentage' ? 'of' : 'change of'} ${updateValue}${updateType === 'percentage' ? '%' : ' LKR'} to ${dhanaType}?`;
             
-            if (!confirm(message)) {
-                e.preventDefault();
+            if (bulkForm.dataset.confirmed === '1') return;
+            e.preventDefault();
+            if (await window.adminConfirm(message, { title: 'Apply bulk price update?', confirmText: 'Apply update' })) {
+                bulkForm.dataset.confirmed = '1';
+                bulkForm.requestSubmit(e.submitter);
             }
         });
     }

@@ -67,6 +67,7 @@ function adminHeaderLinkClass($pages) {
         </div>
     </div>
 </header>
+<script src="../assets/js/admin-ui.js?v=20260915"></script>
 <script>
 (function () {
     const toggle = document.querySelector('.admin-nav-toggle');

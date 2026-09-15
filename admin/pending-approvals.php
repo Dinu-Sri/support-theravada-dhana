@@ -193,20 +193,20 @@ try {
                                         #<?php echo str_pad($action['id'], 6, '0', STR_PAD_LEFT); ?>
                                     </div>
                                     <div class="approval-actions">
-                                        <form method="POST" style="display: inline;">
+                                        <form method="POST" class="approval-decision-form" data-admin-confirm="Apply this approved action to the system?" data-admin-confirm-title="Approve this action?" data-admin-confirm-button="Approve action">
                                             <input type="hidden" name="action_id" value="<?php echo $action['id']; ?>">
                                             <input type="hidden" name="decision" value="approve">
                                             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['admin_csrf_token']); ?>">
-                                            <button type="submit" class="btn-approve" onclick="return confirm('Are you sure you want to approve this action?')">
+                                            <button type="submit" class="btn-approve">
                                                 <i class="fas fa-check"></i> Approve
                                             </button>
                                         </form>
 
-                                        <form method="POST" style="display: inline;">
+                                        <form method="POST" class="approval-decision-form" data-admin-confirm="Reject this requested action? The requester will need to submit it again." data-admin-confirm-title="Reject this action?" data-admin-confirm-button="Reject action" data-admin-confirm-danger="1">
                                             <input type="hidden" name="action_id" value="<?php echo $action['id']; ?>">
                                             <input type="hidden" name="decision" value="reject">
                                             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['admin_csrf_token']); ?>">
-                                            <button type="submit" class="btn-reject" onclick="return confirm('Are you sure you want to reject this action?')">
+                                            <button type="submit" class="btn-reject">
                                                 <i class="fas fa-times"></i> Reject
                                             </button>
                                         </form>
