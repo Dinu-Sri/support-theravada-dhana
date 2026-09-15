@@ -693,22 +693,14 @@ function showDayBookings(date) {
                             </div>
                             <div class="booking-info">
                                 <p><strong>Customer:</strong> ${escapeAdminHtml(booking.first_name)} ${escapeAdminHtml(booking.last_name)}</p>
-                                <p><strong>Email:</strong> ${escapeAdminHtml(booking.email)}</p>
                                 <p><strong>Amount:</strong> Rs. ${Number(booking.total_amount).toLocaleString()}</p>
                                 <p><strong>Time Slot:</strong> ${escapeAdminHtml(String(booking.booking_time_slot || '').replace('_', ' ').toUpperCase())}</p>
-                                ${booking.special_requests ? `<p><strong>Special Requests:</strong> ${escapeAdminHtml(booking.special_requests)}</p>` : ''}
                                 ${isAnnual ? '<p class="annual-badge"><i class="fas fa-calendar-check"></i> Annual Event</p>' : ''}
                             </div>
                             <div class="booking-actions">
-                                ${window.ADMIN_CAPABILITIES?.canEditBookings ? `
-                                    <button class="btn btn-sm btn-primary" onclick="editBooking(${bookingId})">
-                                        <i class="fas fa-edit"></i> Edit
-                                    </button>` : ''}
-                                ${booking.receipt_filename ?
-                                    `<a href="view-receipt.php?file=${encodeURIComponent(booking.receipt_filename)}" target="_blank" rel="noopener" class="btn btn-sm btn-info">
-                                        <i class="fas fa-file-image"></i> Receipt
-                                    </a>` : ''
-                                }
+                                <button class="btn btn-sm btn-primary" onclick="showBookingDetails(${bookingId})">
+                                    <i class="fas fa-eye"></i> View full details
+                                </button>
                             </div>
                         </div>
                     `;
