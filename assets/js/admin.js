@@ -22,6 +22,28 @@ function safeAdminStatus(value) {
     return statuses.includes(value) ? value : 'pending';
 }
 
+function getAdminDayAvailability(dayBookings, dhanaTypes, isBlocked) {
+    if (isBlocked) return 'fully-booked';
+
+    const activeBookings = (Array.isArray(dayBookings) ? dayBookings : [])
+        .filter(booking => safeAdminStatus(booking.status) !== 'cancelled');
+    if (activeBookings.some(booking => booking.booking_time_slot === 'whole_day')) {
+        return 'fully-booked';
+    }
+    if (activeBookings.length === 0) return 'available';
+
+    const bookableOfferings = (Array.isArray(dhanaTypes) ? dhanaTypes : [])
+        .filter(type => Number(type.price) > 0 && ['morning', 'lunch'].includes(type.time_slot))
+        .map(type => `${safeAdminId(type.id)}-${type.time_slot}`);
+    const occupiedOfferings = new Set(activeBookings.map(
+        booking => `${safeAdminId(booking.dhana_type_id)}-${booking.booking_time_slot}`
+    ));
+
+    return bookableOfferings.length > 0 && bookableOfferings.every(key => occupiedOfferings.has(key))
+        ? 'fully-booked'
+        : 'partially-booked';
+}
+
 // Export CSV functionality
 function exportCSV() {
     const table = document.getElementById('bookingsTable');
@@ -585,19 +607,7 @@ function renderCalendar(data) {
         if (isBlocked) cssClass += ' blocked';
         if (date === today) cssClass += ' today';
 
-        // Determine booking status
-        if (dayBookings.length > 0) {
-            const totalSlots = dhanaTypes.length;
-            const bookedSlots = new Set(dayBookings.map(b => `${b.dhana_type_id}-${b.booking_time_slot}`)).size;
-
-            if (bookedSlots >= totalSlots) {
-                cssClass += ' fully-booked';
-            } else {
-                cssClass += ' partially-booked';
-            }
-        } else {
-            cssClass += ' available';
-        }
+        cssClass += ` ${getAdminDayAvailability(dayBookings, dhanaTypes, isBlocked)}`;
 
         calendarHTML += `
             <div class="${cssClass}" data-date="${date}">

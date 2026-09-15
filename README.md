@@ -134,7 +134,7 @@ A safe update sequence is:
 
 1. Preserve `config/database.php`, `config/email.php`, uploaded receipts, and backups.
 2. Pull `main` from GitHub.
-3. Run each newly added file in `database/migrations/` once through phpMyAdmin. For this release, run `database/migrations/2026-09-13-booking-integrity.sql` before reopening reservations.
+3. Run each newly added file in `database/migrations/` once through phpMyAdmin, in filename order. Existing installations must apply the booking-integrity, agent-reservation, admin-hold-owner, and admin-audit-log migrations before using the corresponding features.
 4. Run the deployment preflight and correct every reported error.
 5. Test the donor and admin login pages.
 
