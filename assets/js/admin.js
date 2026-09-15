@@ -865,6 +865,16 @@ function showEditBookingModal(booking) {
                 <form id="editBookingForm">
                     <input type="hidden" name="booking_id" value="${bookingId}">
 
+                    ${booking.is_annual_event ? `
+                    <div class="form-group annual-edit-scope">
+                        <label for="edit_scope">Apply changes to:</label>
+                        <select id="edit_scope" name="edit_scope">
+                            <option value="occurrence" ${booking.parent_booking_id ? 'selected' : ''}>This occurrence only</option>
+                            <option value="series" ${booking.parent_booking_id ? '' : 'selected'}>Entire annual series</option>
+                        </select>
+                        <small>Changing the date, dāna type, or time slot requires “Entire annual series”. That option applies every field shown here, including status and amount, after checking every affected year.</small>
+                    </div>` : '<input type="hidden" name="edit_scope" value="occurrence">'}
+
                     <div class="form-row">
                         <div class="form-group">
                             <label for="edit_booking_date">Booking Date:</label>

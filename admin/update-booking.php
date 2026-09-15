@@ -26,13 +26,15 @@ try {
     $specialRequests = isset($_POST['special_requests']) ? trim($_POST['special_requests']) : '';
     $travelSupport = isset($_POST['travel_support']) ? 1 : 0;
     $isMonk = isset($_POST['is_monk']) ? 1 : 0;
+    $editScope = isset($_POST['edit_scope']) ? (string)$_POST['edit_scope'] : 'occurrence';
     
     // Validation
     if (!$bookingId) {
         throw new Exception('Invalid reservation ID');
     }
 
-    if (!$bookingDate || !strtotime($bookingDate)) {
+    $parsedBookingDate = DateTime::createFromFormat('!Y-m-d', $bookingDate);
+    if (!$parsedBookingDate || $parsedBookingDate->format('Y-m-d') !== $bookingDate) {
         throw new Exception('Invalid reservation date');
     }
     
@@ -51,6 +53,10 @@ try {
     if ($totalAmount < 0) {
         throw new Exception('Total amount cannot be negative');
     }
+
+    if (!in_array($editScope, ['occurrence', 'series'], true)) {
+        throw new Exception('Invalid annual edit scope');
+    }
     
     // Check if reservation exists and get full details for email
     $existingBooking = $db->fetchOne(
@@ -65,11 +71,36 @@ try {
     if (!$existingBooking) {
         throw new Exception('Booking not found');
     }
+
+    $isAnnualBooking = !empty($existingBooking['is_annual_event']);
+    if ($editScope === 'series' && !$isAnnualBooking) {
+        throw new Exception('This reservation is not part of an annual series');
+    }
+
+    $structuralChange = $existingBooking['booking_date'] !== $bookingDate ||
+        $existingBooking['dhana_type_id'] != $dhanaTypeId ||
+        $existingBooking['booking_time_slot'] !== $bookingTimeSlot;
+
+    if ($isAnnualBooking && $editScope === 'occurrence' && $structuralChange) {
+        throw new Exception('Date, dāna type, and time slot changes must be applied to the entire annual series. Select “Entire annual series” and try again.');
+    }
+
+    $seriesBookings = [$existingBooking];
+    $seriesRootId = (int)($existingBooking['parent_booking_id'] ?: $existingBooking['id']);
+    if ($editScope === 'series') {
+        $seriesBookings = $db->fetchAll(
+            "SELECT * FROM bookings WHERE id = ? OR parent_booking_id = ? ORDER BY booking_date, id",
+            [$seriesRootId, $seriesRootId]
+        );
+        if (!$seriesBookings) {
+            throw new Exception('Annual reservation series not found');
+        }
+    }
     
     // Check for conflicts if date, dhana type, or time slot changed
-    if ($existingBooking['booking_date'] !== $bookingDate ||
+    if ($editScope !== 'series' && ($existingBooking['booking_date'] !== $bookingDate ||
         $existingBooking['dhana_type_id'] != $dhanaTypeId ||
-        $existingBooking['booking_time_slot'] !== $bookingTimeSlot) {
+        $existingBooking['booking_time_slot'] !== $bookingTimeSlot)) {
 
         // Get dhana type details
         $dhanaType = $db->fetchOne(
@@ -208,24 +239,81 @@ try {
             throw new Exception($errorMsg);
         }
     }
+
+    $seriesDates = [];
+    if ($editScope === 'series') {
+        $requestedDate = DateTime::createFromFormat('!Y-m-d', $bookingDate);
+        if (!$requestedDate || $requestedDate->format('Y-m-d') !== $bookingDate) {
+            throw new Exception('Invalid reservation date');
+        }
+
+        $seriesIds = array_map('intval', array_column($seriesBookings, 'id'));
+        $seriesPlaceholders = implode(',', array_fill(0, count($seriesIds), '?'));
+        $month = (int)$requestedDate->format('n');
+        $day = (int)$requestedDate->format('j');
+
+        foreach ($seriesBookings as $seriesBooking) {
+            $instanceYear = (int)date('Y', strtotime($seriesBooking['booking_date']));
+            if ($structuralChange && !checkdate($month, $day, $instanceYear)) {
+                throw new Exception('The selected calendar day is not valid in every year of this annual series.');
+            }
+            $instanceDate = $structuralChange
+                ? sprintf('%04d-%02d-%02d', $instanceYear, $month, $day)
+                : $seriesBooking['booking_date'];
+
+            if ($structuralChange && $status !== 'cancelled') {
+                $blockedDate = $db->fetchOne("SELECT id FROM blocked_dates WHERE blocked_date = ?", [$instanceDate]);
+                if ($blockedDate) {
+                    throw new Exception(date('F j, Y', strtotime($instanceDate)) . ' is blocked and cannot be used for this annual series.');
+                }
+
+                $conflictParams = array_merge([$instanceDate], $seriesIds);
+                if ($bookingTimeSlot === 'whole_day') {
+                    $conflictSql = "SELECT id FROM bookings
+                        WHERE booking_date = ? AND id NOT IN ({$seriesPlaceholders})
+                        AND status <> 'cancelled' LIMIT 1";
+                } else {
+                    $conflictSql = "SELECT id FROM bookings
+                        WHERE booking_date = ? AND id NOT IN ({$seriesPlaceholders})
+                        AND status <> 'cancelled'
+                        AND ((dhana_type_id = ? AND booking_time_slot = ?) OR booking_time_slot = 'whole_day')
+                        LIMIT 1";
+                    $conflictParams[] = $dhanaTypeId;
+                    $conflictParams[] = $bookingTimeSlot;
+                }
+                if ($db->fetchOne($conflictSql, $conflictParams)) {
+                    throw new Exception(date('F j, Y', strtotime($instanceDate)) . ' conflicts with another reservation. No annual changes were saved.');
+                }
+            }
+            $seriesDates[(int)$seriesBooking['id']] = $instanceDate;
+        }
+    }
     
     // Verify dhana type exists and is active
     $dhanaType = $db->fetchOne(
-        "SELECT id, name, price FROM dhana_types WHERE id = ? AND is_active = 1",
+        "SELECT id, name, price, time_slot FROM dhana_types WHERE id = ? AND is_active = 1",
         [$dhanaTypeId]
     );
     
     if (!$dhanaType) {
         throw new Exception('Invalid or inactive dhana type');
     }
+
+    if ((float)$dhanaType['price'] <= 0) {
+        throw new Exception('This dāna type is not currently bookable');
+    }
+
+    if ($dhanaType['time_slot'] !== 'extra' && $dhanaType['time_slot'] !== $bookingTimeSlot &&
+        !($bookingTimeSlot === 'whole_day' && in_array($dhanaType['time_slot'], ['morning', 'lunch'], true))) {
+        throw new Exception('The selected time slot is not compatible with this dāna type');
+    }
     
     // Start transaction
     $db->getConnection()->beginTransaction();
     
     try {
-        // Update reservation
-        $db->query(
-            "UPDATE bookings SET 
+        // Update either the selected occurrence or every member of an annual series.
+        $updateSql = "UPDATE bookings SET
                 booking_date = ?, 
                 dhana_type_id = ?, 
                 booking_time_slot = ?, 
@@ -235,9 +323,13 @@ try {
                 travel_support = ?, 
                 is_monk = ?,
                 updated_at = CURRENT_TIMESTAMP
-             WHERE id = ?",
-            [
-                $bookingDate, 
+             WHERE id = ?";
+        $updateTargets = $editScope === 'series' ? $seriesBookings : [$existingBooking];
+        foreach ($updateTargets as $targetBooking) {
+            $targetId = (int)$targetBooking['id'];
+            $targetDate = $editScope === 'series' ? $seriesDates[$targetId] : $bookingDate;
+            $db->query($updateSql, [
+                $targetDate,
                 $dhanaTypeId, 
                 $bookingTimeSlot, 
                 $status, 
@@ -245,9 +337,9 @@ try {
                 $specialRequests, 
                 $travelSupport, 
                 $isMonk, 
-                $bookingId
-            ]
-        );
+                $targetId
+            ]);
+        }
 
         // Track changes for email notification
         $changes = [];
@@ -344,7 +436,9 @@ try {
 
         echo json_encode([
             'success' => true,
-            'message' => 'Reservation updated successfully'
+            'message' => $editScope === 'series'
+                ? 'Annual reservation series updated successfully'
+                : 'Reservation updated successfully'
         ]);
         
     } catch (Exception $e) {
