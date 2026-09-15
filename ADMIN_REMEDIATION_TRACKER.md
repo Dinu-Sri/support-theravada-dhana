@@ -15,14 +15,14 @@ Statuses: `TODO` → `IN PROGRESS` → `FIXED` → `VERIFIED`; use `BLOCKED` onl
 ## Checkpoint
 
 - Audit baseline: `293df13`
-- Current phase: Phase 2 — admin workflows and business logic
-- Next item: `ADM-033` make backup execution reliable on shared hosting
-- Progress: 35 fixed / 69 total; 0 integration-verified
+- Current phase: Phase 3 — authentication and account recovery
+- Next item: `ADM-036` regenerate admin sessions after successful login
+- Progress: 38 fixed / 69 total; 0 integration-verified
 - Verification constraints: the local MySQL service still refuses connections; authenticated browser and database integration checks remain pending.
 
 ## Phase 1 — Security and data integrity
 
-- [ ] `ADM-001` **P0 Security** — Mutation endpoints do not consistently enforce role permissions. Status: `FIXED` (role-matrix integration tests pending). Evidence: permission tests for every mutation endpoint. Commit: `76f334d`, `cde0085`, `77f3ffe`
+- [ ] `ADM-001` **P0 Security** — Mutation endpoints do not consistently enforce role permissions. Status: `FIXED` (role-matrix integration tests pending). Evidence: permission tests for every mutation endpoint. Commit: `76f334d`, `cde0085`, `77f3ffe`, `7e952a7`
 - [ ] `ADM-002` **P0 Security** — Most admin mutations have no CSRF protection. Status: `FIXED` (valid/invalid-token integration tests pending). Evidence: valid/invalid-token POST and JSON tests. Commit: `76f334d`, `cde0085`, `77f3ffe`
 - [ ] `ADM-003` **P0 Data integrity** — Booking hold stores an admin ID in a donor-user foreign key and joins the wrong table. Status: `FIXED` (dynamic migration/hold test pending). Evidence: schema/query correction and hold toggle test. Commit: `76f334d`
 - [ ] `ADM-004` **P0 Security** — Reservation data reaches HTML/JavaScript without consistent escaping, enabling stored XSS. Status: `FIXED` (browser payload test pending). Evidence: malicious-text rendering test. Commit: `77f3ffe`
@@ -57,9 +57,9 @@ Statuses: `TODO` → `IN PROGRESS` → `FIXED` → `VERIFIED`; use `BLOCKED` onl
 - [ ] `ADM-030` **P1 Data integrity** — Pricing updates are not transactional. Status: `FIXED` (rollback integration test pending). Evidence: rollback-on-failure test. Commit: `cde0085`
 - [ ] `ADM-031` **P1 Validation** — Pricing inputs are weakly validated server-side. Status: `FIXED` (boundary integration tests pending). Evidence: invalid amount/month/type boundary tests. Commit: `cde0085`
 - [ ] `ADM-032` **P1 Logic** — Pricing-window calculation ignores direction/boundary cases. Status: `FIXED` (date-boundary integration tests pending). Evidence: past/current/future month tests. Commit: `cde0085`
-- [ ] `ADM-033` **P1 Deployment** — Backup flow lacks shared-hosting preflight and reliable `mysqldump` discovery. Status: `TODO`. Evidence: actionable failure/success diagnostics. Commit: —
-- [ ] `ADM-034` **P1 UX/Reliability** — Backend errors are frequently invisible or overly generic. Status: `TODO`. Evidence: consistent safe error surfaces and server logs. Commit: —
-- [ ] `ADM-035` **P1 Security** — APIs expose raw internal error details. Status: `TODO`. Evidence: production-safe JSON errors. Commit: —
+- [ ] `ADM-033` **P1 Deployment** — Backup flow lacks shared-hosting preflight and reliable `mysqldump` discovery. Status: `FIXED` (cPanel execution test pending); Settings reports command/storage/Zip readiness, common Linux/XAMPP paths are discovered, credentials remain off the command line, and cron failures return nonzero. Evidence: actionable failure/success diagnostics. Commit: `42995c2`
+- [ ] `ADM-034` **P1 UX/Reliability** — Backend errors are frequently invisible or overly generic. Status: `FIXED` (browser failure-path checks pending); core admin fetches now preserve safe server messages in page states, dialogs, or toasts and settings failures are logged with actionable UI copy. Evidence: consistent safe error surfaces and server logs. Commit: `7e952a7`
+- [ ] `ADM-035` **P1 Security** — APIs expose raw internal error details. Status: `FIXED` (crafted database-failure tests pending); expected validation uses domain exceptions while database/unexpected errors return fixed public messages. Evidence: production-safe JSON errors. Commit: `7e952a7`
 
 ## Phase 3 — Authentication and account recovery
 
@@ -114,3 +114,5 @@ Add dated entries here with command/browser evidence. Never include credentials,
 - 2026-09-15 — Escaped dynamic booking/analytics/report output; corrected analytics schema queries and LKR labels; constrained report options and protected exports with permission/CSRF checks; neutralized CSV formulas; removed the misleading PDF path; derived calendar bounds from settings; handled invalid annual recurrence dates; de-duplicated receipt/annual joins; and routed receipts through an authorized viewer while deploying direct-access denial. PHP lint, JavaScript syntax checks, and `git diff --check` passed. Database integration remains pending because local MySQL refused the connection.
 - 2026-09-15 — Added a durable `admin_audit_log` schema/migration, atomic deletion audit snapshots, post-commit receipt-file cleanup, and an actionable missing-migration response. Replaced the calendar count heuristic with slot-conflict evaluation and consolidated day summaries into the full booking-details workflow. PHP lint, JavaScript syntax, diff checks, and five calendar rule cases passed.
 - 2026-09-15 — Added explicit occurrence/series controls for annual edits. Structural changes require series scope; every series date and external conflict is validated before all instances update transactionally. PHP and JavaScript syntax checks passed; database scenarios remain pending.
+- 2026-09-15 — Added shared-hosting backup preflight, `mysqldump` discovery, protected writable-storage checks, quoted temporary option-file credentials, safe failure classification, ZipArchive checks, Settings readiness output, and correct cron exit codes. PHP lint/diff checks passed; local preflight found `mysqldump.exe`, writable storage, and ZipArchive.
+- 2026-09-15 — Completed the admin API error audit: role endpoints now use shared login/permission/CSRF guards; expected domain errors are separated from PDO/unexpected failures; settings no longer renders raw exceptions; and calendar, analytics, booking details, edits, deletion, hold, and user loading surface safe server messages consistently. PHP and JavaScript syntax plus diff checks passed.
