@@ -137,6 +137,7 @@ if (!isset($_SESSION['admin_logged_in'])) {
                     </button>
                     
                     <p class="auth-switch">
+                        <a href="forgot-password.php">Forgot password?</a><br>
                         <a href="../index.php">← Back to Main Site</a>
                     </p>
                 </form>
