@@ -840,11 +840,14 @@ function showEditBookingModal(booking) {
     const totalAmount = Number.isFinite(Number(booking.total_amount)) ? Number(booking.total_amount) : 0;
     const modal = document.createElement('div');
     modal.className = 'edit-booking-modal';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-labelledby', 'editBookingTitle');
     modal.innerHTML = `
-        <div class="edit-booking-content">
+        <div class="edit-booking-content" tabindex="-1">
             <div class="modal-header">
-                <h4>Edit Booking #${String(bookingId).padStart(6, '0')}</h4>
-                <button class="close-modal" onclick="closeEditBookingModal()">
+                <h4 id="editBookingTitle">Edit Booking #${String(bookingId).padStart(6, '0')}</h4>
+                <button type="button" class="close-modal" onclick="closeEditBookingModal()" aria-label="Close edit reservation dialog">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -939,6 +942,10 @@ function showEditBookingModal(booking) {
     `;
 
     document.body.appendChild(modal);
+    document.body.classList.add('modal-open');
+    modal.addEventListener('click', event => { if (event.target === modal) closeEditBookingModal(); });
+    modal.addEventListener('keydown', event => { if (event.key === 'Escape') closeEditBookingModal(); });
+    requestAnimationFrame(() => modal.querySelector('.edit-booking-content')?.focus());
 }
 
 function generateDhanaTypeOptions(selectedId) {
@@ -959,6 +966,7 @@ function closeEditBookingModal() {
     const modal = document.querySelector('.edit-booking-modal');
     if (modal) {
         modal.remove();
+        document.body.classList.remove('modal-open');
     }
 }
 
@@ -999,15 +1007,18 @@ function showBookingConflictError(errorMessage) {
     const errorModal = document.createElement('div');
     errorModal.className = 'edit-booking-modal';
     errorModal.style.zIndex = '10001'; // Higher than edit modal
+    errorModal.setAttribute('role', 'alertdialog');
+    errorModal.setAttribute('aria-modal', 'true');
+    errorModal.setAttribute('aria-labelledby', 'bookingConflictTitle');
 
     // Format the error message (preserve line breaks)
     const formattedError = escapeAdminHtml(errorMessage).replace(/\n/g, '<br>');
 
     errorModal.innerHTML = `
-        <div class="edit-booking-content" style="max-width: 600px;">
+        <div class="edit-booking-content" tabindex="-1" style="max-width: 600px;">
             <div class="modal-header" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); color: white;">
-                <h4><i class="fas fa-exclamation-triangle"></i> Booking Conflict Detected</h4>
-                <button class="close-modal" onclick="this.closest('.edit-booking-modal').remove()" style="color: white;">
+                <h4 id="bookingConflictTitle"><i class="fas fa-exclamation-triangle"></i> Booking Conflict Detected</h4>
+                <button type="button" class="close-modal" data-close-conflict style="color: white;" aria-label="Close booking conflict dialog">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -1032,7 +1043,7 @@ function showBookingConflictError(errorMessage) {
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-primary" onclick="this.closest('.edit-booking-modal').remove()">
+                <button type="button" class="btn btn-primary" data-close-conflict>
                     <i class="fas fa-check"></i> I Understand
                 </button>
             </div>
@@ -1040,6 +1051,11 @@ function showBookingConflictError(errorMessage) {
     `;
 
     document.body.appendChild(errorModal);
+    const closeConflict = () => errorModal.remove();
+    errorModal.querySelectorAll('[data-close-conflict]').forEach(button => button.addEventListener('click', closeConflict));
+    errorModal.addEventListener('click', event => { if (event.target === errorModal) closeConflict(); });
+    errorModal.addEventListener('keydown', event => { if (event.key === 'Escape') closeConflict(); });
+    requestAnimationFrame(() => errorModal.querySelector('.edit-booking-content')?.focus());
 }
 
 async function deleteBooking(bookingId) {
