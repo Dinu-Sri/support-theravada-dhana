@@ -16,8 +16,8 @@ Statuses: `TODO` → `IN PROGRESS` → `FIXED` → `VERIFIED`; use `BLOCKED` onl
 
 - Audit baseline: `293df13`
 - Current phase: Phase 4 — shared admin design system and screen redesign
-- Next item: `ADM-051` finish the cross-screen button hierarchy audit
-- Progress: 59 fixed / 69 total; 2 runtime-verified
+- Next item: `ADM-055` separate routine settings from destructive maintenance
+- Progress: 60 fixed / 69 total; 2 runtime-verified
 - Verification constraints: the local MySQL service still refuses connections; authenticated browser and database integration checks remain pending.
 
 ## Phase 1 — Security and data integrity
@@ -81,7 +81,7 @@ Statuses: `TODO` → `IN PROGRESS` → `FIXED` → `VERIFIED`; use `BLOCKED` onl
 - [ ] `ADM-048` **P2 Accessibility** — Clickable `div` navigation is not keyboard/semantic accessible. Status: `FIXED` (keyboard browser test pending); dashboard filters are real links with focus styling and current-page semantics. Evidence: keyboard-only navigation. Commit: `7cc7fac`
 - [ ] `ADM-049` **P2 UX** — Reservation table is too wide and action-heavy. Status: `FIXED` (responsive browser review pending); the status save action appears only after a changed selection and the icon-only detail action is a labeled Manage control. Evidence: desktop/tablet/mobile layout review. Commit: `fe12e39`
 - [ ] `ADM-050` **P2 UX** — Supervisors see duplicated/redundant status information. Status: `FIXED` (role-specific browser review pending); the update column now communicates read-only access instead of repeating the status badge. Evidence: role-specific table review. Commit: `fe12e39`
-- [ ] `ADM-051` **P2 UI** — Button hierarchy is unclear and inconsistent. Status: `TODO`. Evidence: primary/secondary/danger component audit. Commit: —
+- [ ] `ADM-051` **P2 UI** — Button hierarchy is unclear and inconsistent. Status: `FIXED` (cross-screen browser review pending); one late authoritative component layer now enforces gold primary, neutral secondary, restrained informational/warning, and red destructive actions with consistent sizing, focus, hover, and disabled states. Evidence: primary/secondary/danger component audit. Commit: `9161004`
 - [ ] `ADM-052` **P2 UX** — Native alert/prompt/confirm dialogs interrupt workflows. Status: `FIXED` (browser workflow review pending); admin confirmations, prompts, validation messages, and destructive actions now use a consistent application dialog/toast layer. Evidence: consistent app dialogs/toasts. Commit: `dd77806`
 - [ ] `ADM-053` **P2 Accessibility** — Modals lack focus management, roles, labels, and Escape behavior. Status: `FIXED` (keyboard/screen-reader review pending); shared, user, report, pricing, booking-details, edit, and conflict dialogs have semantic roles/labels, programmatic focus, Escape/backdrop close, and focus return where applicable. Evidence: keyboard/screen-reader checklist. Commit: `dd77806`, `151931a`
 - [ ] `ADM-054` **P2 UX** — Nested dialog scrolling creates confusing double-scroll layouts. Status: `FIXED` (short-viewport browser review pending); page scrolling locks and modal shells keep headers/actions fixed while only their content body scrolls. Evidence: short and tall viewport review. Commit: `dd77806`
