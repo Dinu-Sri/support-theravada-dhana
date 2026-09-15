@@ -15,9 +15,9 @@ Statuses: `TODO` → `IN PROGRESS` → `FIXED` → `VERIFIED`; use `BLOCKED` onl
 ## Checkpoint
 
 - Audit baseline: `293df13`
-- Current phase: Phase 3 — authentication and account recovery
-- Next item: `ADM-036` regenerate admin sessions after successful login
-- Progress: 38 fixed / 69 total; 0 integration-verified
+- Current phase: Phase 4 — shared admin design system and screen redesign
+- Next item: `ADM-042` establish and apply the shared admin design system
+- Progress: 44 fixed / 69 total; 2 runtime-verified
 - Verification constraints: the local MySQL service still refuses connections; authenticated browser and database integration checks remain pending.
 
 ## Phase 1 — Security and data integrity
@@ -63,12 +63,12 @@ Statuses: `TODO` → `IN PROGRESS` → `FIXED` → `VERIFIED`; use `BLOCKED` onl
 
 ## Phase 3 — Authentication and account recovery
 
-- [ ] `ADM-036` **P1 Security** — Admin login does not regenerate the session ID. Status: `TODO`. Evidence: session ID changes after login. Commit: —
-- [ ] `ADM-037` **P1 Security** — Admin sessions have no inactivity timeout. Status: `TODO`. Evidence: expiry and activity refresh tests. Commit: —
-- [ ] `ADM-038` **P1 Security** — Role/permission state remains stale in the session after account changes. Status: `TODO`. Evidence: disable/role-change takes effect next request. Commit: —
-- [ ] `ADM-039` **P1 Security** — Admin login has no throttling. Status: `TODO`. Evidence: repeated-failure throttling test. Commit: —
-- [ ] `ADM-040` **P1 Security** — Logout is a state-changing GET request. Status: `TODO`. Evidence: CSRF-protected POST logout. Commit: —
-- [ ] `ADM-041` **P1 UX/Security** — Admin password recovery, autocomplete, and loading feedback are missing. Status: `TODO`. Evidence: recovery happy/failure paths and form audit. Commit: —
+- [ ] `ADM-036` **P1 Security** — Admin login does not regenerate the session ID. Status: `VERIFIED` (CLI session-rotation test passed). Evidence: session ID changes after login. Commit: `8304170`
+- [ ] `ADM-037` **P1 Security** — Admin sessions have no inactivity timeout. Status: `VERIFIED` (CLI expiry test passed). Evidence: expiry and activity refresh tests. Commit: `8304170`
+- [ ] `ADM-038` **P1 Security** — Role/permission state remains stale in the session after account changes. Status: `FIXED` (database integration test pending). Evidence: disable/role-change takes effect next request. Commit: `8304170`
+- [ ] `ADM-039` **P1 Security** — Admin login has no throttling. Status: `FIXED` (persistent database integration test pending; session fallback implemented). Evidence: repeated-failure throttling test. Commit: `8304170`
+- [ ] `ADM-040` **P1 Security** — Logout is a state-changing GET request. Status: `FIXED` (browser verification pending). Evidence: CSRF-protected POST logout. Commit: `8304170`
+- [ ] `ADM-041` **P1 UX/Security** — Admin password recovery, autocomplete, and loading feedback are missing. Status: `FIXED` (database/email/browser paths pending). Evidence: recovery happy/failure paths and form audit. Commit: `818e4be`, `8304170`
 
 ## Phase 4 — Shared admin design system and screen redesign
 
@@ -116,3 +116,5 @@ Add dated entries here with command/browser evidence. Never include credentials,
 - 2026-09-15 — Added explicit occurrence/series controls for annual edits. Structural changes require series scope; every series date and external conflict is validated before all instances update transactionally. PHP and JavaScript syntax checks passed; database scenarios remain pending.
 - 2026-09-15 — Added shared-hosting backup preflight, `mysqldump` discovery, protected writable-storage checks, quoted temporary option-file credentials, safe failure classification, ZipArchive checks, Settings readiness output, and correct cron exit codes. PHP lint/diff checks passed; local preflight found `mysqldump.exe`, writable storage, and ZipArchive.
 - 2026-09-15 — Completed the admin API error audit: role endpoints now use shared login/permission/CSRF guards; expected domain errors are separated from PDO/unexpected failures; settings no longer renders raw exceptions; and calendar, analytics, booking details, edits, deletion, hold, and user loading surface safe server messages consistently. PHP and JavaScript syntax plus diff checks passed.
+- 2026-09-15 — Hardened admin authentication with session-ID rotation, inactivity expiry, live role/active-state refresh, persistent login throttling with a session fallback, and CSRF-protected POST logout. PHP lint passed; isolated CLI tests confirmed session rotation and timeout behavior.
+- 2026-09-15 — Added non-enumerating admin password recovery with one-hour hashed, single-use reset tokens, CSRF protection, cooldown, safe mail failures, password bounds, and autocomplete/loading feedback. PHP lint and invalid-token rejection checks passed; database/email/browser integration remains pending.
