@@ -31,16 +31,86 @@ class BackupManager {
         $dirs = [$this->backupDir, $this->dailyDir, $this->monthlyDir, $this->receiptsDir];
         
         foreach ($dirs as $dir) {
-            if (!file_exists($dir)) {
-                mkdir($dir, 0755, true);
-                
-                // Add .htaccess to protect backup files
-                $htaccess = $dir . '/.htaccess';
-                if (!file_exists($htaccess)) {
-                    file_put_contents($htaccess, "Deny from all\n");
+            if (!is_dir($dir) && !mkdir($dir, 0755, true) && !is_dir($dir)) {
+                throw new RuntimeException('Backup storage could not be created. Check the directory permissions.');
+            }
+
+            // Keep every backup directory protected on Apache 2.2 and 2.4.
+            $htaccess = $dir . '/.htaccess';
+            if (!file_exists($htaccess)) {
+                $rules = "<IfModule mod_authz_core.c>\n    Require all denied\n</IfModule>\n"
+                    . "<IfModule !mod_authz_core.c>\n    Order deny,allow\n    Deny from all\n</IfModule>\n";
+                if (file_put_contents($htaccess, $rules, LOCK_EX) === false) {
+                    throw new RuntimeException('Backup storage protection could not be installed. Check the directory permissions.');
                 }
             }
         }
+    }
+
+    private function commandExecutionAvailable() {
+        if (!function_exists('exec')) return false;
+        $disabled = array_filter(array_map('trim', explode(',', (string)ini_get('disable_functions'))));
+        return !in_array('exec', $disabled, true);
+    }
+
+    private function resolveMysqlDumpPath() {
+        if (!$this->commandExecutionAvailable()) return null;
+
+        $configured = defined('MYSQLDUMP_PATH') ? trim((string)MYSQLDUMP_PATH) : '';
+        $candidates = array_filter(array_unique([
+            $configured,
+            '/usr/bin/mysqldump',
+            '/usr/local/bin/mysqldump',
+            '/usr/local/mysql/bin/mysqldump',
+            'C:\\xampp\\mysql\\bin\\mysqldump.exe'
+        ]));
+
+        foreach ($candidates as $candidate) {
+            if ((strpos($candidate, '/') !== false || strpos($candidate, '\\') !== false) && is_file($candidate)) {
+                return $candidate;
+            }
+        }
+
+        $commandName = $configured !== '' && strpos($configured, '/') === false && strpos($configured, '\\') === false
+            ? $configured
+            : 'mysqldump';
+        $lookup = PHP_OS_FAMILY === 'Windows'
+            ? 'where ' . escapeshellarg($commandName) . ' 2>NUL'
+            : 'command -v ' . escapeshellarg($commandName) . ' 2>/dev/null';
+        $paths = [];
+        exec($lookup, $paths, $returnCode);
+        if ($returnCode === 0 && !empty($paths[0]) && is_file(trim($paths[0]))) {
+            return trim($paths[0]);
+        }
+        return null;
+    }
+
+    private function escapeDefaultsValue($value) {
+        return '"' . str_replace(["\\", "\r", "\n", '"'], ["\\\\", '', '', '\\"'], (string)$value) . '"';
+    }
+
+    public function getPreflightStatus() {
+        $issues = [];
+        if (!$this->commandExecutionAvailable()) {
+            $issues[] = 'PHP command execution (exec) is disabled by the hosting provider.';
+        }
+        $dumpPath = $this->resolveMysqlDumpPath();
+        if ($dumpPath === null) {
+            $issues[] = 'mysqldump was not found. Set MYSQLDUMP_PATH in config/database.php to the host’s absolute mysqldump path.';
+        }
+        foreach ([$this->backupDir, $this->dailyDir, $this->monthlyDir, $this->receiptsDir] as $directory) {
+            if (!is_dir($directory) || !is_writable($directory)) {
+                $issues[] = 'One or more backup directories are not writable by PHP.';
+                break;
+            }
+        }
+
+        return [
+            'ready' => empty($issues),
+            'issues' => $issues,
+            'mysqldump' => $dumpPath === null ? null : basename($dumpPath),
+            'zip_available' => class_exists('ZipArchive')
+        ];
     }
     
     /**
@@ -50,6 +120,9 @@ class BackupManager {
      */
     public function createDatabaseBackup($type = 'daily') {
         try {
+            if (!in_array($type, ['daily', 'monthly'], true)) {
+                throw new InvalidArgumentException('Invalid database backup type.');
+            }
             $timestamp = date('Y-m-d_H-i-s');
             $monthYear = date('Y-m'); // For monthly backups
             
@@ -61,14 +134,22 @@ class BackupManager {
                 $filepath = $this->dailyDir . '/' . $filename;
             }
             
-            $mysqlDumpPath = defined('MYSQLDUMP_PATH') && MYSQLDUMP_PATH !== ''
-                ? MYSQLDUMP_PATH
-                : 'mysqldump';
-            $credentialsFile = tempnam($this->backupDir, 'mysql-');
-            if ($credentialsFile === false) {
-                throw new RuntimeException('Could not create a temporary database credentials file.');
+            $preflight = $this->getPreflightStatus();
+            if (!$preflight['ready']) {
+                throw new RuntimeException(implode(' ', $preflight['issues']));
             }
-            $credentials = "[client]\nhost=" . DB_HOST . "\nuser=" . DB_USER . "\npassword=" . DB_PASS . "\ndefault-character-set=utf8mb4\n";
+            $mysqlDumpPath = $this->resolveMysqlDumpPath();
+            $credentialsFile = tempnam($this->backupDir, 'mysql-');
+            $errorFile = tempnam($this->backupDir, 'dump-error-');
+            if ($credentialsFile === false || $errorFile === false) {
+                if ($credentialsFile && is_file($credentialsFile)) @unlink($credentialsFile);
+                if ($errorFile && is_file($errorFile)) @unlink($errorFile);
+                throw new RuntimeException('Could not create temporary backup control files. Check backup directory permissions.');
+            }
+            $credentials = "[client]\nhost=" . $this->escapeDefaultsValue(DB_HOST)
+                . "\nuser=" . $this->escapeDefaultsValue(DB_USER)
+                . "\npassword=" . $this->escapeDefaultsValue(DB_PASS)
+                . "\ndefault-character-set=utf8mb4\n";
             if (file_put_contents($credentialsFile, $credentials, LOCK_EX) === false) {
                 throw new RuntimeException('Could not write the temporary database credentials file.');
             }
@@ -78,12 +159,13 @@ class BackupManager {
                 . ' ' . escapeshellarg('--defaults-extra-file=' . $credentialsFile)
                 . ' --single-transaction --skip-lock-tables --routines --triggers '
                 . escapeshellarg(DB_NAME)
-                . ' > ' . escapeshellarg($filepath) . ' 2>&1';
+                . ' > ' . escapeshellarg($filepath)
+                . ' 2> ' . escapeshellarg($errorFile);
 
             try {
                 exec($command, $output, $returnCode);
             } finally {
-                if (is_file($credentialsFile)) unlink($credentialsFile);
+                if (is_file($credentialsFile)) @unlink($credentialsFile);
             }
             
             if ($returnCode === 0 && file_exists($filepath) && filesize($filepath) > 0) {
@@ -94,7 +176,7 @@ class BackupManager {
                 if ($type === 'daily') {
                     $this->rotateDailyBackups();
                 }
-                
+                if (is_file($errorFile)) @unlink($errorFile);
                 return [
                     'success' => true,
                     'message' => ucfirst($type) . ' database backup created successfully!',
@@ -102,10 +184,17 @@ class BackupManager {
                     'size' => filesize($filepath)
                 ];
             } else {
-                throw new Exception('Backup file was not created or is empty. Output: ' . implode("\n", $output));
+                $errorText = is_file($errorFile) ? (string)file_get_contents($errorFile) : '';
+                if (is_file($filepath)) @unlink($filepath);
+                if (stripos($errorText, 'access denied') !== false) {
+                    throw new RuntimeException('mysqldump could not authenticate. Check the database credentials available to the PHP/cron environment.');
+                }
+                throw new RuntimeException('mysqldump failed with exit code ' . (int)$returnCode . '. Confirm MYSQLDUMP_PATH and ask the host to enable database export for this account.');
             }
-            
+
         } catch (Exception $e) {
+            if (isset($errorFile) && is_file($errorFile)) @unlink($errorFile);
+            if (isset($credentialsFile) && is_file($credentialsFile)) @unlink($credentialsFile);
             error_log("Database backup failed: " . $e->getMessage());
             return [
                 'success' => false,
@@ -121,6 +210,9 @@ class BackupManager {
      */
     public function createReceiptsBackup() {
         try {
+            if (!class_exists('ZipArchive')) {
+                throw new RuntimeException('PHP ZipArchive is unavailable. Ask the hosting provider to enable the zip extension.');
+            }
             $timestamp = date('Y-m-d_H-i-s');
             $filename = "receipts_{$timestamp}.zip";
             $filepath = $this->receiptsDir . '/' . $filename;

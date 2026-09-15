@@ -24,6 +24,7 @@ echo "===========================================\n\n";
 
 try {
     $backupManager = new BackupManager();
+    $hadFailure = false;
     
     // Create daily database backup
     echo "Creating daily database backup...\n";
@@ -34,6 +35,7 @@ try {
         echo "  File: " . $dbResult['file'] . "\n";
         echo "  Size: " . BackupManager::formatBytes($dbResult['size']) . "\n";
     } else {
+        $hadFailure = true;
         echo "✗ FAILED: " . $dbResult['message'] . "\n";
     }
     
@@ -51,6 +53,7 @@ try {
                 echo "  Size: " . BackupManager::formatBytes($receiptsResult['size']) . "\n";
             }
         } else {
+            $hadFailure = true;
             echo "✗ FAILED: " . $receiptsResult['message'] . "\n";
         }
         
@@ -73,14 +76,13 @@ try {
     echo "  Total Size: " . BackupManager::formatBytes($stats['receipts']['total_size']) . "\n";
     
     echo "\n===========================================\n";
-    echo "Daily Backup Script Completed Successfully\n";
+    echo $hadFailure ? "Daily Backup Script Completed With Errors\n" : "Daily Backup Script Completed Successfully\n";
     echo "===========================================\n";
     
 } catch (Exception $e) {
     echo "\n✗ ERROR: " . $e->getMessage() . "\n";
-    echo "Stack trace:\n" . $e->getTraceAsString() . "\n";
     error_log("Daily backup failed: " . $e->getMessage());
     exit(1);
 }
 
-exit(0);
+exit($hadFailure ? 1 : 0);

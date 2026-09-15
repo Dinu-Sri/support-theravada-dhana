@@ -25,6 +25,7 @@ echo "===========================================\n\n";
 
 try {
     $backupManager = new BackupManager();
+    $hadFailure = false;
     
     // Create monthly permanent database backup
     echo "Creating monthly permanent database backup...\n";
@@ -35,6 +36,7 @@ try {
         echo "  File: " . $dbResult['file'] . "\n";
         echo "  Size: " . BackupManager::formatBytes($dbResult['size']) . "\n";
     } else {
+        $hadFailure = true;
         echo "✗ FAILED: " . $dbResult['message'] . "\n";
     }
     
@@ -51,6 +53,7 @@ try {
             echo "  Size: " . BackupManager::formatBytes($receiptsResult['size']) . "\n";
         }
     } else {
+        $hadFailure = true;
         echo "✗ FAILED: " . $receiptsResult['message'] . "\n";
     }
     
@@ -72,14 +75,13 @@ try {
     }
     
     echo "\n===========================================\n";
-    echo "Monthly Backup Script Completed Successfully\n";
+    echo $hadFailure ? "Monthly Backup Script Completed With Errors\n" : "Monthly Backup Script Completed Successfully\n";
     echo "===========================================\n";
     
 } catch (Exception $e) {
     echo "\n✗ ERROR: " . $e->getMessage() . "\n";
-    echo "Stack trace:\n" . $e->getTraceAsString() . "\n";
     error_log("Monthly backup failed: " . $e->getMessage());
     exit(1);
 }
 
-exit(0);
+exit($hadFailure ? 1 : 0);

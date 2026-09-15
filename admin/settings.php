@@ -519,6 +519,7 @@ if ($admin['role'] === 'administrator') {
     // Get backup statistics
     $backupManager = new BackupManager();
     $backupStats = $backupManager->getBackupStats();
+    $backupPreflight = $backupManager->getPreflightStatus();
 
     // Get all permissions grouped by role
     $allPermissions = $db->fetchAll("
@@ -827,6 +828,21 @@ if ($admin['role'] === 'administrator') {
 
                 <!-- Backup Tab -->
                 <div class="tab-content" id="backup-tab">
+                    <div class="message <?php echo $backupPreflight['ready'] ? 'success' : 'error'; ?>" role="status">
+                        <strong><?php echo $backupPreflight['ready'] ? 'Database backup is ready.' : 'Database backup needs attention.'; ?></strong>
+                        <?php if ($backupPreflight['ready']): ?>
+                            <span>mysqldump was found and backup storage is writable.</span>
+                        <?php else: ?>
+                            <ul>
+                                <?php foreach ($backupPreflight['issues'] as $issue): ?>
+                                    <li><?php echo htmlspecialchars($issue); ?></li>
+                                <?php endforeach; ?>
+                            </ul>
+                        <?php endif; ?>
+                        <?php if (!$backupPreflight['zip_available']): ?>
+                            <span>Receipt ZIP backups require the PHP zip extension.</span>
+                        <?php endif; ?>
+                    </div>
                 <div class="settings-container">
                         <!-- Backup Management -->
                         <div class="settings-section">
