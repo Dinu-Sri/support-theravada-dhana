@@ -4127,3 +4127,43 @@ textarea {
         gap: 4px;
     }
 }
+
+/* Authoritative action hierarchy; intentionally follows legacy page rules. */
+.admin-panel .btn,
+.admin-app-dialog .btn {
+    min-height: 38px;
+    padding: 8px 14px;
+    border: 1px solid transparent;
+    border-radius: var(--admin-radius-sm);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    font: inherit;
+    font-size: .84rem;
+    font-weight: 650;
+    line-height: 1.2;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color .16s ease, border-color .16s ease, box-shadow .16s ease, transform .16s ease;
+}
+.admin-panel .btn:hover,
+.admin-app-dialog .btn:hover { opacity: 1; transform: translateY(-1px); }
+.admin-panel .btn:focus-visible,
+.admin-app-dialog .btn:focus-visible { outline: none; box-shadow: var(--admin-focus); }
+.admin-panel .btn-primary,
+.admin-app-dialog .btn-primary { background: var(--admin-gold); color: #fff; border-color: var(--admin-gold); }
+.admin-panel .btn-primary:hover,
+.admin-app-dialog .btn-primary:hover { background: var(--admin-gold-dark); border-color: var(--admin-gold-dark); }
+.admin-panel .btn-secondary,
+.admin-app-dialog .btn-secondary { background: #fff; color: var(--admin-ink); border-color: var(--admin-border); }
+.admin-panel .btn-secondary:hover,
+.admin-app-dialog .btn-secondary:hover { background: #f7f4ef; border-color: #cfc6b9; }
+.admin-panel .btn-success { background: var(--admin-success); color: #fff; border-color: var(--admin-success); }
+.admin-panel .btn-danger,
+.admin-app-dialog .btn-danger { background: var(--admin-danger); color: #fff; border-color: var(--admin-danger); }
+.admin-panel .btn-warning { background: #fff7e5; color: #78500b; border-color: #e5c579; }
+.admin-panel .btn-info { background: #eef8fb; color: var(--admin-info); border-color: #b9dce7; }
+.admin-panel .btn:disabled,
+.admin-app-dialog .btn:disabled { opacity: .55; cursor: not-allowed; transform: none; box-shadow: none; }
+.admin-panel .btn-sm { min-height: 34px; padding: 6px 10px; font-size: .78rem; }
