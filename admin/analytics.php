@@ -283,28 +283,8 @@ function getTimeFilterLabel($filter) {
                         </div>
                     </div>
 
-                    <!-- Charts Carousel Section -->
+                    <!-- Insight grid -->
                     <div class="charts-carousel">
-                        <div class="carousel-header">
-                            <div class="carousel-title">
-                                <h3><i class="fas fa-chart-line"></i> <span id="currentChartTitle">Reservation Status Distribution</span></h3>
-                            </div>
-                            <div class="carousel-nav">
-                                <div class="carousel-indicators">
-                                    <div class="indicator active" data-slide="0"></div>
-                                    <div class="indicator" data-slide="1"></div>
-                                    <div class="indicator" data-slide="2"></div>
-                                    <div class="indicator" data-slide="3"></div>
-                                </div>
-                                <button class="nav-btn" id="prevBtn" onclick="previousSlide()">
-                                    <i class="fas fa-chevron-left"></i>
-                                </button>
-                                <button class="nav-btn" id="nextBtn" onclick="nextSlide()">
-                                    <i class="fas fa-chevron-right"></i>
-                                </button>
-                            </div>
-                        </div>
-
                         <div class="carousel-content">
                             <!-- Slide 1: Status Distribution -->
                             <div class="chart-slide active" data-slide="0">
@@ -478,6 +458,6 @@ function getTimeFilterLabel($filter) {
             window.location.reload();
         }
     </script>
-    <script src="../assets/js/analytics.js"></script>
+    <script src="../assets/js/analytics.js?v=20260916"></script>
 </body>
 </html>

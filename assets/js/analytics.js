@@ -22,24 +22,13 @@ const chartColors = [
 ];
 
 // Chart.js default configuration
-Chart.defaults.font.family = 'Arial, sans-serif';
+Chart.defaults.font.family = 'Inter, "Noto Sans Sinhala", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
 Chart.defaults.font.size = 12;
 Chart.defaults.color = '#666';
-
-// Carousel state
-let currentSlide = 0;
-const totalSlides = 4;
-const slideData = [
-    { title: 'Reservation Status Distribution', icon: 'fas fa-chart-pie' },
-    { title: 'Monthly Trends', icon: 'fas fa-chart-line' },
-    { title: 'Dāna Type Distribution', icon: 'fas fa-chart-donut' },
-    { title: 'Revenue by Status', icon: 'fas fa-chart-bar' }
-];
 
 // Initialize charts when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
     initializeCharts();
-    initializeCarousel();
 });
 
 function initializeCharts() {
@@ -354,102 +343,6 @@ function formatCurrency(amount) {
         style: 'currency',
         currency: 'LKR'
     }).format(amount);
-}
-
-// Carousel Functions
-function initializeCarousel() {
-    updateCarouselState();
-
-    // Add click handlers for indicators
-    document.querySelectorAll('.indicator').forEach((indicator, index) => {
-        indicator.addEventListener('click', () => goToSlide(index));
-    });
-
-    // Add keyboard navigation
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'ArrowLeft') {
-            previousSlide();
-        } else if (e.key === 'ArrowRight') {
-            nextSlide();
-        }
-    });
-
-    // Auto-advance slides (optional)
-    // setInterval(nextSlide, 10000); // Uncomment for auto-advance every 10 seconds
-}
-
-function goToSlide(slideIndex) {
-    if (slideIndex < 0 || slideIndex >= totalSlides) return;
-
-    const slides = document.querySelectorAll('.chart-slide');
-    const indicators = document.querySelectorAll('.indicator');
-
-    // Remove active classes
-    slides[currentSlide].classList.remove('active');
-    slides[currentSlide].classList.add('prev');
-    indicators[currentSlide].classList.remove('active');
-
-    // Update current slide
-    currentSlide = slideIndex;
-
-    // Add active classes
-    slides[currentSlide].classList.remove('prev');
-    slides[currentSlide].classList.add('active');
-    indicators[currentSlide].classList.add('active');
-
-    // Update title and icon
-    updateCarouselState();
-
-    // Trigger chart resize for the active slide
-    setTimeout(() => {
-        const activeSlide = slides[currentSlide];
-        const canvas = activeSlide.querySelector('canvas');
-        if (canvas && window.Chart) {
-            const chartInstance = Chart.getChart(canvas);
-            if (chartInstance) {
-                chartInstance.resize();
-            }
-        }
-    }, 100);
-
-    // Clean up prev classes after animation
-    setTimeout(() => {
-        slides.forEach(slide => slide.classList.remove('prev'));
-    }, 500);
-}
-
-function nextSlide() {
-    const nextIndex = (currentSlide + 1) % totalSlides;
-    goToSlide(nextIndex);
-}
-
-function previousSlide() {
-    const prevIndex = (currentSlide - 1 + totalSlides) % totalSlides;
-    goToSlide(prevIndex);
-}
-
-function updateCarouselState() {
-    // Update title and icon
-    const titleElement = document.getElementById('currentChartTitle');
-    const iconElement = titleElement.parentElement.querySelector('i');
-
-    if (titleElement && iconElement) {
-        titleElement.textContent = slideData[currentSlide].title;
-        iconElement.className = slideData[currentSlide].icon;
-    }
-
-    // Update navigation buttons
-    const prevBtn = document.getElementById('prevBtn');
-    const nextBtn = document.getElementById('nextBtn');
-
-    if (prevBtn && nextBtn) {
-        prevBtn.disabled = false;
-        nextBtn.disabled = false;
-
-        // Optional: Disable buttons at start/end
-        // prevBtn.disabled = currentSlide === 0;
-        // nextBtn.disabled = currentSlide === totalSlides - 1;
-    }
 }
 
 function formatNumber(number) {
