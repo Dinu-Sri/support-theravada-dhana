@@ -16,8 +16,8 @@ Statuses: `TODO` → `IN PROGRESS` → `FIXED` → `VERIFIED`; use `BLOCKED` onl
 
 - Audit baseline: `293df13`
 - Current phase: Phase 4 — shared admin design system and screen redesign
-- Next item: `ADM-055` separate routine settings from destructive maintenance
-- Progress: 60 fixed / 69 total; 2 runtime-verified
+- Next item: `ADM-061` consolidate conflicting legacy admin CSS
+- Progress: 64 fixed / 69 total; 2 runtime-verified
 - Verification constraints: the local MySQL service still refuses connections; authenticated browser and database integration checks remain pending.
 
 ## Phase 1 — Security and data integrity
@@ -85,7 +85,7 @@ Statuses: `TODO` → `IN PROGRESS` → `FIXED` → `VERIFIED`; use `BLOCKED` onl
 - [ ] `ADM-052` **P2 UX** — Native alert/prompt/confirm dialogs interrupt workflows. Status: `FIXED` (browser workflow review pending); admin confirmations, prompts, validation messages, and destructive actions now use a consistent application dialog/toast layer. Evidence: consistent app dialogs/toasts. Commit: `dd77806`
 - [ ] `ADM-053` **P2 Accessibility** — Modals lack focus management, roles, labels, and Escape behavior. Status: `FIXED` (keyboard/screen-reader review pending); shared, user, report, pricing, booking-details, edit, and conflict dialogs have semantic roles/labels, programmatic focus, Escape/backdrop close, and focus return where applicable. Evidence: keyboard/screen-reader checklist. Commit: `dd77806`, `151931a`
 - [ ] `ADM-054` **P2 UX** — Nested dialog scrolling creates confusing double-scroll layouts. Status: `FIXED` (short-viewport browser review pending); page scrolling locks and modal shells keep headers/actions fixed while only their content body scrolls. Evidence: short and tall viewport review. Commit: `dd77806`
-- [ ] `ADM-055` **P2 UX** — Settings overloads routine and high-risk actions on one screen. Status: `TODO`. Evidence: reorganized information architecture. Commit: —
+- [ ] `ADM-055` **P2 UX** — Settings overloads routine and high-risk actions on one screen. Status: `FIXED` (deployed tab review pending); permanent data deletion is isolated in an explicitly styled Danger Zone tab instead of being mixed into routine backup management. Evidence: reorganized information architecture. Commit: `b79b2e2`
 - [ ] `ADM-056` **P2 Correctness** — Settings contains invalid nested style markup. Status: `FIXED` (render validation pending). Evidence: HTML validation/source inspection. Commit: `cde0085`
 - [ ] `ADM-057` **P2 UX** — The 72-column pricing grid is not practically usable. Status: `FIXED` (responsive browser review pending); pricing is constrained to focused 6- or 12-month windows with period paging, while the full configured range remains summarized separately. Evidence: focused period/type workflow and responsive review. Commit: `dd77806`
 - [ ] `ADM-058` **P2 Edge case** — Empty pricing data displays January 1970. Status: `FIXED` (empty-database render pending). Evidence: empty-state test. Commit: `cde0085`
@@ -98,9 +98,9 @@ Statuses: `TODO` → `IN PROGRESS` → `FIXED` → `VERIFIED`; use `BLOCKED` onl
 
 ## Phase 5 — Performance, structure, and resilience
 
-- [ ] `ADM-065` **P2 Performance** — Dashboard eagerly loads hidden features and data. Status: `TODO`. Evidence: request/query comparison and lazy loading. Commit: —
-- [ ] `ADM-066` **P2 UX/Logic** — Reservation search only searches the current page. Status: `TODO`. Evidence: server-side full-result search test. Commit: —
-- [ ] `ADM-067` **P2 Performance** — Pricing/permission views contain N+1 query patterns. Status: `TODO`. Evidence: query-count comparison. Commit: —
+- [ ] `ADM-065` **P2 Performance** — Dashboard eagerly loads hidden features and data. Status: `FIXED` (database/browser timing comparison pending); the normal reservation-list request no longer runs or serializes the three calendar datasets, which are fetched only after Calendar View is opened. Evidence: request/query comparison and lazy loading. Commit: `a7d500a`
+- [ ] `ADM-066` **P2 UX/Logic** — Reservation search only searches the current page. Status: `FIXED` (database/browser result-set verification pending); the broken client-only filter was replaced with a bounded prepared server search across IDs, donor/recipient/agent identity, email, and contact fields while preserving status and pagination. Evidence: server-side full-result search test. Commit: `21918cd`
+- [ ] `ADM-067` **P2 Performance** — Pricing/permission views contain N+1 query patterns. Status: `FIXED` (database query-count verification pending); the pricing grid loads its visible window in one query and role descriptions use one permission-map query instead of per-cell/per-role queries. Evidence: query-count comparison. Commit: `0a209a2`
 - [ ] `ADM-068` **P2 Maintainability** — Giant page files mix querying, mutation, markup, CSS, and JS. Status: `TODO`. Evidence: bounded includes/services with regression tests. Commit: —
 - [ ] `ADM-069` **P2 Resilience** — Optional database feature errors can crash the whole dashboard. Status: `TODO`. Evidence: graceful degradation with missing optional tables/data. Commit: —
 
@@ -112,6 +112,11 @@ These findings were reported after the 69-item admin baseline and are tracked se
 - [ ] `REG-002` **Frontend UX** — Step navigation falls below large phantom whitespace in normal and agent flows. Status: `FIXED` (desktop/mobile browser review pending); only the active step occupies layout and content/navigation spacing is compact. Commit: `fe12e39`
 - [ ] `REG-003` **Frontend reliability** — Annual-price selection reports a generic failure. Status: `FIXED` (deployed interaction retest pending); all three production type endpoints returned valid annual pricing, and the client now builds a canonical URL, requests JSON with same-origin credentials, safely parses the body, and displays the server's actionable error. Commit: `fe12e39`
 - [ ] `REG-004` **Frontend UX** — Additional Information wastes vertical space and pushes navigation off-screen. Status: `FIXED` (short-viewport browser review pending); progress, headings, option cards, textarea, and navigation use a compact one-screen flow. Commit: `fe12e39`
+- [ ] `REG-005` **Admin UI** — Analytics retained a narrow, carousel-heavy legacy layout and could serve stale admin-shell CSS. Status: `FIXED` (deployed responsive review pending); cache-versioned design assets, compact filters/KPIs, and a responsive two-column insight grid replace the carousel presentation. Commit: `35e86d5`
+- [ ] `REG-006` **Admin UI** — Popup close controls use inconsistent shapes, sizes, and interaction states. Status: `FIXED` (deployed popup audit pending); pricing, report, user, booking, conflict, and month-picker dialogs share one circular icon control with consistent hover/focus behavior. Commit: `35e86d5`
+- [ ] `REG-007` **Admin UI** — The approvals screen does not follow the shared admin shell or component language. Status: `FIXED` (pending/non-empty deployed review pending); the queue now uses the shared page heading, spacing, cards, button hierarchy, and reusable empty state. Commit: `35e86d5`
+- [ ] `REG-008` **Frontend copy** — Agent recipient guidance says “monastery” instead of “temple.” Status: `FIXED`; the requested sentence now uses “temple.” Commit: `35e86d5`
+- [ ] `REG-009` **Frontend UX** — Review & Submit stacks large cards and hides totals/actions below the fold. Status: `FIXED` (normal/agent deployed viewport review pending); normal reservations use a compact three-column summary and agent reservations use a balanced 2×2 grid, with amount and submit controls visible in the summary. Commit: `35e86d5`
 
 ## Verification log
 
@@ -130,3 +135,5 @@ Add dated entries here with command/browser evidence. Never include credentials,
 - 2026-09-15 — Introduced shared admin design tokens and one responsive, permission-aware header across reservations, analytics, pricing, pricing history, settings, approvals, and roles. Corrected the approvals badge query, removed duplicate analytics navigation, stopped loading the partial pro-UI override, and converted dashboard summary navigation into compact semantic links. PHP lint and diff checks passed; browser/database review remains pending.
 - 2026-09-15 — Reproduced the live booking initialization defect: Step 3 was exposed while Step 1 loaded. Removed the delay and inactive-step layout leak, compacted booking navigation and review spacing, verified all three production annual-price endpoints, and hardened client error handling. Simplified reservation status actions and People & Access, removed duplicate dashboard analytics, normalized typography, and restyled the dedicated analytics screen. PHP/JavaScript syntax and diff checks passed; the updated build still needs deployed visual testing.
 - 2026-09-15 — Replaced native admin dialogs with one reusable confirmation/prompt/toast layer, removed duplicate status-submit listeners, added semantic/focus/Escape behavior to the major admin dialogs, constrained scrolling to modal bodies, and limited pricing views to usable 6/12-month windows. PHP and JavaScript syntax checks plus `git diff --check` passed; deployed keyboard and responsive review remains pending.
+- 2026-09-16 — Reengineered Analytics into a responsive insight grid, rebuilt Approvals on the shared admin shell, standardized modal close controls, corrected agent guidance terminology, and compacted normal/agent review screens so details and submission actions fit a desktop viewport. PHP/JavaScript syntax and diff checks passed; deployed visual review remains pending.
+- 2026-09-16 — Isolated destructive maintenance from routine Settings, reduced the pricing grid and role-permission views from per-cell/per-role queries to batched lookups, removed three eager calendar datasets from normal dashboard loads, and replaced the broken current-page search with prepared full-result search and pagination. PHP/JavaScript syntax and diff checks passed; database query-count and browser result verification remain pending.
