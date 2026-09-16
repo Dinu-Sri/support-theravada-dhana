@@ -57,7 +57,7 @@ try {
     <title>Pending Approvals - Dāna Reservation System</title>
     <?php include '../includes/favicon.php'; ?>
     <link rel="stylesheet" href="../assets/css/style.css">
-    <link rel="stylesheet" href="../assets/css/admin.css">
+    <link rel="stylesheet" href="../assets/css/admin.css?v=20260916">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         .approval-header-banner {
@@ -148,12 +148,12 @@ try {
         }
     </style>
 </head>
-<body>
+<body class="admin-approvals-page">
     <div class="admin-panel">
         <?php $adminPageTitle = 'Approvals'; $adminPageIcon = 'fa-clipboard-check'; include 'includes/header.php'; ?>
 
-        <div class="admin-content">
-            <div class="main-content">
+        <div class="admin-layout">
+            <main class="admin-main-content">
                 <?php if (isset($successMessage)): ?>
                     <div class="alert alert-success">
                         <i class="fas fa-check-circle"></i> <?php echo htmlspecialchars($successMessage); ?>
@@ -166,16 +166,20 @@ try {
                     </div>
                 <?php endif; ?>
 
-                <div class="section-header">
-                    <h2><i class="fas fa-hourglass-half"></i> Actions Awaiting Approval</h2>
-                    <p>Review and approve or reject admin actions • <?php echo count($pendingActions); ?> pending</p>
+                <div class="admin-page-heading">
+                    <div>
+                        <span class="admin-page-eyebrow">Governance</span>
+                        <h1><i class="fas fa-clipboard-check"></i> Approval Queue</h1>
+                        <p>Review sensitive changes requested by administrators.</p>
+                    </div>
+                    <span class="approval-count-summary"><?php echo count($pendingActions); ?> pending</span>
                 </div>
 
                 <?php if (empty($pendingActions)): ?>
-                    <div class="empty-state" style="padding: 60px 30px; text-align: center;">
-                        <i class="fas fa-check-circle" style="font-size: 4rem; color: #28a745; margin-bottom: 20px; opacity: 0.7;"></i>
-                        <h3 style="color: #28a745; margin-bottom: 10px;">All Clear!</h3>
-                        <p style="color: #666; margin: 0;">No pending approvals at this time. All admin actions have been reviewed.</p>
+                    <div class="admin-empty-state">
+                        <span class="admin-empty-state-icon"><i class="fas fa-check"></i></span>
+                        <h2>Approval queue is clear</h2>
+                        <p>There are no sensitive administrator actions waiting for review.</p>
                     </div>
                 <?php else: ?>
                     <div class="approvals-list">
@@ -197,7 +201,7 @@ try {
                                             <input type="hidden" name="action_id" value="<?php echo $action['id']; ?>">
                                             <input type="hidden" name="decision" value="approve">
                                             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['admin_csrf_token']); ?>">
-                                            <button type="submit" class="btn-approve">
+                                            <button type="submit" class="btn btn-success btn-approve">
                                                 <i class="fas fa-check"></i> Approve
                                             </button>
                                         </form>
@@ -206,7 +210,7 @@ try {
                                             <input type="hidden" name="action_id" value="<?php echo $action['id']; ?>">
                                             <input type="hidden" name="decision" value="reject">
                                             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['admin_csrf_token']); ?>">
-                                            <button type="submit" class="btn-reject">
+                                            <button type="submit" class="btn btn-danger btn-reject">
                                                 <i class="fas fa-times"></i> Reject
                                             </button>
                                         </form>
@@ -262,7 +266,7 @@ try {
                         <?php endforeach; ?>
                     </div>
                 <?php endif; ?>
-            </div>
+            </main>
         </div>
     </div>
 </body>

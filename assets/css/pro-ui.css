@@ -409,3 +409,35 @@ input:not([type="checkbox"]):not([type="radio"]):focus, select:focus, textarea:f
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+
+/* One-screen review: dense summary cards with actions always visible on desktop. */
+.booking-container .review-step .step-header { margin-bottom: 10px !important; }
+.booking-container .review-step .booking-review {
+    width: 100%;
+    max-width: 1080px;
+    display: grid;
+    grid-template-columns: minmax(0, .9fr) minmax(0, 1.35fr) minmax(230px, .75fr);
+    gap: 10px;
+    padding: 12px !important;
+    margin: 0 auto !important;
+    overflow: visible;
+}
+.booking-container .review-step .booking-review.agent-review { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.booking-container .review-step .review-section { margin: 0 !important; padding: 11px 13px !important; border-left-width: 3px; box-shadow: none; }
+.booking-container .review-step .review-section:hover { transform: none; }
+.booking-container .review-step .review-section h4 { margin: 0 0 8px !important; padding: 0 0 7px !important; font-size: .82rem; letter-spacing: .04em; }
+.booking-container .review-step .review-section h4::before { height: 15px; margin-right: 8px; }
+.booking-container .review-step .review-item { grid-template-columns: minmax(90px, .85fr) minmax(0, 1.4fr); gap: 8px !important; min-height: 34px; margin: 0 0 5px !important; padding: 5px 8px !important; }
+.booking-container .review-step .review-item .label { min-width: 0 !important; font-size: .66rem !important; line-height: 1.15; }
+.booking-container .review-step .review-item .value { min-height: 0; padding: 3px 6px; border: 0; background: transparent; font-size: .78rem !important; line-height: 1.2; overflow-wrap: anywhere; }
+.booking-container .review-step .total-amount-section { display: flex; flex-direction: column; }
+.booking-container .review-step .total-amount { margin: 0 0 8px; padding: 12px; font-size: 1.22rem; border-radius: 9px; }
+.booking-container .review-step .tentative-price-warning { margin: 0 0 8px; padding: 8px; }
+.booking-container .review-step .review-navigation { margin-top: auto !important; padding-top: 9px !important; gap: 8px !important; }
+.booking-container .review-step .review-navigation .btn { min-width: 0 !important; min-height: 40px; padding: 8px 12px !important; font-size: .76rem !important; letter-spacing: 0; text-transform: none; border-radius: 8px; }
+.booking-container .review-step .agent-review .beneficiary-review-section,
+.booking-container .review-step .agent-review .donor-info-section { min-height: 0; }
+@media (max-width: 820px) {
+    .booking-container .review-step .booking-review,
+    .booking-container .review-step .booking-review.agent-review { grid-template-columns: 1fr; }
+}

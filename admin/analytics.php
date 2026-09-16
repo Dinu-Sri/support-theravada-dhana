@@ -180,8 +180,8 @@ function getTimeFilterLabel($filter) {
     <title>Analytics - Dāna Reservation System</title>
     <?php include '../includes/favicon.php'; ?>
     <link rel="stylesheet" href="../assets/css/style.css">
-    <link rel="stylesheet" href="../assets/css/admin.css">
-    <link rel="stylesheet" href="../assets/css/analytics.css">
+    <link rel="stylesheet" href="../assets/css/admin.css?v=20260916">
+    <link rel="stylesheet" href="../assets/css/analytics.css?v=20260916">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/date-fns@2.29.3/index.min.js"></script>
@@ -227,7 +227,7 @@ function getTimeFilterLabel($filter) {
                         </select>
                     </div>
                     
-                    <button class="refresh-btn" onclick="refreshData()">
+                    <button type="button" class="btn btn-secondary refresh-btn" onclick="refreshData()">
                         <i class="fas fa-sync-alt"></i> Refresh
                     </button>
                 </div>

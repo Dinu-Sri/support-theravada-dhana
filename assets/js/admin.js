@@ -733,7 +733,7 @@ function showMonthYearPicker() {
         <div class="month-year-picker-content">
             <div class="picker-header">
                 <h4>Select Month & Year</h4>
-                <button class="close-picker" onclick="closeMonthYearPicker()">
+                <button type="button" class="close-picker" onclick="closeMonthYearPicker()" aria-label="Close month and year picker">
                     <i class="fas fa-times"></i>
                 </button>
             </div>

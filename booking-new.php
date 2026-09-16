@@ -983,7 +983,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
                         <p>Enter the details of the person for whom you are arranging this dāna reservation.</p>
                     </div>
                     <div class="beneficiary-form-card">
-                        <p><i class="fas fa-shield-alt"></i> You remain the booking agent and payment contact. These details identify the reservation recipient for the monastery.</p>
+                        <p><i class="fas fa-shield-alt"></i> You remain the booking agent and payment contact. These details identify the reservation recipient for the temple.</p>
                         <div class="beneficiary-fields">
                             <div class="form-group">
                                 <label for="booked_for_first_name">Recipient First Name</label>
@@ -1079,7 +1079,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
                         <p>Please review your reservation details before submitting</p>
                     </div>
 
-                    <div class="booking-review">
+                    <div class="booking-review<?php echo $bookingForOther ? ' agent-review' : ''; ?>">
                         <?php if ($bookingForOther): ?>
                         <div class="review-section beneficiary-review-section">
                             <h4><i class="fas fa-user-friends"></i> Reservation Recipient</h4>

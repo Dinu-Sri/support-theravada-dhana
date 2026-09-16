@@ -4167,3 +4167,53 @@ textarea {
 .admin-panel .btn:disabled,
 .admin-app-dialog .btn:disabled { opacity: .55; cursor: not-allowed; transform: none; box-shadow: none; }
 .admin-panel .btn-sm { min-height: 34px; padding: 6px 10px; font-size: .78rem; }
+
+/* Shared modal close control. */
+.close,
+.close-modal,
+.close-picker {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    padding: 0;
+    display: inline-grid;
+    place-items: center;
+    border: 1px solid rgba(255,255,255,.34);
+    border-radius: 50%;
+    background: rgba(255,255,255,.14);
+    color: #fff;
+    font-size: .95rem;
+    line-height: 1;
+    cursor: pointer;
+}
+.close:hover,
+.close-modal:hover,
+.close-picker:hover { background: #fff; color: var(--admin-gold-dark); opacity: 1; }
+.close:focus-visible,
+.close-modal:focus-visible,
+.close-picker:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(255,255,255,.4); }
+
+/* Approvals uses the same shell, cards, spacing and empty-state language as other admin tools. */
+.admin-approvals-page { background: var(--admin-canvas); color: var(--admin-ink); }
+.admin-approvals-page .admin-layout { width: 100%; max-width: 1400px; padding: 18px 22px 32px; }
+.admin-approvals-page .admin-main-content { width: 100%; padding: 0; overflow: visible; background: transparent; }
+.admin-page-heading { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 14px; padding: 18px 20px; border: 1px solid var(--admin-border); border-radius: var(--admin-radius); background: #fff; box-shadow: var(--admin-shadow); }
+.admin-page-heading h1 { display: flex; align-items: center; gap: 9px; margin: 2px 0 4px; color: var(--admin-ink); font-size: 1.28rem; }
+.admin-page-heading h1 i { color: var(--admin-gold); }
+.admin-page-heading p { margin: 0; color: var(--admin-muted); font-size: .86rem; }
+.admin-page-eyebrow { color: var(--admin-gold-dark); font-size: .7rem; font-weight: 750; letter-spacing: .09em; text-transform: uppercase; }
+.approval-count-summary { padding: 6px 10px; border-radius: 999px; background: var(--admin-gold-soft); color: var(--admin-gold-dark); font-size: .76rem; font-weight: 700; white-space: nowrap; }
+.admin-approvals-page .approvals-list { padding: 0; gap: 10px; }
+.admin-approvals-page .approval-card { padding: 16px 18px; border: 1px solid var(--admin-border); border-left: 3px solid var(--admin-gold); border-radius: var(--admin-radius); box-shadow: none; }
+.admin-approvals-page .approval-card:hover { transform: none; box-shadow: var(--admin-shadow); }
+.admin-approvals-page .approval-header { margin-bottom: 10px; }
+.admin-approvals-page .approval-body { margin: 0; }
+.admin-approvals-page .approval-decision-form { margin: 0; }
+.admin-empty-state { min-height: 300px; display: grid; place-items: center; align-content: center; gap: 8px; padding: 42px 24px; border: 1px dashed #d9d1c5; border-radius: var(--admin-radius); background: #fff; text-align: center; }
+.admin-empty-state-icon { width: 54px; height: 54px; display: grid; place-items: center; border-radius: 50%; background: #eaf7f0; color: var(--admin-success); font-size: 1.3rem; }
+.admin-empty-state h2 { margin: 4px 0 0; color: var(--admin-ink); font-size: 1.05rem; }
+.admin-empty-state p { margin: 0; color: var(--admin-muted); font-size: .86rem; }
+@media (max-width: 700px) {
+    .admin-approvals-page .admin-layout { padding: 12px; }
+    .admin-page-heading { align-items: flex-start; flex-direction: column; }
+}
