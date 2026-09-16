@@ -600,6 +600,9 @@ if ($admin['role'] === 'administrator') {
                     <button class="tab-btn" onclick="switchTab('backup', this)">
                         <i class="fas fa-database"></i> Backups
                     </button>
+                    <button class="tab-btn tab-btn-danger" onclick="switchTab('danger', this)">
+                        <i class="fas fa-triangle-exclamation"></i> Danger Zone
+                    </button>
                     <button class="tab-btn" onclick="switchTab('permissions', this)">
                         <i class="fas fa-shield-alt"></i> Permissions
                     </button>
@@ -996,8 +999,13 @@ if ($admin['role'] === 'administrator') {
                             </div>
                         </div>
 
-                        <!-- Clear All Bookings & Receipts -->
-                        <div class="settings-section">
+                    </div>
+                </div>
+
+                <!-- Destructive maintenance is intentionally isolated from routine backups. -->
+                <div class="tab-content" id="danger-tab">
+                    <div class="settings-container">
+                        <div class="settings-section danger-settings-section">
                             <h3><i class="fas fa-trash-alt"></i> Clear All Bookings & Receipts</h3>
 
                             <?php
@@ -1072,13 +1080,12 @@ if ($admin['role'] === 'administrator') {
                                     <small style="color: #d32f2f;">You must type exactly: <strong>DELETE ALL BOOKINGS</strong> (case-sensitive)</small>
                                 </div>
 
-                                <button type="submit" name="clear_all_bookings" class="btn btn-danger" style="margin-top: 15px; background: linear-gradient(135deg, #d32f2f 0%, #c62828 100%);">
+                                <button type="submit" name="clear_all_bookings" class="btn btn-danger" style="margin-top: 15px;">
                                     <i class="fas fa-trash-alt"></i> Clear All Bookings & Receipts
                                 </button>
                             </form>
                         </div>
                     </div>
-                </div>
                 </div>
 
                 <!-- Permissions Tab -->
@@ -1269,6 +1276,10 @@ if ($admin['role'] === 'administrator') {
         .tab-content.active {
             display: block;
         }
+
+        .tab-btn-danger { color: #a61b12; }
+        .tab-btn-danger.active { background: #fff0ee; color: #8f1710; border-color: #efb4ae; }
+        .danger-settings-section { border-top: 3px solid #b42318; }
 
     </style>
 
