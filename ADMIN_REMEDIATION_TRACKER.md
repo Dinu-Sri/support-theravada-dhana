@@ -17,7 +17,7 @@ Statuses: `TODO` → `IN PROGRESS` → `FIXED` → `VERIFIED`; use `BLOCKED` onl
 - Audit baseline: `293df13`
 - Current phase: Phase 4 — shared admin design system and screen redesign
 - Next item: `ADM-061` consolidate conflicting legacy admin CSS
-- Progress: 64 fixed / 69 total; 2 runtime-verified
+- Progress: 65 fixed / 69 total; 2 runtime-verified
 - Verification constraints: the local MySQL service still refuses connections; authenticated browser and database integration checks remain pending.
 
 ## Phase 1 — Security and data integrity
@@ -102,7 +102,7 @@ Statuses: `TODO` → `IN PROGRESS` → `FIXED` → `VERIFIED`; use `BLOCKED` onl
 - [ ] `ADM-066` **P2 UX/Logic** — Reservation search only searches the current page. Status: `FIXED` (database/browser result-set verification pending); the broken client-only filter was replaced with a bounded prepared server search across IDs, donor/recipient/agent identity, email, and contact fields while preserving status and pagination. Evidence: server-side full-result search test. Commit: `21918cd`
 - [ ] `ADM-067` **P2 Performance** — Pricing/permission views contain N+1 query patterns. Status: `FIXED` (database query-count verification pending); the pricing grid loads its visible window in one query and role descriptions use one permission-map query instead of per-cell/per-role queries. Evidence: query-count comparison. Commit: `0a209a2`
 - [ ] `ADM-068` **P2 Maintainability** — Giant page files mix querying, mutation, markup, CSS, and JS. Status: `TODO`. Evidence: bounded includes/services with regression tests. Commit: —
-- [ ] `ADM-069` **P2 Resilience** — Optional database feature errors can crash the whole dashboard. Status: `TODO`. Evidence: graceful degradation with missing optional tables/data. Commit: —
+- [ ] `ADM-069` **P2 Resilience** — Optional database feature errors can crash the whole dashboard. Status: `FIXED` (missing-table deployment test pending); approval-count failures degrade to no badge, and annual/blocking calendar tables are no longer queried by the main dashboard—the isolated calendar endpoint returns a safe error state if unavailable. Evidence: graceful degradation with missing optional tables/data. Commit: `7cc7fac`, `a7d500a`
 
 ## Supplemental user-test regressions
 
