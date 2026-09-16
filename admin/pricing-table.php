@@ -280,12 +280,27 @@ for ($i = 0; $i < $displayMonths; $i++) {
     ];
     
     foreach ($dhanaTypes as $type) {
-        $pricing = $db->fetchOne(
-            "SELECT * FROM monthly_pricing WHERE dhana_type_id = ? AND year = ? AND month = ?",
-            [$type['id'], $year, $month]
-        );
-        
-        $pricingData[$monthKey]['prices'][$type['id']] = $pricing ?: null;
+        $pricingData[$monthKey]['prices'][$type['id']] = null;
+    }
+}
+
+// Load the visible pricing window in one query instead of querying every cell.
+if ($pricingData) {
+    $firstMonth = reset($pricingData);
+    $lastMonth = end($pricingData);
+    $firstKey = ((int)$firstMonth['year'] * 100) + (int)$firstMonth['month'];
+    $lastKey = ((int)$lastMonth['year'] * 100) + (int)$lastMonth['month'];
+    $visiblePrices = $db->fetchAll(
+        "SELECT * FROM monthly_pricing
+         WHERE ((year * 100) + month) BETWEEN ? AND ?",
+        [$firstKey, $lastKey]
+    );
+    foreach ($visiblePrices as $pricing) {
+        $monthKey = ((int)$pricing['year']) . '-' . ((int)$pricing['month']);
+        $typeId = (int)$pricing['dhana_type_id'];
+        if (isset($pricingData[$monthKey]) && array_key_exists($typeId, $pricingData[$monthKey]['prices'])) {
+            $pricingData[$monthKey]['prices'][$typeId] = $pricing;
+        }
     }
 }
 

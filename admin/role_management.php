@@ -209,6 +209,16 @@ $roleHierarchy = $db->fetchAll("
     ORDER BY hierarchy_level DESC
 ");
 
+$permissionsByRole = [];
+$allRolePermissions = $db->fetchAll(
+    "SELECT role_name, permission_name, permission_description
+     FROM role_permissions
+     ORDER BY role_name, permission_name"
+);
+foreach ($allRolePermissions as $permission) {
+    $permissionsByRole[$permission['role_name']][] = $permission;
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -350,12 +360,7 @@ $roleHierarchy = $db->fetchAll("
             <p><strong>Username:</strong> <?php echo htmlspecialchars($currentAdmin['username']); ?></p>
             <p><strong>Email:</strong> <?php echo htmlspecialchars($currentAdmin['email']); ?></p>
             
-            <?php
-            $userPerms = $db->fetchAll(
-                "SELECT permission_name, permission_description FROM role_permissions WHERE role_name = ?",
-                [$currentAdmin['role']]
-            );
-            ?>
+            <?php $userPerms = $permissionsByRole[$currentAdmin['role']] ?? []; ?>
             <div class="permission-list">
                 <strong>Your Permissions:</strong>
                 <?php foreach ($userPerms as $perm): ?>
@@ -544,12 +549,7 @@ $roleHierarchy = $db->fetchAll("
                         <h4><?php echo $role['role_display_name']; ?> (Level <?php echo $role['hierarchy_level']; ?>)</h4>
                         <p><?php echo $role['role_description']; ?></p>
                         
-                        <?php
-                        $rolePerms = $db->fetchAll(
-                            "SELECT permission_name FROM role_permissions WHERE role_name = ?",
-                            [$role['role_name']]
-                        );
-                        ?>
+                        <?php $rolePerms = $permissionsByRole[$role['role_name']] ?? []; ?>
                         <div class="permission-list">
                             <strong>Permissions:</strong><br>
                             <?php foreach ($rolePerms as $perm): ?>
