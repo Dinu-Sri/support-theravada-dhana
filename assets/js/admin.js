@@ -205,111 +205,29 @@ function addSearchFunctionality() {
     // Create search input
     const searchContainer = document.createElement('div');
     searchContainer.className = 'search-container';
+    const currentUrl = new URL(window.location.href);
+    const currentQuery = currentUrl.searchParams.get('q') || '';
     searchContainer.innerHTML = `
-        <div class="search-box">
+        <form class="search-box" method="get" role="search">
             <i class="fas fa-search"></i>
-            <input type="text" id="reservationSearch" placeholder="Search dāna reservations by donor name, email, or reservation ID...">
-            <button type="button" id="clearSearch" style="display: none;">
+            <input type="search" id="bookingSearch" name="q" value="${escapeAdminHtml(currentQuery)}" placeholder="Search all reservations by name, email, contact, or ID...">
+            ${currentUrl.searchParams.get('status') ? `<input type="hidden" name="status" value="${escapeAdminHtml(currentUrl.searchParams.get('status'))}">` : ''}
+            <button type="button" id="clearSearch" aria-label="Clear reservation search" ${currentQuery ? '' : 'hidden'}>
                 <i class="fas fa-times"></i>
             </button>
-        </div>
+        </form>
     `;
-    
-    // Add CSS for search
-    const style = document.createElement('style');
-    style.textContent = `
-        .search-container {
-            margin-bottom: 20px;
-        }
-        .search-box {
-            position: relative;
-            max-width: 400px;
-        }
-        .search-box i {
-            position: absolute;
-            left: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #666;
-        }
-        .search-box input {
-            width: 100%;
-            padding: 10px 15px 10px 35px;
-            border: 2px solid #e1e5e9;
-            border-radius: 8px;
-            font-size: 0.9rem;
-        }
-        .search-box input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-        .search-box button {
-            position: absolute;
-            right: 10px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: none;
-            border: none;
-            color: #666;
-            cursor: pointer;
-            padding: 5px;
-        }
-    `;
-    document.head.appendChild(style);
     
     // Insert search box
     tableContainer.parentNode.insertBefore(searchContainer, tableContainer);
     
-    const searchInput = document.getElementById('bookingSearch');
     const clearButton = document.getElementById('clearSearch');
-    const tableRows = document.querySelectorAll('.bookings-table tbody tr');
-    
-    searchInput.addEventListener('input', function() {
-        const searchTerm = this.value.toLowerCase();
-        let visibleRows = 0;
-        
-        tableRows.forEach(row => {
-            const text = row.textContent.toLowerCase();
-            if (text.includes(searchTerm)) {
-                row.style.display = '';
-                visibleRows++;
-            } else {
-                row.style.display = 'none';
-            }
-        });
-        
-        // Show/hide clear button
-        clearButton.style.display = searchTerm ? 'block' : 'none';
-        
-        // Show no results message
-        showNoResultsMessage(visibleRows === 0 && searchTerm);
-    });
-    
     clearButton.addEventListener('click', function() {
-        searchInput.value = '';
-        searchInput.dispatchEvent(new Event('input'));
-        searchInput.focus();
+        const url = new URL(window.location.href);
+        url.searchParams.delete('q');
+        url.searchParams.delete('page');
+        window.location.href = url.toString();
     });
-}
-
-// Show no results message
-function showNoResultsMessage(show) {
-    let noResultsRow = document.querySelector('.no-results-row');
-    
-    if (show && !noResultsRow) {
-        const table = document.querySelector('.bookings-table tbody');
-        noResultsRow = document.createElement('tr');
-        noResultsRow.className = 'no-results-row';
-        noResultsRow.innerHTML = `
-            <td colspan="8" style="text-align: center; padding: 40px; color: #666;">
-                <i class="fas fa-search" style="font-size: 2rem; margin-bottom: 10px; opacity: 0.5;"></i>
-                <p>No bookings found matching your search.</p>
-            </td>
-        `;
-        table.appendChild(noResultsRow);
-    } else if (!show && noResultsRow) {
-        noResultsRow.remove();
-    }
 }
 
 // Export functionality is now handled by HTML buttons

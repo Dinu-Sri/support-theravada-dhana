@@ -4213,6 +4213,14 @@ textarea {
 .admin-empty-state-icon { width: 54px; height: 54px; display: grid; place-items: center; border-radius: 50%; background: #eaf7f0; color: var(--admin-success); font-size: 1.3rem; }
 .admin-empty-state h2 { margin: 4px 0 0; color: var(--admin-ink); font-size: 1.05rem; }
 .admin-empty-state p { margin: 0; color: var(--admin-muted); font-size: .86rem; }
+.search-container { margin-bottom: 14px; }
+.search-container .search-box { position: relative; max-width: 480px; }
+.search-container .search-box > i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--admin-muted); pointer-events: none; }
+.search-container .search-box input[type="search"] { width: 100%; min-height: 42px; padding: 9px 42px 9px 36px; border: 1px solid var(--admin-border); border-radius: var(--admin-radius-sm); background: #fff; color: var(--admin-ink); font: inherit; font-size: .86rem; }
+.search-container .search-box input[type="search"]:focus { outline: none; border-color: var(--admin-gold); box-shadow: var(--admin-focus); }
+.search-container .search-box button { position: absolute; right: 7px; top: 50%; transform: translateY(-50%); width: 30px; height: 30px; border: 0; border-radius: 50%; background: transparent; color: var(--admin-muted); cursor: pointer; }
+.search-container .search-box button:hover { background: var(--admin-gold-soft); color: var(--admin-gold-dark); }
+.search-container .search-box button[hidden] { display: none; }
 @media (max-width: 700px) {
     .admin-approvals-page .admin-layout { padding: 12px; }
     .admin-page-heading { align-items: flex-start; flex-direction: column; }

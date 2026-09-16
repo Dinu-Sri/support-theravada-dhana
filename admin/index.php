@@ -285,23 +285,44 @@ $stats = [
 
 // Handle filtering
 $statusFilter = isset($_GET['status']) ? $_GET['status'] : 'all';
+$searchTerm = trim((string)($_GET['q'] ?? ''));
+if (strlen($searchTerm) > 100) {
+    $searchTerm = substr($searchTerm, 0, 100);
+}
 $validStatuses = ['all', 'pending', 'receipt_submitted', 'payment_pending', 'confirmed', 'completed', 'cancelled'];
 if (!in_array($statusFilter, $validStatuses)) {
     $statusFilter = 'all';
 }
 
 // Build WHERE clause for filtering
-$whereClause = '';
-$countWhereClause = '';
+$conditions = [];
 $queryParams = [];
-$countParams = [];
 
 if ($statusFilter !== 'all') {
-    $whereClause = "WHERE b.status = ?";
-    $countWhereClause = "WHERE status = ?";
+    $conditions[] = 'b.status = ?';
     $queryParams[] = $statusFilter;
-    $countParams[] = $statusFilter;
 }
+
+if ($searchTerm !== '') {
+    $searchLike = '%' . $searchTerm . '%';
+    $searchConditions = [
+        "CONCAT_WS(' ', u.first_name, u.last_name) LIKE ?",
+        'u.email LIKE ?',
+        "CONCAT_WS(' ', b.booked_for_first_name, b.booked_for_last_name) LIKE ?",
+        'b.booked_for_primary_contact LIKE ?',
+        "CONCAT_WS(' ', agent.first_name, agent.last_name) LIKE ?",
+        'agent.email LIKE ?'
+    ];
+    $searchParams = array_fill(0, count($searchConditions), $searchLike);
+    if (preg_match('/^#?0*(\d+)$/', $searchTerm, $idMatch)) {
+        array_unshift($searchConditions, 'b.id = ?');
+        array_unshift($searchParams, (int)$idMatch[1]);
+    }
+    $conditions[] = '(' . implode(' OR ', $searchConditions) . ')';
+    $queryParams = array_merge($queryParams, $searchParams);
+}
+
+$whereClause = $conditions ? 'WHERE ' . implode(' AND ', $conditions) : '';
 
 // Pagination settings
 $recordsPerPage = 10;
@@ -309,14 +330,25 @@ $currentPage = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
 $offset = ($currentPage - 1) * $recordsPerPage;
 
 // Get total count for pagination (with filter)
-$totalRecords = $db->fetchOne("SELECT COUNT(*) as count FROM bookings $countWhereClause", $countParams)['count'];
+$totalRecords = $db->fetchOne(
+    "SELECT COUNT(*) as count
+     FROM bookings b
+     JOIN users u ON b.user_id = u.id
+     LEFT JOIN users agent ON b.booked_by_agent_id = agent.id
+     $whereClause",
+    $queryParams
+)['count'];
 $totalPages = ceil($totalRecords / $recordsPerPage);
 
 // Helper function to build pagination URLs
 function buildPaginationUrl($page, $status = 'all') {
+    global $searchTerm;
     $params = ['page' => $page];
     if ($status !== 'all') {
         $params['status'] = $status;
+    }
+    if ($searchTerm !== '') {
+        $params['q'] = $searchTerm;
     }
     return '?' . http_build_query($params);
 }
@@ -494,6 +526,12 @@ $dhanaTypes = $db->fetchAll("SELECT * FROM dhana_types WHERE is_active = 1 ORDER
                                 </tr>
                             </thead>
                             <tbody>
+                                <?php if (empty($recentBookings)): ?>
+                                    <tr><td colspan="9" class="admin-empty-cell">
+                                        <i class="fas fa-search"></i>
+                                        <?php echo $searchTerm !== '' ? 'No reservations match this search.' : 'No reservations are available for this filter.'; ?>
+                                    </td></tr>
+                                <?php endif; ?>
                                 <?php foreach ($recentBookings as $booking): ?>
                                     <tr class="booking-row <?php echo ($booking['is_monk'] == 1) ? 'monk-booking' : ''; ?>" data-customer="<?php echo htmlspecialchars($booking['first_name'] . ' ' . $booking['last_name']); ?>" data-email="<?php echo htmlspecialchars($booking['email']); ?>" data-id="<?php echo $booking['id']; ?>">
                                         <td>#<?php echo str_pad($booking['id'], 6, '0', STR_PAD_LEFT); ?></td>
