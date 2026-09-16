@@ -343,85 +343,9 @@ $recentBookings = $db->fetchAll(
     $bookingQueryParams
 );
 
-// Calendar data for admin view
-$currentMonth = isset($_GET['month']) ? (int)$_GET['month'] : date('n');
-$currentYear = isset($_GET['year']) ? (int)$_GET['year'] : date('Y');
-
-// Get dhana types for calendar
+// Dāna types are also used by the edit and report dialogs. Calendar bookings
+// themselves are loaded only when the administrator opens Calendar View.
 $dhanaTypes = $db->fetchAll("SELECT * FROM dhana_types WHERE is_active = 1 ORDER BY price DESC");
-
-// Get all reservations for the current month (for admin calendar view)
-$calendarBookings = $db->fetchAll(
-    "SELECT b.*, dt.name as dhana_type_name, dt.time_slot, u.first_name, u.last_name, u.email,
-            pr.receipt_filename, pr.verified as receipt_verified,
-            ab.year_start, ab.year_end
-     FROM bookings b
-     JOIN dhana_types dt ON b.dhana_type_id = dt.id
-     JOIN users u ON b.user_id = u.id
-     LEFT JOIN payment_receipts pr ON pr.id = (
-         SELECT pr_latest.id FROM payment_receipts pr_latest
-         WHERE pr_latest.booking_id = b.id
-         ORDER BY pr_latest.upload_date DESC, pr_latest.id DESC
-         LIMIT 1
-     )
-     LEFT JOIN annual_bookings ab ON ab.booking_id = COALESCE(b.parent_booking_id, b.id)
-     WHERE MONTH(b.booking_date) = ? AND YEAR(b.booking_date) = ?
-     AND b.status NOT IN ('cancelled')
-     ORDER BY b.booking_date, dt.price DESC",
-    [$currentMonth, $currentYear]
-);
-
-// Get annual reservations that should appear in this month/year
-$annualCalendarBookings = $db->fetchAll(
-    "SELECT b.*, dt.name as dhana_type_name, dt.time_slot, u.first_name, u.last_name, u.email,
-            pr.receipt_filename, pr.verified as receipt_verified,
-            ab.year_start, ab.year_end
-     FROM bookings b
-     JOIN dhana_types dt ON b.dhana_type_id = dt.id
-     JOIN users u ON b.user_id = u.id
-     LEFT JOIN payment_receipts pr ON pr.id = (
-         SELECT pr_latest.id FROM payment_receipts pr_latest
-         WHERE pr_latest.booking_id = b.id
-         ORDER BY pr_latest.upload_date DESC, pr_latest.id DESC
-         LIMIT 1
-     )
-     JOIN annual_bookings ab ON ab.booking_id = COALESCE(b.parent_booking_id, b.id)
-     WHERE MONTH(b.booking_date) = ?
-     AND ? BETWEEN ab.year_start AND ab.year_end
-     AND b.status NOT IN ('cancelled')
-     ORDER BY b.booking_date, dt.price DESC",
-    [$currentMonth, $currentYear]
-);
-
-// Merge annual reservations with regular reservations for current year
-foreach ($annualCalendarBookings as $annualBooking) {
-    $found = false;
-    foreach ($calendarBookings as $booking) {
-        if ($booking['booking_date'] === $annualBooking['booking_date'] &&
-            $booking['dhana_type_id'] === $annualBooking['dhana_type_id'] &&
-            $booking['booking_time_slot'] === $annualBooking['booking_time_slot']) {
-            $found = true;
-            break;
-        }
-    }
-
-    if (!$found) {
-        // Create a virtual reservation entry for the annual event
-        $virtualDate = $currentYear . '-' . str_pad($currentMonth, 2, '0', STR_PAD_LEFT) . '-' .
-                      str_pad(date('d', strtotime($annualBooking['booking_date'])), 2, '0', STR_PAD_LEFT);
-        $annualBooking['booking_date'] = $virtualDate;
-        $annualBooking['is_annual_event'] = 1;
-        $calendarBookings[] = $annualBooking;
-    }
-}
-
-// Get blocked dates
-$blockedDates = $db->fetchAll(
-    "SELECT blocked_date, reason
-     FROM blocked_dates
-     WHERE MONTH(blocked_date) = ? AND YEAR(blocked_date) = ?",
-    [$currentMonth, $currentYear]
-);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -905,11 +829,7 @@ $blockedDates = $db->fetchAll(
 
         // Pass PHP data to JavaScript for calendar functionality
         window.adminCalendarData = {
-            currentMonth: <?php echo $currentMonth; ?>,
-            currentYear: <?php echo $currentYear; ?>,
-            dhanaTypes: <?php echo json_encode($dhanaTypes); ?>,
-            bookings: <?php echo json_encode($calendarBookings); ?>,
-            blockedDates: <?php echo json_encode($blockedDates); ?>
+            dhanaTypes: <?php echo json_encode($dhanaTypes); ?>
         };
     </script>
     <script src="../assets/js/admin.js?v=<?php echo time(); ?>"></script>
