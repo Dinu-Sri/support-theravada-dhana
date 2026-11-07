@@ -149,6 +149,19 @@ function filterBookings() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+    try {
+        const pendingNotice = sessionStorage.getItem('adminFlashNotice');
+        if (pendingNotice) {
+            sessionStorage.removeItem('adminFlashNotice');
+            const notice = JSON.parse(pendingNotice);
+            if (notice && notice.message) {
+                showNotification(notice.message, notice.type || 'success');
+            }
+        }
+    } catch (error) {
+        sessionStorage.removeItem('adminFlashNotice');
+    }
+
     const statusForms = document.querySelectorAll('.status-form');
     statusForms.forEach(form => {
         const select = form.querySelector('select');
@@ -996,9 +1009,17 @@ async function deleteBooking(bookingId) {
     })
     .then(response => readAdminJsonResponse(response, 'Unable to delete the reservation.'))
     .then(data => {
-        closeEditBookingModal();
-        loadCalendarData(); // Refresh calendar
-        showNotification(data.message || 'Reservation deleted successfully!', 'success');
+        // The reservations table is rendered by the server, including counts
+        // and any annual rows removed with this one. Reload so it matches.
+        try {
+            sessionStorage.setItem('adminFlashNotice', JSON.stringify({
+                type: 'success',
+                message: data.message || 'Reservation deleted successfully!'
+            }));
+        } catch (error) {
+            // The reload still shows the updated table if storage is blocked.
+        }
+        window.location.reload();
     })
     .catch(error => {
         console.error('Error:', error);

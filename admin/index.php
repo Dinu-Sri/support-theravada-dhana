@@ -338,7 +338,7 @@ $totalRecords = $db->fetchOne(
      $whereClause",
     $queryParams
 )['count'];
-$totalPages = ceil($totalRecords / $recordsPerPage);
+$totalPages = (int)ceil($totalRecords / $recordsPerPage);
 
 // Helper function to build pagination URLs
 function buildPaginationUrl($page, $status = 'all') {
@@ -351,6 +351,12 @@ function buildPaginationUrl($page, $status = 'all') {
         $params['q'] = $searchTerm;
     }
     return '?' . http_build_query($params);
+}
+
+// A delete on the last page can leave the current page number past the end.
+if ($totalPages > 0 && $currentPage > $totalPages) {
+    header('Location: ' . buildPaginationUrl($totalPages, $statusFilter));
+    exit;
 }
 
 // Get recent reservations with pagination and filtering
