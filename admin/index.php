@@ -952,6 +952,17 @@ $dhanaTypes = $db->fetchAll("SELECT * FROM dhana_types WHERE is_active = 1 ORDER
         const userManagementModal = document.getElementById('userManagementModal');
         const closeUserManagement = document.getElementById('closeUserManagement');
 
+        // Declared before the dialog can open. Opening from ?manage_users=1
+        // runs during this script, and a later `let` would still be in the
+        // temporal dead zone — that throw skipped the close handler and the
+        // user request, leaving a stuck empty dialog.
+        let currentPage = 1;
+        let pageSize = 25;
+        let totalUsers = 0;
+        let allUsers = [];
+        let filteredUsers = [];
+        let currentFilter = 'all';
+
         function openUserManagement() {
             userManagementModal.style.display = 'block';
             userManagementModal.setAttribute('aria-hidden', 'false');
@@ -964,16 +975,22 @@ $dhanaTypes = $db->fetchAll("SELECT * FROM dhana_types WHERE is_active = 1 ORDER
             userManagementModal.style.display = 'none';
             userManagementModal.setAttribute('aria-hidden', 'true');
             document.body.classList.remove('modal-open');
+            const url = new URL(window.location.href);
+            if (url.searchParams.has('manage_users')) {
+                url.searchParams.delete('manage_users');
+                const query = url.searchParams.toString();
+                history.replaceState(null, '', url.pathname + (query ? '?' + query : '') + url.hash);
+            }
             userManagementBtn?.focus();
         }
 
-        userManagementBtn.addEventListener('click', openUserManagement);
+        closeUserManagement.addEventListener('click', closeUserManagementDialog);
+
+        userManagementBtn?.addEventListener('click', openUserManagement);
 
         if (new URLSearchParams(window.location.search).get('manage_users') === '1') {
             openUserManagement();
         }
-
-        closeUserManagement.addEventListener('click', closeUserManagementDialog);
 
         window.addEventListener('click', function(event) {
             if (event.target === userManagementModal) {
@@ -1032,14 +1049,6 @@ $dhanaTypes = $db->fetchAll("SELECT * FROM dhana_types WHERE is_active = 1 ORDER
             renderCurrentPage();
         }
 
-        // Pagination variables
-        let currentPage = 1;
-        let pageSize = 25;
-        let totalUsers = 0;
-        let allUsers = [];
-        let filteredUsers = [];
-        let currentFilter = 'all';
-
         // Page size selector
         const pageSizeSelector = document.getElementById('pageSize');
         pageSizeSelector.addEventListener('change', function() {
@@ -1063,8 +1072,26 @@ $dhanaTypes = $db->fetchAll("SELECT * FROM dhana_types WHERE is_active = 1 ORDER
                 })
                 .catch(error => {
                     console.error('Fetch error:', error);
+                    allUsers = [];
+                    filteredUsers = [];
+                    totalUsers = 0;
+                    renderUsersLoadError(error.message || 'Unable to load users.');
+                    updatePaginationInfo();
+                    renderPagination();
                     showNotification(error.message, 'error');
                 });
+        }
+
+        function renderUsersLoadError(message) {
+            const tableBody = document.getElementById('usersTableBody');
+            tableBody.replaceChildren();
+            const row = document.createElement('tr');
+            const cell = document.createElement('td');
+            cell.colSpan = 4;
+            cell.className = 'admin-empty-cell';
+            cell.textContent = message;
+            row.appendChild(cell);
+            tableBody.appendChild(row);
         }
 
         function renderCurrentPage() {
@@ -1150,9 +1177,13 @@ $dhanaTypes = $db->fetchAll("SELECT * FROM dhana_types WHERE is_active = 1 ORDER
         }
 
         function updatePaginationInfo() {
+            const paginationInfo = document.getElementById('paginationInfo');
+            if (totalUsers === 0) {
+                paginationInfo.textContent = 'Showing 0 - 0 of 0 users';
+                return;
+            }
             const startIndex = (currentPage - 1) * pageSize + 1;
             const endIndex = Math.min(currentPage * pageSize, totalUsers);
-            const paginationInfo = document.getElementById('paginationInfo');
             paginationInfo.textContent = `Showing ${startIndex} - ${endIndex} of ${totalUsers} users`;
         }
 
