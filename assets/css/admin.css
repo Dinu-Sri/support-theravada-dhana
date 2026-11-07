@@ -2240,6 +2240,7 @@ textarea {
 .admin-app-dialog-copy h2 { margin: 0 0 7px; font-size: 1.12rem; }
 .admin-app-dialog-copy p { margin: 0; color: var(--admin-muted); line-height: 1.5; white-space: pre-line; }
 .admin-app-dialog-field { display: grid; gap: 6px; margin-top: 14px; font-size: .82rem; font-weight: 650; }
+.admin-app-dialog-field[hidden] { display: none !important; }
 .admin-app-dialog-field input { min-height: 42px; border: 1px solid var(--admin-border); border-radius: 8px; padding: 8px 10px; }
 .admin-app-dialog-actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
 .admin-toast { position: fixed; top: 84px; right: 18px; z-index: 13000; max-width: 380px; padding: 11px 14px; border-radius: 9px; background: var(--admin-ink); color: #fff; box-shadow: var(--admin-shadow); opacity: 0; transform: translateY(-8px); transition: .18s ease; }
