@@ -4,6 +4,7 @@
  */
 
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/i18n.php';
 
 // Start session if not already started
 if (session_status() === PHP_SESSION_NONE) {
@@ -16,6 +17,8 @@ if (session_status() === PHP_SESSION_NONE) {
     ]);
     session_start();
 }
+
+ui_capture_language();
 
 if (PHP_SAPI !== 'cli') {
     ini_set('display_errors', '0');

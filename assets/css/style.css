@@ -1,10 +1,48 @@
 /* Dhana Reservation System - Main Styles */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Sinhala:wght@400;500;600;700&display=swap');
 
 /* Reset and Base Styles */
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+}
+
+html[data-lang="en"] .lang-si { display: none !important; }
+html[data-lang="si"] .lang-en { display: none !important; }
+html[data-lang="si"] body,
+html[data-lang="si"] .lang-si,
+html[data-lang="si"] .ui-lang-switch a[lang="si"] {
+    font-family: "Noto Sans Sinhala", "Iskoola Pota", "Segoe UI", sans-serif;
+}
+
+.ui-lang-switch,
+.language-tabs.ui-lang-switch {
+    display: inline-flex;
+    gap: 4px;
+    align-items: center;
+    padding: 3px;
+    border: 1px solid rgba(184, 134, 11, .35);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .82);
+}
+.ui-lang-switch a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 32px;
+    padding: 4px 12px;
+    border-radius: 999px;
+    color: #6b5428;
+    font-size: .88rem;
+    font-weight: 700;
+    text-decoration: none;
+}
+.ui-lang-switch a.is-active {
+    background: #d4822a;
+    color: #fff;
+}
+.language-tabs.ui-lang-switch {
+    margin: 15px 20px 0;
 }
 
 body {

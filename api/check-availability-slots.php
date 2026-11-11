@@ -28,7 +28,7 @@ try {
     $date = parseBookingDate($dateValue);
     if (!$date) {
         http_response_code(400);
-        echo json_encode(['error' => 'Invalid date']);
+        echo json_encode(['error' => t_msg('Invalid date')]);
         exit;
     }
 
@@ -36,19 +36,19 @@ try {
     $type = getBookableDhanaType($db, $typeId);
     if (!$type || !in_array($timeSlot, ['morning', 'lunch', 'whole_day'], true) || $type['time_slot'] !== $timeSlot) {
         http_response_code(400);
-        echo json_encode(['error' => 'Invalid dāna type or time slot']);
+        echo json_encode(['error' => t_msg('Invalid dāna type or time slot')]);
         exit;
     }
     $dateError = validateBookingDate($db, $date);
     if ($dateError) {
-        echo json_encode(['available' => false, 'reason' => $dateError]);
+        echo json_encode(['available' => false, 'reason' => t_msg($dateError)]);
         exit;
     }
     if (findBookingConflicts($db, $dateValue, $timeSlot)) {
         $reason = $timeSlot === 'whole_day'
             ? 'Cannot reserve the whole day because another reservation exists.'
             : 'This time slot is already reserved.';
-        echo json_encode(['available' => false, 'reason' => $reason]);
+        echo json_encode(['available' => false, 'reason' => t_msg($reason)]);
         exit;
     }
 
@@ -60,7 +60,7 @@ try {
         'dhana_type' => ['id' => (int)$type['id'], 'name' => $type['name']],
         'price' => $pricing['price'],
         'is_tentative' => $pricing['is_tentative'],
-        'message' => 'This slot is available for reservation.'
+        'message' => t_msg('This slot is available for reservation.')
     ]);
 } catch (JsonException $error) {
     http_response_code(400);
@@ -68,5 +68,5 @@ try {
 } catch (Throwable $error) {
     error_log('Availability check error: ' . $error->getMessage());
     http_response_code(500);
-    echo json_encode(['error' => 'Unable to check availability right now']);
+    echo json_encode(['error' => t_msg('Unable to check availability right now')]);
 }

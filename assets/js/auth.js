@@ -63,7 +63,7 @@
         const accepted = document.getElementById('vinayaAccepted');
         if (accepted) accepted.value = '1';
         window.closeMonkModal();
-        showMessage('Vinaya guidance accepted. You can continue creating the account.', 'success');
+        showMessage(window.uiText ? window.uiText('Vinaya guidance accepted. You can continue creating the account.') : 'Vinaya guidance accepted. You can continue creating the account.', 'success');
     };
 
     function validEmail(value) {
@@ -77,7 +77,7 @@
         }
         const email = form.querySelector('input[type="email"]');
         if (email && !validEmail(email.value.trim())) {
-            showMessage('Please enter a valid email address.', 'error');
+            showMessage(window.uiText ? window.uiText('Please enter a valid email address.') : 'Please enter a valid email address.', 'error');
             email.focus();
             return false;
         }
@@ -85,14 +85,14 @@
             const password = document.getElementById('registerPassword');
             const confirmation = document.getElementById('confirmPassword');
             if (password.value !== confirmation.value) {
-                showMessage('Passwords do not match.', 'error');
+                showMessage(window.uiText ? window.uiText('Passwords do not match.') : 'Passwords do not match.', 'error');
                 confirmation.focus();
                 return false;
             }
             const monk = document.getElementById('isMonk');
             const accepted = document.getElementById('vinayaAccepted');
             if (monk.checked && accepted.value !== '1') {
-                showMessage('Please read and accept the Vinaya guidance first.', 'error');
+                showMessage(window.uiText ? window.uiText('Please read and accept the Vinaya guidance first.') : 'Please read and accept the Vinaya guidance first.', 'error');
                 window.showMonkModal();
                 return false;
             }
@@ -104,7 +104,7 @@
         const button = form.querySelector('button[type="submit"]');
         if (!button) return;
         button.disabled = true;
-        button.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> Please wait…';
+        button.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> ' + (window.uiText ? window.uiText('Please wait…') : 'Please wait…');
     }
 
     document.addEventListener('DOMContentLoaded', function () {

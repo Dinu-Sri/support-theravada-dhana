@@ -40,11 +40,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
 
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<?php echo ui_html_open(); ?>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>New Dāna Reservation - Dāna Reservation System</title>
+    <title><?php echo te('New Dāna Reservation - Dāna Reservation System', 'නව දාන වෙන්කිරීම - දාන වෙන්කිරීමේ පද්ධතිය'); ?></title>
     <?php include 'includes/favicon.php'; ?>
     <link rel="stylesheet" href="assets/css/style.css?v=20260913">
     <link rel="stylesheet" href="assets/css/booking-steps.css?v=20260913">
@@ -829,9 +829,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
     <div class="dashboard">
         <!-- Header -->
         <div class="dashboard-header">
-            <h1><i class="fas fa-plus-circle"></i> Create New Dāna Reservation</h1>
+            <?php ui_lang_switch(); ?>
+            <h1><i class="fas fa-plus-circle"></i> <?php echo te('Create New Dāna Reservation', 'නව දාන වෙන්කිරීමක් සාදන්න'); ?></h1>
             <a href="dashboard.php" class="btn btn-secondary">
-                <i class="fas fa-arrow-left"></i> Back to Dashboard
+                <i class="fas fa-arrow-left"></i> <?php echo te('Back to Dashboard', 'ප්‍රධාන පුවරුවට'); ?>
             </a>
         </div>
 
@@ -845,25 +846,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
                 <div class="step-indicators">
                     <div class="step-indicator active" data-step="1">
                         <div class="step-number">1</div>
-                        <div class="step-label">Dāna Type</div>
+                        <div class="step-label"><?php echo te('Dāna Type', 'දාන වර්ගය'); ?></div>
                     </div>
                     <div class="step-indicator" data-step="2">
                         <div class="step-number">2</div>
-                        <div class="step-label">Date & Time</div>
+                        <div class="step-label"><?php echo te('Date & Time', 'දිනය සහ වේලාව'); ?></div>
                     </div>
                     <?php if ($bookingForOther): ?>
                     <div class="step-indicator" data-step="3">
                         <div class="step-number">3</div>
-                        <div class="step-label">Person Details</div>
+                        <div class="step-label"><?php echo te('Person Details', 'පුද්ගල විස්තර'); ?></div>
                     </div>
                     <?php endif; ?>
                     <div class="step-indicator" data-step="<?php echo $additionalInfoStep; ?>">
                         <div class="step-number"><?php echo $additionalInfoStep; ?></div>
-                        <div class="step-label">Additional Info</div>
+                        <div class="step-label"><?php echo te('Additional Info', 'අමතර තොරතුරු'); ?></div>
                     </div>
                     <div class="step-indicator" data-step="<?php echo $reviewStep; ?>">
                         <div class="step-number"><?php echo $reviewStep; ?></div>
-                        <div class="step-label">Review & Submit</div>
+                        <div class="step-label"><?php echo te('Review & Submit', 'පරීක්ෂා කර ඉදිරිපත් කරන්න'); ?></div>
                     </div>
                 </div>
             </div>
@@ -874,7 +875,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
                     <i class="fas fa-exclamation-circle"></i>
                     <ul>
                         <?php foreach ($errors as $error): ?>
-                            <li><?php echo htmlspecialchars($error); ?></li>
+                            <li><?php echo te_msg($error); ?></li>
                         <?php endforeach; ?>
                     </ul>
                 </div>
@@ -891,15 +892,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
                 <!-- Step 1: Dhana Type Selection -->
                 <div class="form-step active" data-step="1">
                     <div class="step-header">
-                        <h3><i class="fas fa-hand-holding-heart"></i> Step 1: Select Dāna Type</h3>
-                        <p>Choose the type of dāna offering you would like to make</p>
+                        <h3><i class="fas fa-hand-holding-heart"></i> <?php echo te('Step 1: Select Dāna Type', 'පියවර 1: දාන වර්ගය තෝරන්න'); ?></h3>
+                        <p><?php echo te('Choose the type of dāna offering you would like to make', 'ඔබ කිරීමට කැමති දාන පූජාව තෝරන්න'); ?></p>
                     </div>
                     
                     <div id="dhana-types-container" class="dhana-types-grid">
                         <!-- Dhana types will be loaded by JavaScript -->
                         <div class="loading-message">
                             <i class="fas fa-spinner fa-spin"></i>
-                            <p>Loading dāna types...</p>
+                            <p><?php echo te('Loading dāna types...', 'දාන වර්ග පූරණය වෙමින්...'); ?></p>
                         </div>
 
                         <!-- Emergency fallback - PHP generated dhana types (permanently hidden) -->
@@ -925,21 +926,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
                 <!-- Step 2: Date & Time Selection -->
                 <div class="form-step" data-step="2">
                     <div class="step-header">
-                        <h3><i class="fas fa-calendar-alt"></i> Step 2: Select Date & Time</h3>
-                        <p>Choose your preferred date and confirm your time slot (auto-selected based on your dāna type)</p>
+                        <h3><i class="fas fa-calendar-alt"></i> <?php echo te('Step 2: Select Date & Time', 'පියවර 2: දිනය සහ වේලාව තෝරන්න'); ?></h3>
+                        <p><?php echo te('Choose your preferred date and confirm your time slot (auto-selected based on your dāna type)', 'ඔබට පහසු දිනය තෝරා වේලාව තහවුරු කරන්න (දාන වර්ගය අනුව ස්වයංක්‍රීයව තෝරයි)'); ?></p>
                     </div>
 
                     <div class="date-time-selection">
                         <div class="form-group">
-                            <label for="booking_date_display">Reservation Date</label>
+                            <label for="booking_date_display"><?php echo te('Reservation Date', 'වෙන්කිරීමේ දිනය'); ?></label>
                             <div class="date-input-wrapper">
                                 <input type="text"
                                        id="booking_date_display"
                                        class="date-input-field"
-                                       placeholder="Click to select date"
+                                       placeholder="<?php echo te('Click to select date', 'දිනය තේරීමට ඔබන්න'); ?>"
                                        readonly
                                        onclick="showDatePicker()"
-                                       value="<?php echo $selectedDate ? date('F j, Y', strtotime($selectedDate)) : ''; ?>">
+                                       value="<?php echo $selectedDate ? htmlspecialchars(ui_date_keep($selectedDate, 'F j, Y'), ENT_QUOTES, 'UTF-8') : ''; ?>">
                                 <input type="hidden"
                                        id="booking_date"
                                        name="booking_date"
@@ -952,14 +953,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
 
                         <div class="form-group">
                             <label for="booking_time_slot">
-                                Time Slot
-                                <small style="color: #28a745; font-weight: normal;"><i class="fas fa-magic"></i> Auto-selected based on your dāna type</small>
+                                <?php echo te('Time Slot', 'වේලාව'); ?>
+                                <small style="color: #28a745; font-weight: normal;"><i class="fas fa-magic"></i> <?php echo te('Auto-selected based on your dāna type', 'දාන වර්ගය අනුව ස්වයංක්‍රීයව තෝරයි'); ?></small>
                             </label>
                             <select id="booking_time_slot" name="booking_time_slot" required>
-                                <option value="">Select time slot</option>
-                                <option value="morning">Morning Dāna</option>
-                                <option value="lunch">Lunch Dāna</option>
-                                <option value="whole_day">Whole Day</option>
+                                <option value=""><?php echo te('Select time slot', 'වේලාව තෝරන්න'); ?></option>
+                                <option value="morning"><?php echo te('Morning Dāna', 'උදෑසන දානය'); ?></option>
+                                <option value="lunch"><?php echo te('Lunch Dāna', 'දිවා දානය'); ?></option>
+                                <option value="whole_day"><?php echo te('Whole Day', 'සම්පූර්ණ දිනය'); ?></option>
                             </select>
                         </div>
 
@@ -969,7 +970,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
 
                         <div class="calendar-link">
                             <a href="calendar.php" target="_blank" class="btn btn-outline">
-                                <i class="fas fa-calendar-check"></i> View Full Calendar
+                                <i class="fas fa-calendar-check"></i> <?php echo te('View Full Calendar', 'සම්පූර්ණ දින දර්ශනය බලන්න'); ?>
                             </a>
                         </div>
                     </div>
@@ -979,26 +980,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
                 <!-- Step 3: the person receiving the reservation. Agents retain ownership and payment access. -->
                 <div class="form-step beneficiary-step" data-step="3">
                     <div class="step-header">
-                        <h3><i class="fas fa-user-friends"></i> Step 3: Reservation for Another Person</h3>
-                        <p>Enter the details of the person for whom you are arranging this dāna reservation.</p>
+                        <h3><i class="fas fa-user-friends"></i> <?php echo te('Step 3: Reservation for Another Person', 'පියවර 3: වෙනත් අයෙකු වෙනුවෙන් වෙන්කිරීම'); ?></h3>
+                        <p><?php echo te('Enter the details of the person for whom you are arranging this dāna reservation.', 'මෙම දාන වෙන්කිරීම සකසන පුද්ගලයාගේ විස්තර ඇතුළත් කරන්න.'); ?></p>
                     </div>
                     <div class="beneficiary-form-card">
-                        <p><i class="fas fa-shield-alt"></i> You remain the booking agent and payment contact. These details identify the reservation recipient for the temple.</p>
+                        <p><i class="fas fa-shield-alt"></i> <?php echo te('You remain the booking agent and payment contact. These details identify the reservation recipient for the temple.', 'ඔබ වෙන්කිරීමේ නියෝජිතයා සහ ගෙවීම් සම්බන්ධතාව ලෙසම පවතී. මෙම විස්තර විහාරයට වෙන්කිරීම ලබන්නා හඳුනා ගැනීමට යොදයි.'); ?></p>
                         <div class="beneficiary-fields">
                             <div class="form-group">
-                                <label for="booked_for_first_name">Recipient First Name</label>
+                                <label for="booked_for_first_name"><?php echo te('Recipient First Name', 'ලබන්නාගේ මුල් නම'); ?></label>
                                 <input type="text" id="booked_for_first_name" name="booked_for_first_name" maxlength="50" autocomplete="off" required>
                             </div>
                             <div class="form-group">
-                                <label for="booked_for_last_name">Recipient Last Name</label>
+                                <label for="booked_for_last_name"><?php echo te('Recipient Last Name', 'ලබන්නාගේ අවසන් නම'); ?></label>
                                 <input type="text" id="booked_for_last_name" name="booked_for_last_name" maxlength="50" autocomplete="off" required>
                             </div>
                             <div class="form-group">
-                                <label for="booked_for_primary_contact">Primary Mobile Number</label>
+                                <label for="booked_for_primary_contact"><?php echo te('Primary Mobile Number', 'ප්‍රධාන ජංගම අංකය'); ?></label>
                                 <input type="tel" id="booked_for_primary_contact" name="booked_for_primary_contact" maxlength="20" inputmode="tel" autocomplete="tel" required>
                             </div>
                             <div class="form-group">
-                                <label for="booked_for_secondary_contact">Second Mobile Number <small>(optional)</small></label>
+                                <label for="booked_for_secondary_contact"><?php echo te('Second Mobile Number', 'දෙවන ජංගම අංකය'); ?> <small><?php echo te('(optional)', '(අනිවාර්ය නොවේ)'); ?></small></label>
                                 <input type="tel" id="booked_for_secondary_contact" name="booked_for_secondary_contact" maxlength="20" inputmode="tel" autocomplete="tel">
                             </div>
                         </div>
@@ -1009,15 +1010,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
                 <!-- Additional Information -->
                 <div class="form-step additional-info-step" data-step="<?php echo $additionalInfoStep; ?>">
                     <div class="step-header">
-                        <h3><i class="fas fa-info-circle"></i> Step <?php echo $additionalInfoStep; ?>: Additional Information</h3>
-                        <p>Please provide additional details about your reservation</p>
+                        <h3><i class="fas fa-info-circle"></i> <?php echo te('Step', 'පියවර'); ?> <?php echo $additionalInfoStep; ?>: <?php echo te('Additional Information', 'අමතර තොරතුරු'); ?></h3>
+                        <p><?php echo te('Please provide additional details about your reservation', 'ඔබගේ වෙන්කිරීම පිළිබඳ අමතර විස්තර ලබා දෙන්න'); ?></p>
                     </div>
 
                     <div class="additional-info-section">
                         <div class="toggle-group">
                             <div class="toggle-content">
-                                <h4><i class="fas fa-bus"></i> Provide Travel Support</h4>
-                                <p>Toggle this if you can provide transportation or travel support for monks attending the dāna ceremony.</p>
+                                <h4><i class="fas fa-bus"></i> <?php echo te('Provide Travel Support', 'ගමන් පහසුකම් සපයන්න'); ?></h4>
+                                <p><?php echo te('Toggle this if you can provide transportation or travel support for monks attending the dāna ceremony.', 'දානයට පැමිණෙන ස්වාමීන් වහන්සේලාට ගමන් පහසුකම් සැපයිය හැකි නම් මෙය සක්‍රිය කරන්න.'); ?></p>
                             </div>
                             <div class="toggle-switch-container">
                                 <input type="checkbox" id="travel_support" name="travel_support" value="1" class="toggle-switch-input">
@@ -1026,8 +1027,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
                                         <span class="toggle-switch-button"></span>
                                     </span>
                                     <span class="toggle-switch-text">
-                                        <span class="toggle-on">ON</span>
-                                        <span class="toggle-off">OFF</span>
+                                        <span class="toggle-on"><?php echo te('ON', 'සක්‍රිය'); ?></span>
+                                        <span class="toggle-off"><?php echo te('OFF', 'අක්‍රිය'); ?></span>
                                     </span>
                                 </label>
                             </div>
@@ -1037,13 +1038,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
 
                         <div class="toggle-group">
                             <div class="toggle-content">
-                                <h4><i class="fas fa-calendar-check"></i> Annual Event</h4>
-                                <p>Reserve this same calendar date once per year for the configured annual period.</p>
+                                <h4><i class="fas fa-calendar-check"></i> <?php echo te('Annual Event', 'වාර්ෂික උත්සවය'); ?></h4>
+                                <p><?php echo te('Reserve this same calendar date once per year for the configured annual period.', 'නියමිත වාර්ෂික කාලය සඳහා මෙම දිනය වසරකට වරක් වෙන්කරන්න.'); ?></p>
 
                                 <!-- Inline Annual Price Summary -->
                                 <div id="annual_price_summary" class="annual-price-inline-summary" style="display: none;">
                                     <div class="loading-inline">
-                                        <i class="fas fa-spinner fa-spin"></i> Loading price breakdown...
+                                        <i class="fas fa-spinner fa-spin"></i> <?php echo te('Loading price breakdown...', 'මිල විස්තරය පූරණය වෙමින්...'); ?>
                                     </div>
                                 </div>
                             </div>
@@ -1054,20 +1055,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
                                         <span class="toggle-switch-button"></span>
                                     </span>
                                     <span class="toggle-switch-text">
-                                        <span class="toggle-on">ON</span>
-                                        <span class="toggle-off">OFF</span>
+                                        <span class="toggle-on"><?php echo te('ON', 'සක්‍රිය'); ?></span>
+                                        <span class="toggle-off"><?php echo te('OFF', 'අක්‍රිය'); ?></span>
                                     </span>
                                 </label>
                             </div>
                         </div>
 
                         <div class="form-group special-requests-group">
-                            <label for="special_requests">Special Requests (Optional)</label>
+                            <label for="special_requests"><?php echo te('Special Requests (Optional)', 'විශේෂ ඉල්ලීම් (අනිවාර්ය නොවේ)'); ?></label>
                             <textarea id="special_requests"
                                       name="special_requests"
                                       rows="4"
                                       maxlength="2000"
-                                      placeholder="Any special requirements, dietary restrictions, or additional information for your dāna reservation..."></textarea>
+                                      placeholder="<?php echo te('Any special requirements, dietary restrictions, or additional information for your dāna reservation...', 'විශේෂ අවශ්‍යතා, ආහාර සීමා, හෝ ඔබගේ දාන වෙන්කිරීම පිළිබඳ අමතර තොරතුරු...'); ?>"></textarea>
                         </div>
                     </div>
                 </div>
@@ -1075,68 +1076,68 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
                 <!-- Review & Submit -->
                 <div class="form-step review-step" data-step="<?php echo $reviewStep; ?>">
                     <div class="step-header">
-                        <h3><i class="fas fa-check-circle"></i> Step <?php echo $reviewStep; ?>: Review & Submit</h3>
-                        <p>Please review your reservation details before submitting</p>
+                        <h3><i class="fas fa-check-circle"></i> <?php echo te('Step', 'පියවර'); ?> <?php echo $reviewStep; ?>: <?php echo te('Review & Submit', 'පරීක්ෂා කර ඉදිරිපත් කරන්න'); ?></h3>
+                        <p><?php echo te('Please review your reservation details before submitting', 'ඉදිරිපත් කිරීමට පෙර වෙන්කිරීමේ විස්තර පරීක්ෂා කරන්න'); ?></p>
                     </div>
 
                     <div class="booking-review<?php echo $bookingForOther ? ' agent-review' : ''; ?>">
                         <?php if ($bookingForOther): ?>
                         <div class="review-section beneficiary-review-section">
-                            <h4><i class="fas fa-user-friends"></i> Reservation Recipient</h4>
+                            <h4><i class="fas fa-user-friends"></i> <?php echo te('Reservation Recipient', 'වෙන්කිරීම ලබන්නා'); ?></h4>
                             <div class="review-item">
-                                <span class="label">Full Name</span>
-                                <span class="value" id="review-beneficiary-name">Not provided</span>
+                                <span class="label"><?php echo te('Full Name', 'සම්පූර්ණ නම'); ?></span>
+                                <span class="value" id="review-beneficiary-name"><?php echo te('Not provided', 'ලබා දී නැත'); ?></span>
                             </div>
                             <div class="review-item">
-                                <span class="label">Primary Mobile</span>
-                                <span class="value" id="review-beneficiary-primary-contact">Not provided</span>
+                                <span class="label"><?php echo te('Primary Mobile', 'ප්‍රධාන ජංගම'); ?></span>
+                                <span class="value" id="review-beneficiary-primary-contact"><?php echo te('Not provided', 'ලබා දී නැත'); ?></span>
                             </div>
                             <div class="review-item">
-                                <span class="label">Second Mobile</span>
-                                <span class="value" id="review-beneficiary-secondary-contact">Not provided</span>
+                                <span class="label"><?php echo te('Second Mobile', 'දෙවන ජංගම'); ?></span>
+                                <span class="value" id="review-beneficiary-secondary-contact"><?php echo te('Not provided', 'ලබා දී නැත'); ?></span>
                             </div>
                         </div>
                         <?php endif; ?>
                         <div class="review-section donor-info-section">
-                            <h4><i class="fas fa-user-circle"></i> <?php echo $bookingForOther ? 'Agent Information' : 'Donor Information'; ?></h4>
+                            <h4><i class="fas fa-user-circle"></i> <?php echo $bookingForOther ? te('Agent Information', 'නියෝජිත තොරතුරු') : te('Donor Information', 'දායක තොරතුරු'); ?></h4>
                             <div class="review-item">
-                                <span class="label">Full Name</span>
+                                <span class="label"><?php echo te('Full Name', 'සම්පූර්ණ නම'); ?></span>
                                 <span class="value"><?php echo htmlspecialchars($user['first_name'] . ' ' . $user['last_name']); ?></span>
                             </div>
                             <div class="review-item">
-                                <span class="label">Email Address</span>
+                                <span class="label"><?php echo te('Email Address', 'විද්‍යුත් තැපෑල'); ?></span>
                                 <span class="value"><?php echo htmlspecialchars($user['email']); ?></span>
                             </div>
                         </div>
 
                         <div class="review-section reservation-details-section">
-                            <h4><i class="fas fa-calendar-check"></i> Reservation Details</h4>
+                            <h4><i class="fas fa-calendar-check"></i> <?php echo te('Reservation Details', 'වෙන්කිරීමේ විස්තර'); ?></h4>
                             <div class="review-item">
-                                <span class="label">Dāna Type</span>
-                                <span class="value" id="review-dhana-type">Not selected</span>
+                                <span class="label"><?php echo te('Dāna Type', 'දාන වර්ගය'); ?></span>
+                                <span class="value" id="review-dhana-type"><?php echo te('Not selected', 'තෝරා නැත'); ?></span>
                             </div>
                             <div class="review-item">
-                                <span class="label">Date</span>
-                                <span class="value" id="review-date">Not selected</span>
+                                <span class="label"><?php echo te('Date', 'දිනය'); ?></span>
+                                <span class="value" id="review-date"><?php echo te('Not selected', 'තෝරා නැත'); ?></span>
                             </div>
                             <div class="review-item">
-                                <span class="label">Time Slot</span>
-                                <span class="value" id="review-time-slot">Not selected</span>
+                                <span class="label"><?php echo te('Time Slot', 'වේලාව'); ?></span>
+                                <span class="value" id="review-time-slot"><?php echo te('Not selected', 'තෝරා නැත'); ?></span>
                             </div>
                             <div class="review-item">
-                                <span class="label">Travel Support</span>
-                                <span class="value" id="review-travel-support">No</span>
+                                <span class="label"><?php echo te('Travel Support', 'ගමන් පහසුකම්'); ?></span>
+                                <span class="value" id="review-travel-support"><?php echo te('No', 'නැත'); ?></span>
                             </div>
                             <div class="review-item">
-                                <span class="label">Annual Event</span>
-                                <span class="value" id="review-annual-event">No</span>
+                                <span class="label"><?php echo te('Annual Event', 'වාර්ෂික උත්සවය'); ?></span>
+                                <span class="value" id="review-annual-event"><?php echo te('No', 'නැත'); ?></span>
                             </div>
                         </div>
 
                         <div class="review-section total-amount-section">
-                            <h4>Total Amount</h4>
+                            <h4><?php echo te('Total Amount', 'මුළු මුදල'); ?></h4>
                             <div class="total-amount">
-                                <span id="review-total-amount">Calculating…</span>
+                                <span id="review-total-amount"><?php echo te('Calculating…', 'ගණනය කරමින්…'); ?></span>
                             </div>
 
                             <!-- Tentative Price Disclaimer -->
@@ -1145,18 +1146,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
                                     <i class="fas fa-exclamation-triangle"></i>
                                 </div>
                                 <div class="warning-content">
-                                    <h5>Price is Tentative</h5>
-                                    <p>The selected date is beyond our current pricing window. The displayed price is tentative and subject to confirmation later.</p>
+                                    <h5><?php echo te('Price is Tentative', 'මිල තාවකාලිකයි'); ?></h5>
+                                    <p><?php echo te('The selected date is beyond our current pricing window. The displayed price is tentative and subject to confirmation later.', 'තෝරාගත් දිනය වත්මන් මිල කවුළුවෙන් ඔබ්බෙහි ය. පෙන්වන මිල තාවකාලික වන අතර පසුව තහවුරු වේ.'); ?></p>
                                 </div>
                             </div>
 
                             <!-- Review Step Navigation Buttons -->
                             <div class="review-navigation" style="display: none;">
                                 <button type="button" id="reviewPrevBtn" class="btn btn-secondary">
-                                    <i class="fas fa-arrow-left"></i> Previous
+                                    <i class="fas fa-arrow-left"></i> <?php echo te('Previous', 'පෙර'); ?>
                                 </button>
                                 <button type="submit" id="reviewSubmitBtn" class="btn btn-success">
-                                    <i class="fas fa-check"></i> Submit Dāna Reservation
+                                    <i class="fas fa-check"></i> <?php echo te('Submit Dāna Reservation', 'දාන වෙන්කිරීම ඉදිරිපත් කරන්න'); ?>
                                 </button>
                             </div>
                         </div>
@@ -1166,13 +1167,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
                 <!-- Navigation Buttons (for other steps) -->
                 <div class="form-navigation">
                     <button type="button" id="prevBtn" class="btn btn-secondary" style="display: none;">
-                        <i class="fas fa-arrow-left"></i> Previous
+                        <i class="fas fa-arrow-left"></i> <?php echo te('Previous', 'පෙර'); ?>
                     </button>
                     <button type="button" id="nextBtn" class="btn btn-primary">
-                        Next <i class="fas fa-arrow-right"></i>
+                        <?php echo te('Next', 'ඊළඟ'); ?> <i class="fas fa-arrow-right"></i>
                     </button>
                     <button type="submit" id="submitBtn" class="btn btn-success" style="display: none;">
-                        <i class="fas fa-check"></i> Submit Reservation
+                        <i class="fas fa-check"></i> <?php echo te('Submit Reservation', 'වෙන්කිරීම ඉදිරිපත් කරන්න'); ?>
                     </button>
                 </div>
             </form>
@@ -1290,36 +1291,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
             modal.innerHTML = `
                 <div class="date-picker-content" tabindex="-1">
                     <div class="date-picker-header">
-                        <h4 id="datePickerTitle">Select Reservation Date</h4>
-                        <button type="button" class="close-date-picker" onclick="closeDatePicker()" aria-label="Close date picker">
+                        <h4 id="datePickerTitle">${uiText('Select Reservation Date')}</h4>
+                        <button type="button" class="close-date-picker" onclick="closeDatePicker()" aria-label="${uiText('Close date picker')}">
                             <i class="fas fa-times"></i>
                         </button>
                     </div>
                     <div class="date-picker-body">
                         <div class="date-selector-row">
                             <div class="year-selector">
-                                <label for="dateYearSelect">Year:</label>
+                                <label for="dateYearSelect">${uiText('Year:')}</label>
                                 <select id="dateYearSelect">
                                     ${generateYearOptions()}
                                 </select>
                             </div>
                             <div class="month-selector-dropdown">
-                                <label for="dateMonthSelect">Month:</label>
+                                <label for="dateMonthSelect">${uiText('Month:')}</label>
                                 <select id="dateMonthSelect">
                                     ${generateMonthOptions()}
                                 </select>
                             </div>
                         </div>
                         <div class="day-selector">
-                            <span class="day-selector-label">Day:</span>
+                            <span class="day-selector-label">${uiText('Day:')}</span>
                             <div class="day-grid" id="dayGrid">
                                 ${generateDayButtons()}
                             </div>
                         </div>
                     </div>
                     <div class="date-picker-footer">
-                        <button type="button" class="btn btn-secondary" onclick="closeDatePicker()">Cancel</button>
-                        <button type="button" class="btn btn-primary" onclick="applyDateSelection()">Select Date</button>
+                        <button type="button" class="btn btn-secondary" onclick="closeDatePicker()">${uiText('Cancel')}</button>
+                        <button type="button" class="btn btn-primary" onclick="applyDateSelection()">${uiText('Select Date')}</button>
                     </div>
                 </div>
             `;
@@ -1377,7 +1378,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
         }
 
         function generateMonthOptions() {
-            const months = ['January', 'February', 'March', 'April', 'May', 'June',
+            const months = (window.UI && window.UI.months) || ['January', 'February', 'March', 'April', 'May', 'June',
                            'July', 'August', 'September', 'October', 'November', 'December'];
             let options = '';
 
@@ -1453,11 +1454,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
                 console.log('Created date object:', selectedDate);
 
                 // Format for display
-                const displayDate = selectedDate.toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                });
+                const displayDate = window.uiFormatMonthDate
+                    ? window.uiFormatMonthDate(selectedDate)
+                    : selectedDate.toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                    });
                 console.log('Display date formatted:', displayDate);
 
                 // Format for form submission (YYYY-MM-DD) - TIMEZONE SAFE
@@ -1674,6 +1677,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
             }
         });
     </script>
-    <script src="assets/js/booking-steps.js?v=20260917"></script>
+    <script src="assets/js/booking-steps.js?v=20261111"></script>
 </body>
 </html>

@@ -4,6 +4,14 @@
 
 let calendarReturnFocus = null;
 
+function uiText(key) {
+    return window.uiText ? window.uiText(key) : key;
+}
+
+function uiDhana(name) {
+    return window.uiDhana ? window.uiDhana(name) : name;
+}
+
 function openCalendarModal(modal) {
     modal.style.display = 'block';
     modal.querySelector('.modal-content')?.focus();
@@ -29,8 +37,8 @@ function showDateDetails(date) {
         modalContent.innerHTML = `
             <div style="text-align: center; padding: 20px; color: #666;">
                 <i class="fas fa-ban" style="font-size: 3rem; margin-bottom: 15px; color: #6c757d;"></i>
-                <h4>Date Not Available</h4>
-                <p>This date is blocked and not available for booking.</p>
+                <h4>${uiText('Date Not Available')}</h4>
+                <p>${uiText('This date is blocked and not available for booking.')}</p>
             </div>
         `;
         bookNowBtn.style.display = 'none';
@@ -61,17 +69,17 @@ function showDateDetails(date) {
             if (isWholeDayBooking) {
                 // This is the dhana type that has the whole day booking
                 statusClass = 'booked';
-                statusText = 'Booked (Whole Day)';
+                statusText = uiText('Booked (Whole Day)');
             } else if (dhanaType.time_slot === 'extra' || dhanaType.name === 'Extra Item') {
                 // Extra items are still available even with whole day booking (future feature)
                 statusClass = 'available';
-                statusText = 'Available';
+                statusText = uiText('Available');
                 hasAvailable = true;
             } else {
                 // Morning and Lunch Dana are blocked when whole day is booked
                 statusClass = 'blocked';
-                statusText = 'Not Available';
-                timeSlotInfo = '<small>Blocked by whole day booking</small>';
+                statusText = uiText('Not Available');
+                timeSlotInfo = '<small>' + uiText('Blocked by whole day booking') + '</small>';
             }
         } else {
             // No whole day booking, check individual time slots and conflicts
@@ -83,11 +91,11 @@ function showDateDetails(date) {
                 // Whole day booking is blocked if ANY time slot is booked on this date
                 if (hasAnyBookings) {
                     statusClass = 'blocked';
-                    statusText = 'Not Available';
-                    timeSlotInfo = '<small>Blocked by existing bookings</small>';
+                    statusText = uiText('Not Available');
+                    timeSlotInfo = '<small>' + uiText('Blocked by existing bookings') + '</small>';
                 } else {
                     statusClass = 'available';
-                    statusText = 'Available';
+                    statusText = uiText('Available');
                     hasAvailable = true;
                 }
             } else if (dhanaBookings) {
@@ -97,28 +105,28 @@ function showDateDetails(date) {
 
                 if ((dhanaType.time_slot === 'morning' || dhanaType.name === 'Morning Dana') && morningBooked) {
                     statusClass = 'booked';
-                    statusText = 'Booked';
+                    statusText = uiText('Booked');
                 } else if ((dhanaType.time_slot === 'lunch' || dhanaType.name === 'Lunch Dana') && lunchBooked) {
                     statusClass = 'booked';
-                    statusText = 'Booked';
+                    statusText = uiText('Booked');
                 } else if (dhanaType.time_slot === 'extra' || dhanaType.name === 'Extra Item') {
                     statusClass = 'available';
-                    statusText = 'Available';
+                    statusText = uiText('Available');
                     hasAvailable = true;
                 } else {
                     statusClass = 'available';
-                    statusText = 'Available';
+                    statusText = uiText('Available');
                     hasAvailable = true;
                 }
             } else {
                 // No bookings for this specific dhana type
                 if (dhanaType.time_slot === 'extra' || dhanaType.name === 'Extra Item') {
                     statusClass = 'available';
-                    statusText = 'Available';
+                    statusText = uiText('Available');
                     hasAvailable = true;
                 } else {
                     statusClass = 'available';
-                    statusText = 'Available';
+                    statusText = uiText('Available');
                     hasAvailable = true;
                 }
             }
@@ -127,7 +135,7 @@ function showDateDetails(date) {
         content += `
             <div class="dhana-item ${statusClass}">
                 <div class="dhana-info">
-                    <h4>${escapeHtml(dhanaType.name)}</h4>
+                    <h4>${escapeHtml(uiDhana(dhanaType.name))}</h4>
                     <p>Rs. ${formatPrice(dhanaType.price)}</p>
                     ${timeSlotInfo}
                 </div>
@@ -141,7 +149,7 @@ function showDateDetails(date) {
     content += '</div>';
     
     if (hasAvailable) {
-        let availabilityMessage = 'Great! This date has available slots.';
+        let availabilityMessage = uiText('Great! This date has available slots.');
         if (hasWholeDayBooking) {
             // Check if only extra items are available
             const onlyExtraAvailable = dhanaTypes.every(type => {
@@ -151,7 +159,7 @@ function showDateDetails(date) {
             });
 
             if (onlyExtraAvailable) {
-                availabilityMessage = 'Only extra items are available (whole day is booked).';
+                availabilityMessage = uiText('Only extra items are available (whole day is booked).');
             }
         }
 
@@ -164,14 +172,14 @@ function showDateDetails(date) {
         bookNowBtn.style.display = 'inline-block';
         bookNowBtn.href = `booking-new.php?date=${date}`;
     } else {
-        let unavailabilityMessage = 'Sorry, this date is fully booked.';
+        let unavailabilityMessage = uiText('Sorry, this date is fully booked.');
         if (hasWholeDayBooking) {
-            unavailabilityMessage = 'This date is blocked due to a whole day booking.';
+            unavailabilityMessage = uiText('This date is blocked due to a whole day booking.');
         } else {
             // Check if it's blocked due to existing bookings preventing whole day
             const hasExistingBookings = bookingsByDate[date] && Object.keys(bookingsByDate[date]).length > 0;
             if (hasExistingBookings) {
-                unavailabilityMessage = 'This date has existing bookings that prevent whole day booking.';
+                unavailabilityMessage = uiText('This date has existing bookings that prevent whole day booking.');
             }
         }
 
@@ -204,19 +212,18 @@ function closeDateModal() {
 // Format date for display
 function formatDate(dateString) {
     const date = new Date(dateString + 'T00:00:00');
-    const options = { 
-        weekday: 'long', 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
-    };
-    return date.toLocaleDateString('en-US', options);
+    return window.uiFormatLongDate ? window.uiFormatLongDate(date) : date.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
 }
 
 // Format price
 function formatPrice(price) {
     if (price == 0) {
-        return 'Coming Soon';
+        return uiText('Coming Soon');
     }
     return new Intl.NumberFormat('en-US').format(price);
 }
@@ -374,8 +381,8 @@ function createQuickJump() {
     monthYear.style.cursor = 'pointer';
     monthYear.setAttribute('role', 'button');
     monthYear.setAttribute('tabindex', '0');
-    monthYear.setAttribute('aria-label', 'Choose a month and year');
-    monthYear.title = 'Click to jump to a specific month';
+    monthYear.setAttribute('aria-label', uiText('Choose a month and year'));
+    monthYear.title = uiText('Click to jump to a specific month');
 
     // Add a subtle hover effect
     monthYear.addEventListener('mouseenter', function() {

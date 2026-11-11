@@ -56,11 +56,11 @@ $bookings = $db->fetchAll(
 );
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<?php echo ui_html_open(); ?>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Dāna Reservations - Dāna Reservation System</title>
+    <title><?php echo te('My Dāna Reservations - Dāna Reservation System', 'මගේ දාන වෙන්කිරීම් - දාන වෙන්කිරීමේ පද්ධතිය'); ?></title>
     <?php include 'includes/favicon.php'; ?>
     <link rel="stylesheet" href="assets/css/style.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -70,14 +70,19 @@ $bookings = $db->fetchAll(
     <div class="dashboard">
         <!-- Header -->
         <div class="dashboard-header">
-            <h1><i class="fas fa-list"></i> My Dāna Reservations</h1>
-            <p>View all your dāna reservations and their status
+            <?php ui_lang_switch(); ?>
+            <h1><i class="fas fa-list"></i> <?php echo te('My Dāna Reservations', 'මගේ දාන වෙන්කිරීම්'); ?></h1>
+            <p><?php echo te('View all your dāna reservations and their status', 'ඔබගේ සියලු දාන වෙන්කිරීම් සහ ඒවායේ තත්ත්වය බලන්න'); ?>
                 <?php if (!empty($bookings)): ?>
-                    (<?php echo (int)$bookingSummary['total']; ?> total reservation<?php echo (int)$bookingSummary['total'] !== 1 ? 's' : ''; ?>)
+                    <?php if (ui_lang() === 'si'): ?>
+                        (මුළු වෙන්කිරීම් <?php echo (int)$bookingSummary['total']; ?>)
+                    <?php else: ?>
+                        (<?php echo (int)$bookingSummary['total']; ?> total reservation<?php echo (int)$bookingSummary['total'] !== 1 ? 's' : ''; ?>)
+                    <?php endif; ?>
                 <?php endif; ?>
             </p>
             <a href="dashboard.php" class="btn btn-secondary">
-                <i class="fas fa-arrow-left"></i> Back to Dashboard
+                <i class="fas fa-arrow-left"></i> <?php echo te('Back to Dashboard', 'ප්‍රධාන පුවරුවට'); ?>
             </a>
         </div>
 
@@ -91,7 +96,7 @@ $bookings = $db->fetchAll(
                         </div>
                         <div class="summary-info">
                             <h3><?php echo (int)$bookingSummary['total']; ?></h3>
-                            <p>Total Dāna Reservations</p>
+                            <p><?php echo te('Total Dāna Reservations', 'මුළු දාන වෙන්කිරීම්'); ?></p>
                         </div>
                     </div>
 
@@ -101,7 +106,7 @@ $bookings = $db->fetchAll(
                         </div>
                         <div class="summary-info">
                             <h3><?php echo (int)$bookingSummary['confirmed']; ?></h3>
-                            <p>Confirmed</p>
+                            <p><?php echo te('Confirmed', 'තහවුරු කළ'); ?></p>
                         </div>
                     </div>
 
@@ -111,7 +116,7 @@ $bookings = $db->fetchAll(
                         </div>
                         <div class="summary-info">
                             <h3><?php echo (int)$bookingSummary['pending']; ?></h3>
-                            <p>Active Pending</p>
+                            <p><?php echo te('Active Pending', 'සක්‍රිය පොරොත්තු'); ?></p>
                         </div>
                     </div>
 
@@ -121,7 +126,7 @@ $bookings = $db->fetchAll(
                         </div>
                         <div class="summary-info">
                             <h3>Rs. <?php echo number_format($bookingSummary['active_value']); ?></h3>
-                            <p>Upcoming Active Value</p>
+                            <p><?php echo te('Upcoming Active Value', 'ඉදිරි සක්‍රිය වටිනාකම'); ?></p>
                         </div>
                     </div>
                 </div>
@@ -133,14 +138,14 @@ $bookings = $db->fetchAll(
             <?php if (empty($bookings)): ?>
                 <div style="text-align: center; padding: 60px 20px; color: #666;">
                     <i class="fas fa-calendar-times" style="font-size: 4rem; margin-bottom: 30px; opacity: 0.3;"></i>
-                    <h3>No Dāna Reservations Yet</h3>
-                    <p>You haven't made any dāna reservations yet. Start by creating your first dāna reservation!</p>
+                    <h3><?php echo te('No Dāna Reservations Yet', 'තවම දාන වෙන්කිරීම් නැත'); ?></h3>
+                    <p><?php echo te("You haven't made any dāna reservations yet. Start by creating your first dāna reservation!", 'ඔබ තවම දාන වෙන්කිරීම් කර නැත. පළමු දාන වෙන්කිරීම සාදන්න.'); ?></p>
                     <div style="margin-top: 30px;">
                         <a href="calendar.php" class="btn btn-primary" style="margin-right: 15px;">
-                            <i class="fas fa-calendar-alt"></i> Check Availability
+                            <i class="fas fa-calendar-alt"></i> <?php echo te('Check Availability', 'ලබා ගත හැකි දින පරීක්ෂා කරන්න'); ?>
                         </a>
                         <a href="booking-new.php" class="btn btn-secondary">
-                            <i class="fas fa-plus-circle"></i> New Dāna Reservation
+                            <i class="fas fa-plus-circle"></i> <?php echo te('New Dāna Reservation', 'නව දාන වෙන්කිරීම'); ?>
                         </a>
                     </div>
                 </div>
@@ -158,7 +163,7 @@ $bookings = $db->fetchAll(
                                 </div>
                                 <div class="reservation-status">
                                     <span class="status-badge status-<?php echo $paymentWindowExpired && $booking['status'] === 'pending' ? 'cancelled' : $booking['status']; ?>">
-                                        <?php echo $paymentWindowExpired && $booking['status'] === 'pending' ? 'Expired' : ucfirst(str_replace('_', ' ', $booking['status'])); ?>
+                                        <?php echo htmlspecialchars(ui_status($paymentWindowExpired && $booking['status'] === 'pending' ? 'expired' : $booking['status'])); ?>
                                     </span>
                                 </div>
                             </div>
@@ -167,10 +172,10 @@ $bookings = $db->fetchAll(
                                 <div class="detail-row">
                                     <i class="fas fa-hand-holding-heart"></i>
                                     <span>
-                                        <?php echo htmlspecialchars($booking['dhana_type_name']); ?>
+                                        <?php echo htmlspecialchars(ui_dhana_name($booking['dhana_type_name'])); ?>
                                         <?php if ($booking['is_annual_event']): ?>
                                             <span class="annual-badge">
-                                                <i class="fas fa-calendar-check"></i> Annual
+                                                <i class="fas fa-calendar-check"></i> <?php echo te('Annual', 'වාර්ෂික'); ?>
                                             </span>
                                         <?php endif; ?>
                                     </span>
@@ -178,20 +183,20 @@ $bookings = $db->fetchAll(
 
                                 <div class="detail-row">
                                     <i class="fas fa-calendar"></i>
-                                    <span><?php echo date('F j, Y', strtotime($booking['booking_date'])); ?></span>
+                                    <span><?php echo htmlspecialchars(ui_date_keep($booking['booking_date'], 'F j, Y')); ?></span>
                                 </div>
 
                                 <?php if (!empty($booking['booked_by_agent_id'])): ?>
                                     <div class="detail-row">
                                         <i class="fas fa-user-friends"></i>
-                                        <span>For: <?php echo htmlspecialchars(trim(($booking['booked_for_first_name'] ?? '') . ' ' . ($booking['booked_for_last_name'] ?? ''))); ?></span>
+                                        <span><?php echo te('For:', 'වෙනුවෙන්:'); ?> <?php echo htmlspecialchars(trim(($booking['booked_for_first_name'] ?? '') . ' ' . ($booking['booked_for_last_name'] ?? ''))); ?></span>
                                     </div>
                                 <?php endif; ?>
 
                                 <?php if ($booking['is_annual_event'] && $booking['year_start'] && $booking['year_end']): ?>
                                     <div class="detail-row">
                                         <i class="fas fa-repeat"></i>
-                                        <span>Annual Event: <?php echo $booking['year_start']; ?> - <?php echo $booking['year_end']; ?></span>
+                                        <span><?php echo te('Annual Event:', 'වාර්ෂික උත්සවය:'); ?> <?php echo $booking['year_start']; ?> - <?php echo $booking['year_end']; ?></span>
                                     </div>
                                 <?php endif; ?>
 
@@ -202,7 +207,7 @@ $bookings = $db->fetchAll(
 
                                 <div class="detail-row">
                                     <i class="fas fa-clock"></i>
-                                    <span>Booked on <?php echo date('M j, Y', strtotime($booking['created_at'])); ?></span>
+                                    <span><?php echo te('Booked on', 'වෙන්කළ දිනය'); ?> <?php echo htmlspecialchars(ui_format_date($booking['created_at'])); ?></span>
                                 </div>
                                 
                                 <?php if ($booking['special_requests']): ?>
@@ -218,15 +223,15 @@ $bookings = $db->fetchAll(
                                     <div class="receipt-status">
                                         <?php if ($booking['receipt_verified']): ?>
                                             <i class="fas fa-check-circle" style="color: #28a745;"></i>
-                                            <span style="color: #28a745;">Receipt Verified</span>
+                                            <span style="color: #28a745;"><?php echo te('Receipt Verified', 'රිසිට්පත තහවුරු කළා'); ?></span>
                                         <?php else: ?>
                                             <i class="fas fa-clock" style="color: #ffc107;"></i>
-                                            <span style="color: #ffc107;">Receipt Pending Verification</span>
+                                            <span style="color: #ffc107;"><?php echo te('Receipt Pending Verification', 'රිසිට්පත තහවුරු කිරීම පොරොත්තුවෙන්'); ?></span>
                                         <?php endif; ?>
                                     </div>
                                     <a href="receipt.php?id=<?php echo (int)$booking['receipt_id']; ?>"
                                        target="_blank" rel="noopener" class="receipt-link">
-                                        <i class="fas fa-external-link-alt"></i> View Receipt
+                                        <i class="fas fa-external-link-alt"></i> <?php echo te('View Receipt', 'රිසිට්පත බලන්න'); ?>
                                     </a>
                                 </div>
                             <?php endif; ?>
@@ -235,27 +240,27 @@ $bookings = $db->fetchAll(
                                 <?php if ($booking['status'] === 'pending' && !$paymentWindowExpired): ?>
                                     <a href="payment.php?booking_id=<?php echo $booking['id']; ?>"
                                        class="btn btn-primary btn-sm">
-                                        <i class="fas fa-credit-card"></i> Complete Payment
+                                        <i class="fas fa-credit-card"></i> <?php echo te('Complete Payment', 'ගෙවීම සම්පූර්ණ කරන්න'); ?>
                                     </a>
                                 <?php elseif ($booking['status'] === 'pending' && $paymentWindowExpired): ?>
                                     <span class="status-text cancelled">
-                                        <i class="fas fa-clock"></i> Payment window expired
+                                        <i class="fas fa-clock"></i> <?php echo te('Payment window expired', 'ගෙවීමේ කාලය ඉකුත් විය'); ?>
                                     </span>
                                 <?php elseif ($booking['status'] === 'receipt_submitted' || $booking['status'] === 'payment_pending'): ?>
                                     <span class="status-text">
-                                        <i class="fas fa-hourglass-half"></i> Awaiting Payment Verification
+                                        <i class="fas fa-hourglass-half"></i> <?php echo te('Awaiting Payment Verification', 'ගෙවීම තහවුරු කිරීම බලාපොරොත්තුවෙන්'); ?>
                                     </span>
                                 <?php elseif ($booking['status'] === 'confirmed'): ?>
                                     <span class="status-text confirmed">
-                                        <i class="fas fa-check-circle"></i> Dāna Reservation Confirmed
+                                        <i class="fas fa-check-circle"></i> <?php echo te('Dāna Reservation Confirmed', 'දාන වෙන්කිරීම තහවුරු කළා'); ?>
                                     </span>
                                 <?php elseif ($booking['status'] === 'completed'): ?>
                                     <span class="status-text completed">
-                                        <i class="fas fa-star"></i> Completed
+                                        <i class="fas fa-star"></i> <?php echo te('Completed', 'සම්පූර්ණයි'); ?>
                                     </span>
                                 <?php elseif ($booking['status'] === 'cancelled'): ?>
                                     <span class="status-text cancelled">
-                                        <i class="fas fa-times-circle"></i> Cancelled
+                                        <i class="fas fa-times-circle"></i> <?php echo te('Cancelled', 'අවලංගුයි'); ?>
                                     </span>
                                 <?php endif; ?>
                             </div>
@@ -264,16 +269,16 @@ $bookings = $db->fetchAll(
                 </div>
 
                 <?php if ($totalPages > 1): ?>
-                    <nav class="pagination" aria-label="Reservation pages">
-                        <?php if ($page > 1): ?><a class="btn btn-secondary btn-sm" href="?page=<?php echo $page - 1; ?>">Previous</a><?php endif; ?>
-                        <span>Page <?php echo $page; ?> of <?php echo $totalPages; ?></span>
-                        <?php if ($page < $totalPages): ?><a class="btn btn-secondary btn-sm" href="?page=<?php echo $page + 1; ?>">Next</a><?php endif; ?>
+                    <nav class="pagination" aria-label="<?php echo te('Reservation pages', 'වෙන්කිරීම් පිටු'); ?>">
+                        <?php if ($page > 1): ?><a class="btn btn-secondary btn-sm" href="?page=<?php echo $page - 1; ?>"><?php echo te('Previous', 'පෙර'); ?></a><?php endif; ?>
+                        <span><?php echo ui_lang() === 'si' ? 'පිටුව ' . $page . ' / ' . $totalPages : 'Page ' . $page . ' of ' . $totalPages; ?></span>
+                        <?php if ($page < $totalPages): ?><a class="btn btn-secondary btn-sm" href="?page=<?php echo $page + 1; ?>"><?php echo te('Next', 'ඊළඟ'); ?></a><?php endif; ?>
                     </nav>
                 <?php endif; ?>
                 
                 <div style="text-align: center; margin-top: 40px;">
                     <a href="booking-new.php" class="btn btn-primary">
-                        <i class="fas fa-plus-circle"></i> Make New Dāna Reservation
+                        <i class="fas fa-plus-circle"></i> <?php echo te('Make New Dāna Reservation', 'නව දාන වෙන්කිරීමක් කරන්න'); ?>
                     </a>
                 </div>
             <?php endif; ?>

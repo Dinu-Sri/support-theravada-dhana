@@ -14,20 +14,20 @@ $receipt = getDB()->fetchOne(
 );
 if (!$receipt) {
     http_response_code(404);
-    exit('Receipt not found');
+    exit(t('Receipt not found', 'රිසිට්පත හමු නොවීය'));
 }
 
 $filename = basename($receipt['receipt_filename']);
 $path = __DIR__ . '/uploads/receipts/' . $filename;
 if (!is_file($path)) {
     http_response_code(404);
-    exit('Receipt file not found');
+    exit(t('Receipt file not found', 'රිසිට්පත් ගොනුව හමු නොවීය'));
 }
 $mime = (new finfo(FILEINFO_MIME_TYPE))->file($path);
 $allowed = ['image/jpeg', 'image/png', 'application/pdf'];
 if (!in_array($mime, $allowed, true)) {
     http_response_code(415);
-    exit('Unsupported receipt type');
+    exit(t('Unsupported receipt type', 'මෙම රිසිට්පත් වර්ගයට සහාය නැත'));
 }
 
 header('Content-Type: ' . $mime);

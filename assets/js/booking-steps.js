@@ -14,6 +14,18 @@ const additionalInfoStep = Number(bookingFlow.additionalInfoStep) || 3;
 const reviewStep = Number(bookingFlow.reviewStep) || totalSteps;
 let stepTransitionPending = false;
 
+function uiText(key) {
+    return window.uiText ? window.uiText(key) : key;
+}
+
+function uiDhana(name) {
+    return window.uiDhana ? window.uiDhana(name) : name;
+}
+
+function uiDesc(text) {
+    return window.uiDesc ? window.uiDesc(text) : text;
+}
+
 // Safe function to check if element exists before accessing
 function safeGetElement(id) {
     try {
@@ -464,7 +476,7 @@ function safeLoadDhanaTypes() {
             dhanaTypesContainer.innerHTML = `
                 <div class="error-message">
                     <i class="fas fa-exclamation-triangle"></i>
-                    <p>No dāna types available. Please contact the administrator.</p>
+                    <p>${uiText('No dāna types available. Please contact the administrator.')}</p>
                 </div>
             `;
             return;
@@ -488,17 +500,17 @@ function safeLoadDhanaTypes() {
 
                     <label for="dhana_${type.id}" class="dhana-type-label ${isDisabled ? 'disabled' : ''}">
                         <div class="dhana-type-header">
-                            <h4>${safeEscapeHtml(type.name)}</h4>
+                            <h4>${safeEscapeHtml(uiDhana(type.name))}</h4>
                             <div class="dhana-type-price" data-base-price="${type.price}">
                                 ${type.price > 0 ?
-                                    '<span class="price-pending"><i class="fas fa-info-circle"></i> Price will be shown after selecting date</span>' :
-                                    '<span class="coming-soon">Coming Soon</span>'
+                                    '<span class="price-pending"><i class="fas fa-info-circle"></i> ' + uiText('Price will be shown after selecting date') + '</span>' :
+                                    '<span class="coming-soon">' + uiText('Coming Soon') + '</span>'
                                 }
                             </div>
                         </div>
 
                         ${type.description ?
-                            `<p class="dhana-type-description">${safeEscapeHtml(type.description)}</p>` :
+                            `<p class="dhana-type-description">${safeEscapeHtml(uiDesc(type.description))}</p>` :
                             ''
                         }
 
@@ -510,7 +522,7 @@ function safeLoadDhanaTypes() {
                         ${isDisabled ?
                             `<div class="disabled-overlay">
                                 <i class="fas fa-clock"></i>
-                                Coming Soon
+                                ${uiText('Coming Soon')}
                             </div>` :
                             ''
                         }
@@ -601,7 +613,7 @@ async function updateDhanaPricesForDate(selectedDate) {
 
                 // Add tentative indicator if needed
                 if (data.is_tentative) {
-                    priceElement.innerHTML = `<span class="price-amount">${formattedPrice}</span> <span class="tentative-badge" title="Price may change">*</span>`;
+                    priceElement.innerHTML = `<span class="price-amount">${formattedPrice}</span> <span class="tentative-badge" title="${uiText('Price may change')}">*</span>`;
                 } else {
                     priceElement.innerHTML = `<span class="price-amount">${formattedPrice}</span>`;
                 }
@@ -616,7 +628,7 @@ async function updateDhanaPricesForDate(selectedDate) {
                 console.log(`✅ Updated price for ${dhanaTypeName}: Rs. ${data.price}${data.is_tentative ? ' (tentative)' : ''}`);
             } else if (data.success && data.price == 0) {
                 // Price is 0, show "Coming Soon"
-                priceElement.innerHTML = '<span class="coming-soon">Coming Soon</span>';
+                priceElement.innerHTML = '<span class="coming-soon">' + uiText('Coming Soon') + '</span>';
                 radioInput.disabled = true;
                 card.querySelector('.dhana-type-label')?.classList.add('disabled');
                 console.log(`⚠️ ${dhanaTypeName} is coming soon (price = 0)`);
@@ -654,7 +666,7 @@ function updateStep2PriceSummary(selectedDate) {
             if (data.success) {
                 // Format price with tentative indicator if needed
                 const formattedPrice = `Rs. ${safeFormatPrice(data.price)}`;
-                const tentativeIndicator = data.is_tentative ? ' <span class="tentative-badge" title="Price may change">*</span>' : '';
+                const tentativeIndicator = data.is_tentative ? ' <span class="tentative-badge" title="' + uiText('Price may change') + '">*</span>' : '';
 
                 // Update inline display: | Rs. 180,000
                 inlinePriceDisplay.innerHTML = `| <strong>${formattedPrice}</strong>${tentativeIndicator}`;
@@ -675,13 +687,13 @@ function updateStep2PriceSummary(selectedDate) {
 // Ultra-safe helper functions
 function safeGetTimeSlotLabel(timeSlot) {
     const labels = {
-        'whole_day': 'Whole Day',
-        'morning': 'Morning Dāna',
-        'lunch': 'Lunch Dāna',
-        'evening': 'Evening Dāna',
-        'extra': 'Flexible timing'
+        'whole_day': uiText('Whole Day'),
+        'morning': uiText('Morning Dāna'),
+        'lunch': uiText('Lunch Dāna'),
+        'evening': uiText('Evening Dāna'),
+        'extra': uiText('Flexible timing')
     };
-    return labels[timeSlot] || 'Whole Day';
+    return labels[timeSlot] || uiText('Whole Day');
 }
 
 function safeEscapeHtml(text) {
@@ -699,7 +711,7 @@ function safeEscapeHtml(text) {
 function safeFormatPrice(price) {
     try {
         if (price == 0) {
-            return 'Coming Soon';
+            return uiText('Coming Soon');
         }
         return new Intl.NumberFormat('en-US').format(price);
     } catch (error) {
@@ -1483,7 +1495,7 @@ function validateCurrentStep() {
 
             if (!selectedDhanaType) {
                 console.log('❌ No dāna type selected');
-                errors.push('Please select a dāna type');
+                errors.push(uiText('Please select a dāna type'));
                 isValid = false;
             } else {
                 console.log('✅ Dhana type selected:', selectedDhanaType.value);
@@ -1507,20 +1519,20 @@ function validateCurrentStep() {
 
             if (!bookingDate) {
                 console.log('❌ No reservation date selected');
-                errors.push('Please select a reservation date');
+                errors.push(uiText('Please select a reservation date'));
                 isValid = false;
             }
 
             if (!timeSlot) {
                 console.log('❌ No time slot selected');
-                errors.push('Please select a time slot');
+                errors.push(uiText('Please select a time slot'));
                 isValid = false;
             }
 
             // Check if date is not in the past
             if (bookingDate && bookingDate < new Date().toISOString().split('T')[0]) {
                 console.log('❌ Date is in the past');
-                errors.push('Reservation date cannot be in the past');
+                errors.push(uiText('Reservation date cannot be in the past'));
                 isValid = false;
             }
 
@@ -1535,7 +1547,7 @@ function validateCurrentStep() {
                     isValid = false;
                 } else if (!currentAvailabilityStatus.available) {
                     console.log('❌ Slot not available:', currentAvailabilityStatus.reason);
-                    errors.push(currentAvailabilityStatus.reason || 'Selected slot is not available. Please choose a different date or time.');
+                    errors.push(currentAvailabilityStatus.reason || uiText('Selected slot is not available. Please choose a different date or time.'));
                     isValid = false;
                 } else {
                     console.log('✅ Step 2 validation passed');
@@ -1555,12 +1567,12 @@ function validateCurrentStep() {
                 break;
             }
             isValid = validateAllSteps();
-            if (!isValid) errors.push('Please return to the date step and verify your selection.');
+            if (!isValid) errors.push(uiText('Please return to the date step and verify your selection.'));
             break;
 
         case 5:
             isValid = validateAllSteps();
-            if (!isValid) errors.push('Please complete the recipient details and verify the selected date and time.');
+            if (!isValid) errors.push(uiText('Please complete the recipient details and verify the selected date and time.'));
             break;
     }
 
@@ -1598,19 +1610,19 @@ function validateBeneficiaryDetails(errors) {
     let valid = true;
 
     if (firstName.length < 2 || firstName.length > 50) {
-        errors.push('Please enter the reservation recipient’s first name.');
+        errors.push(uiText('Please enter the reservation recipient’s first name.'));
         valid = false;
     }
     if (lastName.length < 2 || lastName.length > 50) {
-        errors.push('Please enter the reservation recipient’s last name.');
+        errors.push(uiText('Please enter the reservation recipient’s last name.'));
         valid = false;
     }
     if (!phonePattern.test(primaryContact)) {
-        errors.push('Please enter a valid primary mobile number for the reservation recipient.');
+        errors.push(uiText('Please enter a valid primary mobile number for the reservation recipient.'));
         valid = false;
     }
     if (secondaryContact && !phonePattern.test(secondaryContact)) {
-        errors.push('Please enter a valid second mobile number, or leave it blank.');
+        errors.push(uiText('Please enter a valid second mobile number, or leave it blank.'));
         valid = false;
     }
     return valid;
@@ -1671,23 +1683,23 @@ function updateTimeSlotOptions() {
     if (!dhanaTypeData) return;
 
     // Clear existing options except the first one
-    timeSlotSelect.innerHTML = '<option value="">Select time slot</option>';
+    timeSlotSelect.innerHTML = '<option value="">' + uiText('Select time slot') + '</option>';
 
     // Add appropriate options based on dhana type with enhanced descriptions
     const timeSlotOptions = {
         'morning': {
             value: 'morning',
-            label: 'Morning Dāna',
+            label: uiText('Morning Dāna'),
             description: '6:00 AM - 12:00 PM'
         },
         'lunch': {
             value: 'lunch',
-            label: 'Lunch Dāna',
+            label: uiText('Lunch Dāna'),
             description: '11:00 AM - 2:00 PM'
         },
         'whole_day': {
             value: 'whole_day',
-            label: 'Whole Day',
+            label: uiText('Whole Day'),
             description: 'Full day reservation'
         }
     };
@@ -1776,7 +1788,7 @@ async function checkAvailability() {
     if (!selectedDhanaType || !bookingDate || !timeSlot) {
         resultDiv.innerHTML = `
             <i class="fas fa-info-circle"></i>
-            Please select dāna type, date, and time slot first.
+            ${uiText('Please select dāna type, date, and time slot first.')}
         `;
         resultDiv.className = 'availability-result unavailable';
         currentAvailabilityStatus = null;
@@ -1792,7 +1804,7 @@ async function checkAvailability() {
         // Show loading
         resultDiv.innerHTML = `
             <i class="fas fa-spinner fa-spin"></i>
-            Checking availability...
+            ${uiText('Checking availability...')}
         `;
         resultDiv.className = 'availability-result';
         resultDiv.style.display = 'block';
@@ -1812,7 +1824,7 @@ async function checkAvailability() {
         });
 
         const result = await response.json();
-        if (!response.ok) throw new Error(result.error || 'Availability check failed');
+        if (!response.ok) throw new Error(result.error || uiText('Availability check failed'));
         if (requestId !== availabilityRequestId || selectionKey !== getAvailabilitySelectionKey()) return null;
 
         currentAvailabilityStatus = { ...result, selectionKey };
@@ -1820,11 +1832,11 @@ async function checkAvailability() {
         if (result.available) {
             resultDiv.innerHTML = `
                 <i class="fas fa-check-circle"></i>
-                Great! This slot is available for reservation.
+                ${uiText('Great! This slot is available for reservation.')}
             `;
             resultDiv.className = 'availability-result available';
         } else {
-            const reason = result.reason || 'Sorry, this slot is already booked. Please choose a different date or time.';
+            const reason = result.reason || uiText('Sorry, this slot is already booked. Please choose a different date or time.');
             resultDiv.replaceChildren();
             const icon = document.createElement('i');
             icon.className = 'fas fa-times-circle';
@@ -1838,7 +1850,7 @@ async function checkAvailability() {
         console.error('Error checking availability:', error);
         resultDiv.innerHTML = `
             <i class="fas fa-exclamation-triangle"></i>
-            Unable to check availability. Please try again.
+            ${uiText('Unable to check availability. Please try again.')}
         `;
         resultDiv.className = 'availability-result unavailable';
         currentAvailabilityStatus = { available: false, reason: 'Network error', selectionKey };
@@ -1858,7 +1870,7 @@ async function autoCheckAvailability() {
         // Show immediate feedback that we're checking
         resultDiv.innerHTML = `
             <i class="fas fa-spinner fa-spin"></i>
-            Checking availability for your selected date and time...
+            ${uiText('Checking availability for your selected date and time...')}
         `;
         resultDiv.className = 'availability-result';
         resultDiv.style.display = 'block';
@@ -1893,12 +1905,12 @@ function updateReviewSection() {
             const tentativeDisclaimer = document.getElementById('tentative-price-disclaimer');
 
             if (reviewDhanaType && dhanaTypeData) {
-                reviewDhanaType.textContent = dhanaTypeData.name || 'Unknown';
+                reviewDhanaType.textContent = uiDhana(dhanaTypeData.name) || uiText('Unknown');
             }
 
             // Fetch dynamic price from API
             if (reviewTotalAmount && dhanaTypeData) {
-                reviewTotalAmount.textContent = 'Calculating…';
+                reviewTotalAmount.textContent = uiText('Calculating…');
                 fetch(`api/get-monthly-price.php?dhana_type_id=${selectedDhanaType.value}&date=${bookingDate}`)
                     .then(response => response.json())
                     .then(data => {
@@ -1942,13 +1954,12 @@ function updateReviewSection() {
             if (reviewDate) {
                 try {
                     const date = new Date(bookingDate + 'T00:00:00');
-                    const formattedDate = date.toLocaleDateString('en-US', {
+                    reviewDate.textContent = window.uiFormatLongDate ? window.uiFormatLongDate(date) : date.toLocaleDateString('en-US', {
                         weekday: 'long',
                         year: 'numeric',
                         month: 'long',
                         day: 'numeric'
                     });
-                    reviewDate.textContent = formattedDate;
                 } catch (dateError) {
                     console.warn('Date parsing error:', dateError);
                     reviewDate.textContent = bookingDate;
@@ -1963,9 +1974,9 @@ function updateReviewSection() {
             const reviewTimeSlot = document.getElementById('review-time-slot');
             if (reviewTimeSlot) {
                 const timeSlotLabels = {
-                    'morning': 'Morning Dāna',
-                    'lunch': 'Lunch Dāna',
-                    'whole_day': 'Whole Day'
+                    'morning': uiText('Morning Dāna'),
+                    'lunch': uiText('Lunch Dāna'),
+                    'whole_day': uiText('Whole Day')
                 };
                 reviewTimeSlot.textContent = timeSlotLabels[timeSlot] ||
                     timeSlot.charAt(0).toUpperCase() + timeSlot.slice(1).replace('_', ' ');
@@ -1977,14 +1988,14 @@ function updateReviewSection() {
         if (reviewTravelSupport) {
             const travelSupportElement = document.getElementById('travel_support');
             const isChecked = travelSupportElement ? travelSupportElement.checked : false;
-            reviewTravelSupport.textContent = isChecked ? 'Yes' : 'No';
+            reviewTravelSupport.textContent = isChecked ? uiText('Yes') : uiText('No');
         }
 
         const reviewAnnualEvent = document.getElementById('review-annual-event');
         if (reviewAnnualEvent) {
             const annualEventElement = document.getElementById('is_annual_event');
             const isChecked = annualEventElement ? annualEventElement.checked : false;
-            reviewAnnualEvent.textContent = isChecked ? 'Yes' : 'No';
+            reviewAnnualEvent.textContent = isChecked ? uiText('Yes') : uiText('No');
         }
 
         if (isAgentBooking) {
@@ -1996,9 +2007,9 @@ function updateReviewSection() {
             const recipientPrimary = document.getElementById('review-beneficiary-primary-contact');
             const recipientSecondary = document.getElementById('review-beneficiary-secondary-contact');
 
-            if (recipientName) recipientName.textContent = `${firstName} ${lastName}`.trim() || 'Not provided';
-            if (recipientPrimary) recipientPrimary.textContent = primaryContact || 'Not provided';
-            if (recipientSecondary) recipientSecondary.textContent = secondaryContact || 'Not provided';
+            if (recipientName) recipientName.textContent = `${firstName} ${lastName}`.trim() || uiText('Not provided');
+            if (recipientPrimary) recipientPrimary.textContent = primaryContact || uiText('Not provided');
+            if (recipientSecondary) recipientSecondary.textContent = secondaryContact || uiText('Not provided');
         }
 
         console.log('updateReviewSection completed successfully');
@@ -2008,7 +2019,7 @@ function updateReviewSection() {
     }
 }function formatPrice(price) {
     if (price == 0) {
-        return 'Coming Soon';
+        return uiText('Coming Soon');
     }
     return new Intl.NumberFormat('en-US').format(price);
 }
@@ -2031,7 +2042,7 @@ if (bookingForm) {
         event.preventDefault();
         const result = await checkAvailability();
         if (!result || !result.available || result.selectionKey !== getAvailabilitySelectionKey()) {
-            showValidationErrors([result?.reason || 'This reservation can no longer be submitted. Please verify the date and time.']);
+            showValidationErrors([result?.reason || uiText('This reservation can no longer be submitted. Please verify the date and time.')]);
             return;
         }
         bookingSubmitApproved = true;
@@ -2344,14 +2355,14 @@ async function showAnnualPriceBreakdown() {
 
     if (!selectedDhanaType) {
         summaryContainer.style.display = 'block';
-        summaryContainer.innerHTML = '<div class="error-inline"><i class="fas fa-exclamation-circle"></i> Please select a dāna type first</div>';
+        summaryContainer.innerHTML = '<div class="error-inline"><i class="fas fa-exclamation-circle"></i> ' + uiText('Please select a dāna type first') + '</div>';
         document.getElementById('is_annual_event').checked = false;
         return;
     }
 
     if (!bookingDateInput || !bookingDateInput.value) {
         summaryContainer.style.display = 'block';
-        summaryContainer.innerHTML = '<div class="error-inline"><i class="fas fa-exclamation-circle"></i> Please select a date first</div>';
+        summaryContainer.innerHTML = '<div class="error-inline"><i class="fas fa-exclamation-circle"></i> ' + uiText('Please select a date first') + '</div>';
         document.getElementById('is_annual_event').checked = false;
         return;
     }
@@ -2364,7 +2375,7 @@ async function showAnnualPriceBreakdown() {
 
     // Show loading state
     summaryContainer.style.display = 'block';
-    summaryContainer.innerHTML = '<div class="loading-inline"><i class="fas fa-spinner fa-spin"></i> Loading price breakdown...</div>';
+    summaryContainer.innerHTML = '<div class="loading-inline"><i class="fas fa-spinner fa-spin"></i> ' + uiText('Loading price breakdown...') + '</div>';
 
     try {
         const endpoint = new URL('api/get-annual-prices.php', window.location.href);
@@ -2381,21 +2392,23 @@ async function showAnnualPriceBreakdown() {
         try {
             data = JSON.parse(responseText);
         } catch (parseError) {
-            throw new Error('The pricing service returned an invalid response.');
+            throw new Error(uiText('The pricing service returned an invalid response.'));
         }
 
         if (!response.ok) {
-            throw new Error(data.error || `Unable to load annual prices (${response.status}).`);
+            throw new Error(data.error || ((window.UI && window.UI.lang === 'si')
+                ? `වාර්ෂික මිල පූරණය කළ නොහැක (${response.status}).`
+                : `Unable to load annual prices (${response.status}).`));
         }
 
         if (data.success) {
             displayAnnualPriceInline(data);
         } else {
-            summaryContainer.innerHTML = `<div class="error-inline"><i class="fas fa-exclamation-triangle"></i> ${escapeHtml(data.error || 'Unable to load prices.')}</div>`;
+            summaryContainer.innerHTML = `<div class="error-inline"><i class="fas fa-exclamation-triangle"></i> ${escapeHtml(data.error || uiText('Unable to load prices.'))}</div>`;
         }
     } catch (error) {
         console.error('Error fetching annual prices:', error);
-        summaryContainer.innerHTML = `<div class="error-inline"><i class="fas fa-exclamation-triangle"></i> ${escapeHtml(error.message || 'Failed to load prices. Please try again.')}</div>`;
+        summaryContainer.innerHTML = `<div class="error-inline"><i class="fas fa-exclamation-triangle"></i> ${escapeHtml(error.message || uiText('Failed to load prices. Please try again.'))}</div>`;
     }
 }
 
@@ -2407,27 +2420,39 @@ function displayAnnualPriceInline(data) {
 
     const summaryContainer = document.getElementById('annual_price_summary');
 
+    const sinhala = window.UI && window.UI.lang === 'si';
+    const confirmedCount = Number(data.summary.confirmed_count);
+    const missingCount = Number(data.summary.not_set_count);
+    const confirmedLabel = sinhala
+        ? `තහවුරු මිල සහිත වසර ${confirmedCount}:`
+        : `${confirmedCount} year${confirmedCount > 1 ? 's' : ''} with confirmed prices:`;
+    const missingLabel = sinhala
+        ? `මිල තවම නියම නොකළ වසර ${missingCount}:`
+        : `${missingCount} year${missingCount > 1 ? 's' : ''} with prices not set yet:`;
+    const spanLabel = sinhala
+        ? `වසර ${Number(data.annual_years)}`
+        : `${Number(data.annual_years)} Years`;
     let html = `
         <div class="annual-inline-header">
-            <i class="fas fa-calendar-check"></i>${escapeHtml(data.dhana_type_name)} - ${Number(data.annual_years)} Years
+            <i class="fas fa-calendar-check"></i>${escapeHtml(uiDhana(data.dhana_type_name))} - ${spanLabel}
         </div>
         <div class="annual-inline-stats">
             <div class="stat-item confirmed">
                 <div class="stat-item-header">
-                    <i class="fas fa-check-circle"></i><span class="stat-item-label">${data.summary.confirmed_count} year${data.summary.confirmed_count > 1 ? 's' : ''} with confirmed prices:</span>
+                    <i class="fas fa-check-circle"></i><span class="stat-item-label">${confirmedLabel}</span>
                 </div>
                 <span class="stat-amount">Rs. ${formatPrice(data.summary.total_confirmed)}</span>
             </div>
     `;
 
     // Only show "not set" stat if there are any
-    if (data.summary.not_set_count > 0) {
+    if (missingCount > 0) {
         html += `
             <div class="stat-item warning">
                 <div class="stat-item-header">
-                    <i class="fas fa-exclamation-circle"></i><span class="stat-item-label">${data.summary.not_set_count} year${data.summary.not_set_count > 1 ? 's' : ''} with prices not set yet:</span>
+                    <i class="fas fa-exclamation-circle"></i><span class="stat-item-label">${missingLabel}</span>
                 </div>
-                <span class="stat-amount">To be determined</span>
+                <span class="stat-amount">${uiText('To be determined')}</span>
             </div>
         `;
     }
@@ -2437,15 +2462,15 @@ function displayAnnualPriceInline(data) {
         <div class="annual-inline-details">
             <button type="button" class="btn-link-small" onclick="toggleAnnualDetails()">
                 <i class="fas fa-chevron-down" id="toggle-icon"></i>
-                <span id="toggle-text">Show detailed breakdown</span>
+                <span id="toggle-text">${uiText('Show detailed breakdown')}</span>
             </button>
             <div id="annual_details_table" class="annual-details-table" style="display: none;">
                 <table>
                     <thead>
                         <tr>
-                            <th>Year</th>
-                            <th>Date</th>
-                            <th>Price</th>
+                            <th>${uiText('Year')}</th>
+                            <th>${uiText('Date')}</th>
+                            <th>${uiText('Price')}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -2454,12 +2479,16 @@ function displayAnnualPriceInline(data) {
     data.prices.forEach(yearData => {
         const priceDisplay = yearData.price !== null
             ? `<span class="price-confirmed">Rs. ${formatPrice(yearData.price)}</span>`
-            : '<span class="price-not-set">Not set yet</span>';
+            : `<span class="price-not-set">${uiText('Not set yet')}</span>`;
+        const yearLabel = sinhala ? `වසර ${yearData.year_number}` : `Year ${yearData.year_number}`;
+        const displayDate = yearData.date && window.uiFormatMonthDate
+            ? window.uiFormatMonthDate(new Date(yearData.date + 'T00:00:00'))
+            : yearData.display_date;
 
         html += `
             <tr>
-                <td>Year ${yearData.year_number}</td>
-                <td>${escapeHtml(yearData.display_date)}</td>
+                <td>${yearLabel}</td>
+                <td>${escapeHtml(displayDate)}</td>
                 <td>${priceDisplay}</td>
             </tr>
         `;
@@ -2487,11 +2516,11 @@ function toggleAnnualDetails() {
         if (detailsTable.style.display === 'none') {
             detailsTable.style.display = 'block';
             toggleIcon.className = 'fas fa-chevron-up';
-            toggleText.textContent = 'Hide detailed breakdown';
+            toggleText.textContent = uiText('Hide detailed breakdown');
         } else {
             detailsTable.style.display = 'none';
             toggleIcon.className = 'fas fa-chevron-down';
-            toggleText.textContent = 'Show detailed breakdown';
+            toggleText.textContent = uiText('Show detailed breakdown');
         }
     }
 }

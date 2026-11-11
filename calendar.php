@@ -81,12 +81,7 @@ $blockedDatesArray = array_column($blockedDates, 'blocked_date');
 
 // Calendar helper functions
 function getMonthName($month) {
-    $months = [
-        1 => 'January', 2 => 'February', 3 => 'March', 4 => 'April',
-        5 => 'May', 6 => 'June', 7 => 'July', 8 => 'August',
-        9 => 'September', 10 => 'October', 11 => 'November', 12 => 'December'
-    ];
-    return $months[$month];
+    return ui_month_name((int)$month);
 }
 
 function getDaysInMonth($month, $year) {
@@ -100,11 +95,11 @@ $previousMonth = (clone $requestedMonth)->modify('-1 month');
 $nextMonth = (clone $requestedMonth)->modify('+1 month');
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<?php echo ui_html_open(); ?>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Check Availability - Dāna Reservation System</title>
+    <title><?php echo te('Check Availability - Dāna Reservation System', 'දින පරීක්ෂා කිරීම - දාන වෙන්කිරීමේ පද්ධතිය'); ?></title>
     <?php include 'includes/favicon.php'; ?>
     <link rel="stylesheet" href="assets/css/style.css">
     <link rel="stylesheet" href="assets/css/calendar.css">
@@ -115,10 +110,11 @@ $nextMonth = (clone $requestedMonth)->modify('+1 month');
     <div class="dashboard">
         <!-- Header -->
         <div class="dashboard-header">
-            <h1><i class="fas fa-calendar-alt"></i> Check Availability</h1>
-            <p>Select your preferred date for dāna reservation</p>
+            <?php ui_lang_switch(); ?>
+            <h1><i class="fas fa-calendar-alt"></i> <?php echo te('Check Availability', 'ලබා ගත හැකි දින පරීක්ෂා කරන්න'); ?></h1>
+            <p><?php echo te('Select your preferred date for dāna reservation', 'දාන වෙන්කිරීම සඳහා ඔබට පහසු දිනය තෝරන්න'); ?></p>
             <a href="dashboard.php" class="btn btn-secondary">
-                <i class="fas fa-arrow-left"></i> Back to Dashboard
+                <i class="fas fa-arrow-left"></i> <?php echo te('Back to Dashboard', 'ප්‍රධාන පුවරුවට'); ?>
             </a>
         </div>
 
@@ -127,21 +123,21 @@ $nextMonth = (clone $requestedMonth)->modify('+1 month');
             <div class="calendar-header">
                 <div class="calendar-nav">
                     <?php if ($previousMonth >= $minMonth): ?>
-                        <a aria-label="Previous month" href="?month=<?php echo $previousMonth->format('n'); ?>&year=<?php echo $previousMonth->format('Y'); ?>" class="nav-btn"><i class="fas fa-chevron-left"></i></a>
+                        <a aria-label="<?php echo te('Previous month', 'පෙර මාසය'); ?>" href="?month=<?php echo $previousMonth->format('n'); ?>&year=<?php echo $previousMonth->format('Y'); ?>" class="nav-btn"><i class="fas fa-chevron-left"></i></a>
                     <?php else: ?>
                         <span class="nav-btn disabled" aria-hidden="true"><i class="fas fa-chevron-left"></i></span>
                     <?php endif; ?>
                     <h2 id="monthYearDisplay"><?php echo getMonthName($currentMonth) . ' ' . $currentYear; ?></h2>
                     <?php if ($nextMonth <= $maxMonth): ?>
-                        <a aria-label="Next month" href="?month=<?php echo $nextMonth->format('n'); ?>&year=<?php echo $nextMonth->format('Y'); ?>" class="nav-btn"><i class="fas fa-chevron-right"></i></a>
+                        <a aria-label="<?php echo te('Next month', 'ඊළඟ මාසය'); ?>" href="?month=<?php echo $nextMonth->format('n'); ?>&year=<?php echo $nextMonth->format('Y'); ?>" class="nav-btn"><i class="fas fa-chevron-right"></i></a>
                     <?php else: ?>
                         <span class="nav-btn disabled" aria-hidden="true"><i class="fas fa-chevron-right"></i></span>
                     <?php endif; ?>
                 </div>
                 <p class="calendar-window-note">
                     <i class="fas fa-info-circle" aria-hidden="true"></i>
-                    You can browse the next 12 months. Reservations are currently open through
-                    <strong><?php echo $calendarMaxDate->format('F j, Y'); ?></strong>.
+                    <?php echo te('You can browse the next 12 months. Reservations are currently open through', 'ඉදිරි මාස 12 බලන්න පුළුවන්. වෙන්කිරීම් දැනට විවෘත වන්නේ'); ?>
+                    <strong><?php echo htmlspecialchars(ui_format_date($calendarMaxDate->getTimestamp())); ?></strong><?php echo ui_lang() === 'si' ? ' දක්වා.' : '.'; ?>
                 </p>
             </div>
 
@@ -149,42 +145,42 @@ $nextMonth = (clone $requestedMonth)->modify('+1 month');
             <div class="calendar-legend">
                 <div class="legend-item">
                     <div class="legend-color available"></div>
-                    <span>Available</span>
+                    <span><?php echo te('Available', 'ලබා ගත හැක'); ?></span>
                 </div>
                 <div class="legend-item">
                     <div class="legend-color partially-booked"></div>
-                    <span>Partially Booked</span>
+                    <span><?php echo te('Partially Booked', 'අර්ධ වශයෙන් වෙන් වී ඇත'); ?></span>
                 </div>
                 <div class="legend-item">
                     <div class="legend-color fully-booked"></div>
-                    <span>Fully Booked</span>
+                    <span><?php echo te('Fully Booked', 'සම්පූර්ණයෙන් වෙන් වී ඇත'); ?></span>
                 </div>
                 <div class="legend-item">
                     <div class="legend-color blocked"></div>
-                    <span>Blocked</span>
+                    <span><?php echo te('Blocked', 'අවහිරයි'); ?></span>
                 </div>
                 <div class="legend-item">
                     <div class="legend-color whole-day-blocked"></div>
-                    <span>Whole Day Booked</span>
+                    <span><?php echo te('Whole Day Booked', 'සම්පූර්ණ දිනය වෙන් වී ඇත'); ?></span>
                 </div>
                 <div class="legend-item">
                     <div class="annual-event-badge" style="position: static; margin-right: 8px;">
                         <i class="fas fa-calendar-check"></i>
                     </div>
-                    <span>Annual Event</span>
+                    <span><?php echo te('Annual Event', 'වාර්ෂික උත්සවය'); ?></span>
                 </div>
             </div>
 
             <!-- Calendar Grid -->
             <div class="calendar-grid">
                 <!-- Day headers -->
-                <div class="day-header">Sun</div>
-                <div class="day-header">Mon</div>
-                <div class="day-header">Tue</div>
-                <div class="day-header">Wed</div>
-                <div class="day-header">Thu</div>
-                <div class="day-header">Fri</div>
-                <div class="day-header">Sat</div>
+                <div class="day-header"><?php echo te('Sun', 'ඉරි'); ?></div>
+                <div class="day-header"><?php echo te('Mon', 'සඳු'); ?></div>
+                <div class="day-header"><?php echo te('Tue', 'අඟ'); ?></div>
+                <div class="day-header"><?php echo te('Wed', 'බදා'); ?></div>
+                <div class="day-header"><?php echo te('Thu', 'බ්‍රහ'); ?></div>
+                <div class="day-header"><?php echo te('Fri', 'සිකු'); ?></div>
+                <div class="day-header"><?php echo te('Sat', 'සෙන'); ?></div>
 
                 <?php
                 $daysInMonth = getDaysInMonth($currentMonth, $currentYear);
@@ -228,7 +224,7 @@ $nextMonth = (clone $requestedMonth)->modify('+1 month');
                         $cssClass .= ' today';
                     }
                     
-                    $dayLabel = date('l, F j, Y', strtotime($date));
+                    $dayLabel = ui_date_keep($date, 'l, F j, Y', 'long');
                     $disabled = ($isPast || $isOutsideWindow) ? ' disabled' : '';
                     echo '<button type="button" class="' . $cssClass . '" data-date="' . $date . '" aria-label="' . htmlspecialchars($dayLabel) . '" onclick="showDateDetails(\'' . $date . '\')"' . $disabled . '>';
                     echo '<span class="day-number">' . $day . '</span>';
@@ -278,15 +274,15 @@ $nextMonth = (clone $requestedMonth)->modify('+1 month');
             <div class="modal-content" tabindex="-1">
                 <div class="modal-header">
                     <h3 id="modalDate"></h3>
-                    <button type="button" class="close" aria-label="Close date details" onclick="closeDateModal()">&times;</button>
+                    <button type="button" class="close" aria-label="<?php echo te('Close date details', 'දින විස්තර වසන්න'); ?>" onclick="closeDateModal()">&times;</button>
                 </div>
                 <div class="modal-body">
                     <div id="modalContent"></div>
                 </div>
                 <div class="modal-footer">
-                    <button class="btn btn-secondary" onclick="closeDateModal()">Close</button>
+                    <button class="btn btn-secondary" onclick="closeDateModal()"><?php echo te('Close', 'වසන්න'); ?></button>
                     <a id="bookNowBtn" href="#" class="btn btn-primary" style="display: none;">
-                        <i class="fas fa-plus-circle"></i> Book Now
+                        <i class="fas fa-plus-circle"></i> <?php echo te('Book Now', 'දැන් වෙන්කරන්න'); ?>
                     </a>
                 </div>
             </div>
@@ -296,33 +292,24 @@ $nextMonth = (clone $requestedMonth)->modify('+1 month');
         <div id="monthYearModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="monthPickerTitle">
             <div class="modal-content" style="max-width: 400px;" tabindex="-1">
                 <div class="modal-header">
-                    <h3 id="monthPickerTitle"><i class="fas fa-calendar-alt"></i> Jump to Month</h3>
-                    <button type="button" class="close" aria-label="Close month picker" onclick="closeMonthYearModal()">&times;</button>
+                    <h3 id="monthPickerTitle"><i class="fas fa-calendar-alt"></i> <?php echo te('Jump to Month', 'මාසයකට යන්න'); ?></h3>
+                    <button type="button" class="close" aria-label="<?php echo te('Close month picker', 'මාස තේරීම වසන්න'); ?>" onclick="closeMonthYearModal()">&times;</button>
                 </div>
                 <div class="modal-body">
                     <div style="padding: 20px;">
                         <div style="margin-bottom: 20px;">
                             <label for="jumpMonth" style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">
-                                <i class="fas fa-calendar"></i> Select Month:
+                                <i class="fas fa-calendar"></i> <?php echo te('Select Month:', 'මාසය තෝරන්න:'); ?>
                             </label>
                             <select id="jumpMonth" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px;">
-                                <option value="1">January</option>
-                                <option value="2">February</option>
-                                <option value="3">March</option>
-                                <option value="4">April</option>
-                                <option value="5">May</option>
-                                <option value="6">June</option>
-                                <option value="7">July</option>
-                                <option value="8">August</option>
-                                <option value="9">September</option>
-                                <option value="10">October</option>
-                                <option value="11">November</option>
-                                <option value="12">December</option>
+                                <?php for ($monthNumber = 1; $monthNumber <= 12; $monthNumber++): ?>
+                                    <option value="<?php echo $monthNumber; ?>"><?php echo htmlspecialchars(ui_month_name($monthNumber), ENT_QUOTES, 'UTF-8'); ?></option>
+                                <?php endfor; ?>
                             </select>
                         </div>
                         <div style="margin-bottom: 20px;">
                             <label for="jumpYear" style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">
-                                <i class="fas fa-calendar-day"></i> Select Year:
+                                <i class="fas fa-calendar-day"></i> <?php echo te('Select Year:', 'වසර තෝරන්න:'); ?>
                             </label>
                             <select id="jumpYear" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px;">
                                 <?php
@@ -336,9 +323,9 @@ $nextMonth = (clone $requestedMonth)->modify('+1 month');
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button class="btn btn-secondary" onclick="closeMonthYearModal()">Cancel</button>
+                    <button class="btn btn-secondary" onclick="closeMonthYearModal()"><?php echo te('Cancel', 'අවලංගු කරන්න'); ?></button>
                     <button class="btn btn-primary" onclick="jumpToMonthYear()">
-                        <i class="fas fa-arrow-right"></i> Go to Month
+                        <i class="fas fa-arrow-right"></i> <?php echo te('Go to Month', 'මාසයට යන්න'); ?>
                     </button>
                 </div>
             </div>
@@ -354,6 +341,6 @@ $nextMonth = (clone $requestedMonth)->modify('+1 month');
         const currentMonth = <?php echo $currentMonth; ?>;
         const currentYear = <?php echo $currentYear; ?>;
     </script>
-    <script src="assets/js/calendar.js"></script>
+    <script src="assets/js/calendar.js?v=20261111"></script>
 </body>
 </html>

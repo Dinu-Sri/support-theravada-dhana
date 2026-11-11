@@ -29,16 +29,16 @@ try {
     $type = getBookableDhanaType($db, $typeId);
     if (!$date || !$type) {
         http_response_code(400);
-        echo json_encode(['error' => 'Invalid date or dāna type']);
+        echo json_encode(['error' => t_msg('Invalid date or dāna type')]);
         exit;
     }
     $dateError = validateBookingDate($db, $date);
     if ($dateError) {
-        echo json_encode(['available' => false, 'reason' => $dateError]);
+        echo json_encode(['available' => false, 'reason' => t_msg($dateError)]);
         exit;
     }
     if (findBookingConflicts($db, $dateValue, $type['time_slot'])) {
-        echo json_encode(['available' => false, 'reason' => 'This offering is already reserved for the selected date.']);
+        echo json_encode(['available' => false, 'reason' => t_msg('This offering is already reserved for the selected date.')]);
         exit;
     }
     echo json_encode(['available' => true, 'date' => $dateValue, 'dhana_type' => ['id' => (int)$type['id'], 'name' => $type['name']]]);
@@ -48,5 +48,5 @@ try {
 } catch (Throwable $error) {
     error_log('Legacy availability error: ' . $error->getMessage());
     http_response_code(500);
-    echo json_encode(['error' => 'Unable to check availability right now']);
+    echo json_encode(['error' => t_msg('Unable to check availability right now')]);
 }

@@ -167,11 +167,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['receipt'])) {
 
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<?php echo ui_html_open(); ?>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Payment - Dāna Reservation System</title>
+    <title><?php echo te('Payment - Dāna Reservation System', 'ගෙවීම - දාන වෙන්කිරීමේ පද්ධතිය'); ?></title>
     <?php include 'includes/favicon.php'; ?>
     <link rel="stylesheet" href="assets/css/style.css?v=20260913">
     <link rel="stylesheet" href="assets/css/payment.css?v=20260913">
@@ -182,10 +182,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['receipt'])) {
     <div class="dashboard">
         <!-- Header -->
         <div class="dashboard-header">
-            <h1><i class="fas fa-credit-card"></i> Payment & Receipt Upload</h1>
-            <p>Complete your dāna reservation by uploading payment receipt</p>
+            <?php ui_lang_switch(); ?>
+            <h1><i class="fas fa-credit-card"></i> <?php echo te('Payment & Receipt Upload', 'ගෙවීම සහ රිසිට්පත උඩුගත කිරීම'); ?></h1>
+            <p><?php echo te('Complete your dāna reservation by uploading payment receipt', 'ගෙවීම් රිසිට්පත උඩුගත කර දාන වෙන්කිරීම සම්පූර්ණ කරන්න'); ?></p>
             <a href="dashboard.php" class="btn btn-secondary">
-                <i class="fas fa-arrow-left"></i> Back to Dashboard
+                <i class="fas fa-arrow-left"></i> <?php echo te('Back to Dashboard', 'ප්‍රධාන පුවරුවට'); ?>
             </a>
         </div>
 
@@ -195,51 +196,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['receipt'])) {
             <div class="booking-summary-card" id="printableSummary">
                 <?php
                 // Calculate payment deadline (72 hours from creation by default)
-                $paymentDeadline = date('F j, Y h:i A', strtotime($booking['created_at'] . ' +' . $timeoutHours . ' hours'));
+                $paymentDeadline = ui_date_keep(strtotime($booking['created_at'] . ' +' . $timeoutHours . ' hours'), 'F j, Y h:i A', 'datetime');
 
-                // Get time slot display
-                $timeSlotDisplay = '';
-                if (isset($booking['booking_time_slot'])) {
-                    switch($booking['booking_time_slot']) {
-                        case 'morning': $timeSlotDisplay = 'Morning Dāna'; break;
-                        case 'lunch': $timeSlotDisplay = 'Lunch Dāna'; break;
-                        case 'whole_day': $timeSlotDisplay = 'Whole Day'; break;
-                        default: $timeSlotDisplay = ucfirst($booking['booking_time_slot']);
-                    }
-                }
+                $timeSlotDisplay = isset($booking['booking_time_slot']) ? ui_time_slot($booking['booking_time_slot']) : '';
                 ?>
 
                 <!-- Print Header (only visible when printing) -->
                 <div class="print-header">
-                    <h1>Dāna Reservation Summary</h1>
-                    <p class="print-subtitle">Support Theravada - Dāna Reservation System</p>
-                    <p class="print-date">Generated on: <span id="printDateTime"></span></p>
+                    <h1><?php echo te('Dāna Reservation Summary', 'දාන වෙන්කිරීමේ සාරාංශය'); ?></h1>
+                    <p class="print-subtitle"><?php echo te('Support Theravada - Dāna Reservation System', 'Support Theravada - දාන වෙන්කිරීමේ පද්ධතිය'); ?></p>
+                    <p class="print-date"><?php echo te('Generated on:', 'සෑදූ දිනය:'); ?> <span id="printDateTime"></span></p>
                 </div>
 
                 <!-- Screen Header (hidden when printing) -->
-                <h3 class="no-print"><i class="fas fa-receipt"></i> Dāna Reservation Summary</h3>
+                <h3 class="no-print"><i class="fas fa-receipt"></i> <?php echo te('Dāna Reservation Summary', 'දාන වෙන්කිරීමේ සාරාංශය'); ?></h3>
 
                 <!-- Main Summary Table -->
                 <table class="summary-table">
                     <thead>
                         <tr>
-                            <th colspan="2" class="table-header">Reservation Information</th>
+                            <th colspan="2" class="table-header"><?php echo te('Reservation Information', 'වෙන්කිරීමේ තොරතුරු'); ?></th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
-                            <td class="label-cell">Reservation ID</td>
+                            <td class="label-cell"><?php echo te('Reservation ID', 'වෙන්කිරීමේ අංකය'); ?></td>
                             <td class="value-cell"><strong>#<?php echo str_pad($booking['id'], 6, '0', STR_PAD_LEFT); ?></strong></td>
                         </tr>
                         <tr>
-                            <td class="label-cell">Reservation Date Created</td>
-                            <td class="value-cell"><?php echo date('F j, Y h:i A', strtotime($booking['created_at'])); ?></td>
+                            <td class="label-cell"><?php echo te('Reservation Date Created', 'වෙන්කළ දිනය'); ?></td>
+                            <td class="value-cell"><?php echo htmlspecialchars(ui_date_keep($booking['created_at'], 'F j, Y h:i A', 'datetime')); ?></td>
                         </tr>
                         <tr>
-                            <td class="label-cell">Current Status</td>
+                            <td class="label-cell"><?php echo te('Current Status', 'වත්මන් තත්ත්වය'); ?></td>
                             <td class="value-cell">
                                 <span class="status-badge status-<?php echo $paymentExpired && $booking['status'] === 'pending' ? 'cancelled' : $booking['status']; ?>">
-                                    <?php echo $paymentExpired && $booking['status'] === 'pending' ? 'Expired' : ucfirst(str_replace('_', ' ', $booking['status'])); ?>
+                                    <?php echo htmlspecialchars(ui_status($paymentExpired && $booking['status'] === 'pending' ? 'expired' : $booking['status'])); ?>
                                 </span>
                             </td>
                         </tr>
@@ -250,20 +242,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['receipt'])) {
                 <table class="summary-table">
                     <thead>
                         <tr>
-                            <th colspan="2" class="table-header">Donor Information</th>
+                            <th colspan="2" class="table-header"><?php echo te('Donor Information', 'දායක තොරතුරු'); ?></th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
-                            <td class="label-cell">Name</td>
+                            <td class="label-cell"><?php echo te('Name', 'නම'); ?></td>
                             <td class="value-cell"><?php echo htmlspecialchars($booking['first_name'] . ' ' . $booking['last_name']); ?></td>
                         </tr>
                         <tr>
-                            <td class="label-cell">Email</td>
+                            <td class="label-cell"><?php echo te('Email', 'විද්‍යුත් තැපෑල'); ?></td>
                             <td class="value-cell"><?php echo htmlspecialchars($booking['email']); ?></td>
                         </tr>
                         <tr>
-                            <td class="label-cell">Contact Number</td>
+                            <td class="label-cell"><?php echo te('Contact Number', 'දුරකථන අංකය'); ?></td>
                             <td class="value-cell"><?php echo htmlspecialchars($booking['contact_number']); ?></td>
                         </tr>
                     </tbody>
@@ -273,21 +265,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['receipt'])) {
                 <table class="summary-table">
                     <thead>
                         <tr>
-                            <th colspan="2" class="table-header">Reservation Recipient</th>
+                            <th colspan="2" class="table-header"><?php echo te('Reservation Recipient', 'වෙන්කිරීම ලබන්නා'); ?></th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
-                            <td class="label-cell">Name</td>
+                            <td class="label-cell"><?php echo te('Name', 'නම'); ?></td>
                             <td class="value-cell"><?php echo htmlspecialchars(trim($booking['booked_for_first_name'] . ' ' . $booking['booked_for_last_name'])); ?></td>
                         </tr>
                         <tr>
-                            <td class="label-cell">Primary Mobile</td>
+                            <td class="label-cell"><?php echo te('Primary Mobile', 'ප්‍රධාන ජංගම'); ?></td>
                             <td class="value-cell"><?php echo htmlspecialchars($booking['booked_for_primary_contact']); ?></td>
                         </tr>
                         <?php if (!empty($booking['booked_for_secondary_contact'])): ?>
                         <tr>
-                            <td class="label-cell">Second Mobile</td>
+                            <td class="label-cell"><?php echo te('Second Mobile', 'දෙවන ජංගම'); ?></td>
                             <td class="value-cell"><?php echo htmlspecialchars($booking['booked_for_secondary_contact']); ?></td>
                         </tr>
                         <?php endif; ?>
@@ -299,41 +291,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['receipt'])) {
                 <table class="summary-table">
                     <thead>
                         <tr>
-                            <th colspan="2" class="table-header">Dāna Details</th>
+                            <th colspan="2" class="table-header"><?php echo te('Dāna Details', 'දාන විස්තර'); ?></th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
-                            <td class="label-cell">Dāna Type</td>
-                            <td class="value-cell"><strong><?php echo htmlspecialchars($booking['dhana_type_name']); ?></strong></td>
+                            <td class="label-cell"><?php echo te('Dāna Type', 'දාන වර්ගය'); ?></td>
+                            <td class="value-cell"><strong><?php echo htmlspecialchars(ui_dhana_name($booking['dhana_type_name'])); ?></strong></td>
                         </tr>
                         <tr>
-                            <td class="label-cell">Dāna Date</td>
-                            <td class="value-cell"><strong><?php echo date('l, F j, Y', strtotime($booking['booking_date'])); ?></strong></td>
+                            <td class="label-cell"><?php echo te('Dāna Date', 'දාන දිනය'); ?></td>
+                            <td class="value-cell"><strong><?php echo htmlspecialchars(ui_date_keep($booking['booking_date'], 'l, F j, Y', 'long')); ?></strong></td>
                         </tr>
                         <?php if ($timeSlotDisplay): ?>
                         <tr>
-                            <td class="label-cell">Time Slot</td>
+                            <td class="label-cell"><?php echo te('Time Slot', 'වේලාව'); ?></td>
                             <td class="value-cell"><?php echo $timeSlotDisplay; ?></td>
                         </tr>
                         <?php endif; ?>
                         <tr>
-                            <td class="label-cell">Travel Support Offered</td>
-                            <td class="value-cell"><?php echo $booking['travel_support'] ? 'Yes' : 'No'; ?></td>
+                            <td class="label-cell"><?php echo te('Travel Support Offered', 'ගමන් පහසුකම්'); ?></td>
+                            <td class="value-cell"><?php echo $booking['travel_support'] ? te('Yes', 'ඔව්') : te('No', 'නැත'); ?></td>
                         </tr>
                         <tr>
-                            <td class="label-cell">Annual Event</td>
-                            <td class="value-cell"><?php echo $booking['is_annual_event'] ? 'Yes (Recurring Yearly)' : 'No'; ?></td>
+                            <td class="label-cell"><?php echo te('Annual Event', 'වාර්ෂික උත්සවය'); ?></td>
+                            <td class="value-cell"><?php echo $booking['is_annual_event'] ? te('Yes (Recurring Yearly)', 'ඔව් (වාර්ෂිකව)') : te('No', 'නැත'); ?></td>
                         </tr>
                         <?php if ($booking['special_requests']): ?>
                         <tr>
-                            <td class="label-cell">Special Requests</td>
+                            <td class="label-cell"><?php echo te('Special Requests', 'විශේෂ ඉල්ලීම්'); ?></td>
                             <td class="value-cell"><?php echo nl2br(htmlspecialchars($booking['special_requests'])); ?></td>
                         </tr>
                         <?php else: ?>
                         <tr>
-                            <td class="label-cell">Special Requests</td>
-                            <td class="value-cell">None</td>
+                            <td class="label-cell"><?php echo te('Special Requests', 'විශේෂ ඉල්ලීම්'); ?></td>
+                            <td class="value-cell"><?php echo te('None', 'නැත'); ?></td>
                         </tr>
                         <?php endif; ?>
                     </tbody>
@@ -343,50 +335,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['receipt'])) {
                 <table class="summary-table">
                     <thead>
                         <tr>
-                            <th colspan="2" class="table-header">Payment Information</th>
+                            <th colspan="2" class="table-header"><?php echo te('Payment Information', 'ගෙවීම් තොරතුරු'); ?></th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
-                            <td class="label-cell">Total Amount</td>
+                            <td class="label-cell"><?php echo te('Total Amount', 'මුළු මුදල'); ?></td>
                             <td class="value-cell amount-highlight"><strong>Rs. <?php echo number_format($booking['total_amount']); ?></strong></td>
                         </tr>
                         <tr>
-                            <td class="label-cell">Payment Receipt Submitted</td>
+                            <td class="label-cell"><?php echo te('Payment Receipt Submitted', 'ගෙවීම් රිසිට්පත යවා ඇත'); ?></td>
                             <td class="value-cell">
                                 <?php if ($existingReceipt): ?>
-                                    <span class="status-success">✓ Yes</span> - Uploaded on <?php echo date('F j, Y h:i A', strtotime($existingReceipt['upload_date'])); ?>
+                                    <span class="status-success">✓ <?php echo te('Yes', 'ඔව්'); ?></span> - <?php echo te('Uploaded on', 'උඩුගත කළ දිනය'); ?> <?php echo htmlspecialchars(ui_date_keep($existingReceipt['upload_date'], 'F j, Y h:i A', 'datetime')); ?>
                                 <?php else: ?>
-                                    <span class="status-warning">✗ No</span> - Please upload payment receipt
+                                    <span class="status-warning">✗ <?php echo te('No', 'නැත'); ?></span> - <?php echo te('Please upload payment receipt', 'ගෙවීම් රිසිට්පත උඩුගත කරන්න'); ?>
                                 <?php endif; ?>
                             </td>
                         </tr>
                         <?php if ($existingReceipt): ?>
                         <tr>
-                            <td class="label-cell">Payment Method</td>
-                            <td class="value-cell"><?php echo ucfirst(str_replace('_', ' ', $existingReceipt['payment_method'])); ?></td>
+                            <td class="label-cell"><?php echo te('Payment Method', 'ගෙවීමේ ක්‍රමය'); ?></td>
+                            <td class="value-cell"><?php echo htmlspecialchars(ui_payment_method($existingReceipt['payment_method'])); ?></td>
                         </tr>
                         <tr>
-                            <td class="label-cell">Payment Reference</td>
+                            <td class="label-cell"><?php echo te('Payment Reference', 'ගෙවීම් යොමුව'); ?></td>
                             <td class="value-cell"><?php echo htmlspecialchars($existingReceipt['payment_reference']); ?></td>
                         </tr>
                         <tr>
-                            <td class="label-cell">Receipt Verification Status</td>
+                            <td class="label-cell"><?php echo te('Receipt Verification Status', 'රිසිට්පත් තහවුරු තත්ත්වය'); ?></td>
                             <td class="value-cell">
                                 <?php if ($existingReceipt['verified']): ?>
-                                    <span class="status-success">✓ Verified</span>
+                                    <span class="status-success">✓ <?php echo te('Verified', 'තහවුරු කළා'); ?></span>
                                 <?php else: ?>
-                                    <span class="status-warning">⏳ Pending Verification</span>
+                                    <span class="status-warning">⏳ <?php echo te('Pending Verification', 'තහවුරු කිරීම පොරොත්තුවෙන්'); ?></span>
                                 <?php endif; ?>
                             </td>
                         </tr>
                         <?php endif; ?>
                         <?php if (!$existingReceipt && $timeoutHours > 0): ?>
                         <tr>
-                            <td class="label-cell">Payment Deadline</td>
+                            <td class="label-cell"><?php echo te('Payment Deadline', 'ගෙවීම් අවසන් දිනය'); ?></td>
                             <td class="value-cell <?php echo $paymentExpired ? 'status-error' : 'deadline-warning'; ?>">
-                                <strong><?php echo $paymentDeadline; ?></strong>
-                                <br><small><?php echo $paymentExpired ? 'This payment window has expired' : 'Receipt must be uploaded before this deadline'; ?></small>
+                                <strong><?php echo htmlspecialchars($paymentDeadline); ?></strong>
+                                <br><small><?php echo $paymentExpired ? te('This payment window has expired', 'මෙම ගෙවීම් කාලය ඉකුත් වී ඇත') : te('Receipt must be uploaded before this deadline', 'මෙම අවසන් දිනයට පෙර රිසිට්පත උඩුගත කරන්න'); ?></small>
                             </td>
                         </tr>
                         <?php endif; ?>
@@ -395,34 +387,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['receipt'])) {
 
                 <!-- Important Notice -->
                 <div class="important-notice">
-                    <h4><i class="fas fa-exclamation-triangle"></i> Important Notice</h4>
+                    <h4><i class="fas fa-exclamation-triangle"></i> <?php echo te('Important Notice', 'වැදගත් දැනුම්දීම'); ?></h4>
                     <ul>
-                        <li><strong>Temporary Reservation:</strong> This is a temporary booking until confirmed by staff.</li>
-                        <li><strong>Not a Guarantee:</strong> This receipt does not guarantee that your reservation is confirmed until the status is marked as "Confirmed" by authorized staff members.</li>
+                        <li><strong><?php echo te('Temporary Reservation:', 'තාවකාලික වෙන්කිරීම:'); ?></strong> <?php echo te('This is a temporary booking until confirmed by staff.', 'කාර්ය මණ්ඩලය තහවුරු කරන තුරු මෙය තාවකාලික වෙන්කිරීමකි.'); ?></li>
+                        <li><strong><?php echo te('Not a Guarantee:', 'සහතිකයක් නොවේ:'); ?></strong> <?php echo te('This receipt does not guarantee that your reservation is confirmed until the status is marked as "Confirmed" by authorized staff members.', 'බලයලත් කාර්ය මණ්ඩලය තත්ත්වය "තහවුරු කළ" ලෙස සලකුණු කරන තුරු මෙම රිසිට්පත වෙන්කිරීම තහවුරු වූ බවට සහතිකයක් නොවේ.'); ?></li>
                         <?php if (!$existingReceipt && $timeoutHours > 0): ?>
-                        <li><strong>Payment Deadline:</strong> <?php echo $paymentExpired ? 'The receipt deadline was' : 'Payment receipt must be uploaded before'; ?> <strong><?php echo $paymentDeadline; ?></strong><?php echo $paymentExpired ? '.' : '. Failure to upload will result in automatic cancellation of this reservation.'; ?></li>
+                        <li><strong><?php echo te('Payment Deadline:', 'ගෙවීම් අවසන් දිනය:'); ?></strong> <?php echo $paymentExpired ? te('The receipt deadline was', 'රිසිට්පත් අවසන් දිනය වූයේ') : te('Payment receipt must be uploaded before', 'ගෙවීම් රිසිට්පත උඩුගත කළ යුත්තේ'); ?> <strong><?php echo htmlspecialchars($paymentDeadline); ?></strong><?php echo $paymentExpired ? '.' : te('. Failure to upload will result in automatic cancellation of this reservation.', '. උඩුගත නොකළහොත් මෙම වෙන්කිරීම ස්වයංක්‍රීයව අවලංගු වේ.'); ?></li>
                         <?php endif; ?>
-                        <li><strong>Verification Required:</strong> All payment receipts are subject to verification by administration.</li>
-                        <li><strong>Contact Us:</strong> For any questions or concerns, please contact the administration.</li>
+                        <li><strong><?php echo te('Verification Required:', 'තහවුරු කිරීම අවශ්‍යයි:'); ?></strong> <?php echo te('All payment receipts are subject to verification by administration.', 'සියලු ගෙවීම් රිසිට්පත් පරිපාලනය විසින් තහවුරු කරනු ලැබේ.'); ?></li>
+                        <li><strong><?php echo te('Contact Us:', 'අප අමතන්න:'); ?></strong> <?php echo te('For any questions or concerns, please contact the administration.', 'ප්‍රශ්න හෝ ගැටලු සඳහා පරිපාලනය අමතන්න.'); ?></li>
                     </ul>
                 </div>
 
                 <!-- Print Summary Button (visible on screen, hidden when printing) -->
                 <button class="btn-print-summary no-print" onclick="printSummary()">
-                    <i class="fas fa-print"></i> Print Summary
+                    <i class="fas fa-print"></i> <?php echo te('Print Summary', 'සාරාංශය මුද්‍රණය කරන්න'); ?>
                 </button>
             </div>
 
             <!-- Right panel: receipt upload followed by clear bank details -->
-            <aside class="payment-side-panel" aria-label="Payment submission">
+            <aside class="payment-side-panel" aria-label="<?php echo te('Payment submission', 'ගෙවීම ඉදිරිපත් කිරීම'); ?>">
             <?php if (($booking['status'] === 'pending' || $booking['status'] === 'payment_pending') && !$paymentExpired && !$existingReceipt): ?>
                 <div class="receipt-upload-form">
-                    <h3><i class="fas fa-upload"></i> Upload Payment Receipt</h3>
+                    <h3><i class="fas fa-upload"></i> <?php echo te('Upload Payment Receipt', 'ගෙවීම් රිසිට්පත උඩුගත කරන්න'); ?></h3>
 
                     <?php if (isset($successMessage)): ?>
                         <div class="success-message">
                             <i class="fas fa-check-circle"></i>
-                            <?php echo htmlspecialchars($successMessage); ?>
+                            <?php echo te_msg($successMessage); ?>
                         </div>
                     <?php endif; ?>
 
@@ -431,7 +423,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['receipt'])) {
                             <i class="fas fa-exclamation-circle"></i>
                             <ul>
                                 <?php foreach ($errors as $error): ?>
-                                    <li><?php echo htmlspecialchars($error); ?></li>
+                                    <li><?php echo te_msg($error); ?></li>
                                 <?php endforeach; ?>
                             </ul>
                         </div>
@@ -441,106 +433,106 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['receipt'])) {
                         <?php echo csrfInput(); ?>
                         <div class="form-row">
                             <div class="form-group">
-                                <label for="payment_method">Payment Method</label>
+                                <label for="payment_method"><?php echo te('Payment Method', 'ගෙවීමේ ක්‍රමය'); ?></label>
                                 <select id="payment_method" name="payment_method" required>
-                                    <option value="">Select payment method</option>
-                                    <option value="bank_transfer">Bank Transfer</option>
-                                    <option value="online_banking">Online Banking</option>
-                                    <option value="mobile_banking">Mobile Banking</option>
-                                    <option value="cash_deposit">Cash Deposit</option>
+                                    <option value=""><?php echo te('Select payment method', 'ගෙවීමේ ක්‍රමය තෝරන්න'); ?></option>
+                                    <option value="bank_transfer"><?php echo te('Bank Transfer', 'බැංකු මාරුව'); ?></option>
+                                    <option value="online_banking"><?php echo te('Online Banking', 'ඔන්ලයින් බැංකුකරණය'); ?></option>
+                                    <option value="mobile_banking"><?php echo te('Mobile Banking', 'ජංගම බැංකුකරණය'); ?></option>
+                                    <option value="cash_deposit"><?php echo te('Cash Deposit', 'මුදල් තැන්පතුව'); ?></option>
                                 </select>
                             </div>
 
                             <div class="form-group">
-                                <label for="payment_reference">Transaction ID / Reference</label>
+                                <label for="payment_reference"><?php echo te('Transaction ID / Reference', 'ගනුදෙනු අංකය / යොමුව'); ?></label>
                                 <input type="text" id="payment_reference" name="payment_reference" maxlength="100"
-                                       placeholder="Enter transaction ID or reference number" required>
+                                       placeholder="<?php echo te('Enter transaction ID or reference number', 'ගනුදෙනු අංකය හෝ යොමු අංකය ඇතුළත් කරන්න'); ?>" required>
                             </div>
                         </div>
 
                         <div class="form-group">
-                            <label for="receipt">Receipt File</label>
+                            <label for="receipt"><?php echo te('Receipt File', 'රිසිට්පත් ගොනුව'); ?></label>
                             <div class="file-upload-area">
                                 <input type="file" id="receipt" name="receipt" accept=".jpg,.jpeg,.png,.pdf" required>
                                 <div class="file-upload-text">
                                     <i class="fas fa-cloud-upload-alt"></i>
-                                    <p>Click to select receipt file or drag and drop</p>
-                                    <small>Supported formats: JPG, PNG, PDF (Max 5MB)</small>
+                                    <p><?php echo te('Click to select receipt file or drag and drop', 'රිසිට්පත් ගොනුව තේරීමට ඔබන්න හෝ ඇද දමන්න'); ?></p>
+                                    <small><?php echo te('Supported formats: JPG, PNG, PDF (Max 5MB)', 'JPG, PNG, PDF (උපරිම 5MB)'); ?></small>
                                 </div>
                             </div>
                         </div>
 
                         <button type="submit" class="btn btn-primary btn-large">
                             <i class="fas fa-upload"></i>
-                            Upload Receipt
+                            <?php echo te('Upload Receipt', 'රිසිට්පත උඩුගත කරන්න'); ?>
                         </button>
                     </form>
                 </div>
             <?php elseif ($existingReceipt): ?>
                 <!-- Show Existing Receipt in Middle Column -->
                 <div class="existing-receipt">
-                    <h3><i class="fas fa-file-invoice"></i> Uploaded Receipt</h3>
+                    <h3><i class="fas fa-file-invoice"></i> <?php echo te('Uploaded Receipt', 'උඩුගත කළ රිසිට්පත'); ?></h3>
 
                     <div class="receipt-info">
                         <div class="receipt-item">
-                            <label>Upload Date:</label>
-                            <span><?php echo date('F j, Y g:i A', strtotime($existingReceipt['upload_date'])); ?></span>
+                            <label><?php echo te('Upload Date:', 'උඩුගත කළ දිනය:'); ?></label>
+                            <span><?php echo htmlspecialchars(ui_date_keep($existingReceipt['upload_date'], 'F j, Y g:i A', 'datetime')); ?></span>
                         </div>
 
                         <div class="receipt-item">
-                            <label>Payment Method:</label>
-                            <span><?php echo ucfirst(str_replace('_', ' ', $existingReceipt['payment_method'])); ?></span>
+                            <label><?php echo te('Payment Method:', 'ගෙවීමේ ක්‍රමය:'); ?></label>
+                            <span><?php echo htmlspecialchars(ui_payment_method($existingReceipt['payment_method'])); ?></span>
                         </div>
 
                         <div class="receipt-item">
-                            <label>Reference:</label>
+                            <label><?php echo te('Reference:', 'යොමුව:'); ?></label>
                             <span><?php echo htmlspecialchars($existingReceipt['payment_reference']); ?></span>
                         </div>
 
                         <div class="receipt-item">
-                            <label>Status:</label>
+                            <label><?php echo te('Status:', 'තත්ත්වය:'); ?></label>
                             <span class="verification-status <?php echo $existingReceipt['verified'] ? 'verified' : 'pending'; ?>">
                                 <?php if ($existingReceipt['verified']): ?>
-                                    <i class="fas fa-check-circle"></i> Verified
+                                    <i class="fas fa-check-circle"></i> <?php echo te('Verified', 'තහවුරු කළා'); ?>
                                 <?php else: ?>
-                                    <i class="fas fa-clock"></i> Pending Verification
+                                    <i class="fas fa-clock"></i> <?php echo te('Pending Verification', 'තහවුරු කිරීම පොරොත්තුවෙන්'); ?>
                                 <?php endif; ?>
                             </span>
                         </div>
 
                         <div class="receipt-item">
-                            <label>File:</label>
+                            <label><?php echo te('File:', 'ගොනුව:'); ?></label>
                             <a href="receipt.php?id=<?php echo (int)$existingReceipt['id']; ?>"
                                target="_blank" rel="noopener" class="receipt-link">
                                 <i class="fas fa-external-link-alt"></i>
-                                View Receipt
+                                <?php echo te('View Receipt', 'රිසිට්පත බලන්න'); ?>
                             </a>
                         </div>
                     </div>
                 </div>
             <?php elseif ($paymentExpired): ?>
                 <div class="existing-receipt payment-expired-notice" role="status">
-                    <h3><i class="fas fa-clock"></i> Payment Window Expired</h3>
-                    <p>This temporary reservation can no longer accept a receipt. Please create a new reservation or contact the administration if you already made the payment.</p>
-                    <a href="booking-new.php" class="btn btn-primary"><i class="fas fa-plus-circle"></i> Make a New Reservation</a>
+                    <h3><i class="fas fa-clock"></i> <?php echo te('Payment Window Expired', 'ගෙවීම් කාලය ඉකුත් විය'); ?></h3>
+                    <p><?php echo te('This temporary reservation can no longer accept a receipt. Please create a new reservation or contact the administration if you already made the payment.', 'මෙම තාවකාලික වෙන්කිරීමට තවදුරටත් රිසිට්පතක් භාර ගත නොහැක. නව වෙන්කිරීමක් සාදන්න, නැතහොත් දැනටමත් ගෙවා ඇත්නම් පරිපාලනය අමතන්න.'); ?></p>
+                    <a href="booking-new.php" class="btn btn-primary"><i class="fas fa-plus-circle"></i> <?php echo te('Make a New Reservation', 'නව වෙන්කිරීමක් කරන්න'); ?></a>
                 </div>
             <?php endif; ?>
 
                 <section class="bank-details-card payment-bank-details">
                     <div class="bank-details-header">
-                        <h3><i class="fas fa-university"></i> Bank Transfer Details</h3>
+                        <h3><i class="fas fa-university"></i> <?php echo te('Bank Transfer Details', 'බැංකු මාරු විස්තර'); ?></h3>
                         <button type="button" class="copy-bank-details" onclick="copyBankDetails()">
-                            <i class="fas fa-copy"></i> Copy Details
+                            <i class="fas fa-copy"></i> <?php echo te('Copy Details', 'විස්තර පිටපත් කරන්න'); ?>
                         </button>
                     </div>
                     <p class="bank-details-intro">
-                        Transfer exactly <strong>Rs. <?php echo number_format($booking['total_amount']); ?></strong>, then return to the form above and upload the receipt.
+                        <?php echo te('Transfer exactly', 'හරියටම මාරු කරන්න'); ?> <strong>Rs. <?php echo number_format($booking['total_amount']); ?></strong><?php echo ui_lang() === 'si' ? ', ඉන්පසු ඉහත පෝරමයට ආපසු ගොස් රිසිට්පත උඩුගත කරන්න.' : ', then return to the form above and upload the receipt.'; ?>
                     </p>
-                    <div class="bank-details" id="bankDetailsText" aria-label="Bank account details">
+                    <div class="bank-details" id="bankDetailsText" aria-label="<?php echo te('Bank account details', 'බැංකු ගිණුම් විස්තර'); ?>">
                         <?php if ($bankDetails): ?>
                             <?php echo nl2br(htmlspecialchars($bankDetails['setting_value'])); ?>
                         <?php else: ?>
-                            <p>Bank details will be provided by the administration.</p>
+                            <p><?php echo te('Bank details will be provided by the administration.', 'බැංකු විස්තර පරිපාලනය විසින් ලබා දෙනු ඇත.'); ?></p>
                         <?php endif; ?>
                     </div>
                 </section>
@@ -548,7 +540,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['receipt'])) {
         </div> <!-- Close payment-container -->
     </div> <!-- Close dashboard -->
 
-    <script src="assets/js/payment.js"></script>
+    <script src="assets/js/payment.js?v=20261111"></script>
     <script>
         // Copy bank details function
         function copyBankDetails() {
@@ -582,7 +574,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['receipt'])) {
                 showCopySuccess();
             } catch (err) {
                 console.error('Failed to copy text: ', err);
-                alert('Failed to copy bank details. Please copy manually.');
+                alert(window.uiText ? window.uiText('Failed to copy bank details. Please copy manually.') : 'Failed to copy bank details. Please copy manually.');
             }
 
             document.body.removeChild(textArea);
@@ -592,7 +584,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['receipt'])) {
             const button = document.querySelector('.copy-bank-details');
             const originalText = button.innerHTML;
 
-            button.innerHTML = '<i class="fas fa-check"></i> Copied!';
+            button.innerHTML = '<i class="fas fa-check"></i> ' + (window.uiText ? window.uiText('Copied!') : 'Copied!');
             button.style.background = 'linear-gradient(135deg, #28a745 0%, #20c997 100%)';
 
             setTimeout(() => {
@@ -605,7 +597,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['receipt'])) {
         function printSummary() {
             // Set print date in the header
             const now = new Date();
-            const printDate = now.toLocaleDateString('en-US', {
+            const printDate = window.uiFormatDateTime ? window.uiFormatDateTime(now) : now.toLocaleDateString('en-US', {
                 year: 'numeric',
                 month: 'long',
                 day: 'numeric',
@@ -626,7 +618,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['receipt'])) {
         // Set initial print date on page load
         document.addEventListener('DOMContentLoaded', function() {
             const now = new Date();
-            const printDate = now.toLocaleDateString('en-US', {
+            const printDate = window.uiFormatDateTime ? window.uiFormatDateTime(now) : now.toLocaleDateString('en-US', {
                 year: 'numeric',
                 month: 'long',
                 day: 'numeric',

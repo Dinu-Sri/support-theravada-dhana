@@ -61,7 +61,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Show loading state
                 const submitButton = this.querySelector('button[type="submit"]');
                 const originalText = submitButton.innerHTML;
-                submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
+                submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + (window.uiText ? window.uiText('Uploading...') : 'Uploading...');
                 submitButton.disabled = true;
                 
                 // If form validation passes, it will submit normally
@@ -102,7 +102,7 @@ function handleFileSelection(file) {
     fileUploadText.innerHTML = `
         <i class="fas fa-file-check" style="color: #28a745;"></i>
         <p><strong>${fileName}</strong></p>
-        <small>Size: ${fileSize} | Ready to upload</small>
+        <small>${window.uiText ? window.uiText('Size') : 'Size'}: ${fileSize} | ${window.uiText ? window.uiText('Ready to upload') : 'Ready to upload'}</small>
     `;
     
     fileUploadArea.style.borderColor = '#28a745';
@@ -116,8 +116,8 @@ function resetFileUploadArea() {
     
     fileUploadText.innerHTML = `
         <i class="fas fa-cloud-upload-alt"></i>
-        <p>Click to select receipt file or drag and drop</p>
-        <small>Supported formats: JPG, PNG, PDF (Max 5MB)</small>
+        <p>${window.uiText ? window.uiText('Click to select receipt file or drag and drop') : 'Click to select receipt file or drag and drop'}</p>
+        <small>${window.uiText ? window.uiText('Supported formats: JPG, PNG, PDF (Max 5MB)') : 'Supported formats: JPG, PNG, PDF (Max 5MB)'}</small>
     `;
     
     fileUploadArea.style.borderColor = '#e1e5e9';
@@ -132,14 +132,14 @@ function validateFile(file) {
     if (file.size > maxSize) {
         return {
             valid: false,
-            error: 'File size must be less than 5MB'
+            error: window.uiText ? window.uiText('File size must be less than 5MB') : 'File size must be less than 5MB'
         };
     }
     
     if (!allowedTypes.includes(file.type)) {
         return {
             valid: false,
-            error: 'Only JPG, PNG, and PDF files are allowed'
+            error: window.uiText ? window.uiText('Only JPG, PNG, and PDF files are allowed') : 'Only JPG, PNG, and PDF files are allowed'
         };
     }
     
@@ -153,8 +153,8 @@ function showFileError(error) {
     
     fileUploadText.innerHTML = `
         <i class="fas fa-exclamation-triangle" style="color: #dc3545;"></i>
-        <p style="color: #dc3545;"><strong>Error: ${error}</strong></p>
-        <small>Please select a valid file</small>
+        <p style="color: #dc3545;"><strong>${window.uiText ? window.uiText('Error:') : 'Error:'} ${error}</strong></p>
+        <small>${window.uiText ? window.uiText('Please select a valid file') : 'Please select a valid file'}</small>
     `;
     
     fileUploadArea.style.borderColor = '#dc3545';
@@ -182,7 +182,7 @@ function validateUploadForm() {
     // Check payment method
     const paymentMethod = document.getElementById('payment_method').value;
     if (!paymentMethod) {
-        errors.push('Please select a payment method');
+        errors.push(window.uiText ? window.uiText('Please select a payment method') : 'Please select a payment method');
         highlightField('payment_method', false);
     } else {
         highlightField('payment_method', true);
@@ -191,7 +191,7 @@ function validateUploadForm() {
     // Check payment reference
     const paymentReference = document.getElementById('payment_reference').value.trim();
     if (!paymentReference) {
-        errors.push('Please enter payment reference/transaction ID');
+        errors.push(window.uiText ? window.uiText('Please enter payment reference/transaction ID') : 'Please enter payment reference/transaction ID');
         highlightField('payment_reference', false);
     } else {
         highlightField('payment_reference', true);
@@ -200,7 +200,7 @@ function validateUploadForm() {
     // Check file selection
     const fileInput = document.getElementById('receipt');
     if (!fileInput.files || fileInput.files.length === 0) {
-        errors.push('Please select a receipt file to upload');
+        errors.push(window.uiText ? window.uiText('Please select a receipt file to upload') : 'Please select a receipt file to upload');
     } else {
         const file = fileInput.files[0];
         const validation = validateFile(file);

@@ -5,6 +5,7 @@ header('Cache-Control: no-store');
 ini_set('display_errors', '0');
 
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../includes/i18n.php';
 require_once __DIR__ . '/../includes/booking-rules.php';
 
 try {
@@ -12,12 +13,12 @@ try {
     $startDate = parseBookingDate($_GET['start_date'] ?? '');
     if (!$startDate || $typeId <= 0) {
         http_response_code(400);
-        echo json_encode(['success' => false, 'error' => 'Invalid date or dāna type']);
+        echo json_encode(['success' => false, 'error' => t_msg('Invalid date or dāna type')]);
         exit;
     }
     if ($startDate->format('m-d') === '02-29') {
         http_response_code(400);
-        echo json_encode(['success' => false, 'error' => 'Annual reservations cannot start on February 29']);
+        echo json_encode(['success' => false, 'error' => t_msg('Annual reservations cannot start on February 29')]);
         exit;
     }
 
@@ -25,7 +26,7 @@ try {
     $type = getBookableDhanaType($db, $typeId);
     if (!$type) {
         http_response_code(404);
-        echo json_encode(['success' => false, 'error' => 'Dāna type is not available']);
+        echo json_encode(['success' => false, 'error' => t_msg('Dāna type is not available')]);
         exit;
     }
     $years = bookingSettingInt($db, 'annual_booking_years', 2, 1, 25);
@@ -48,7 +49,7 @@ try {
         $prices[] = [
             'year_number' => $offset + 1,
             'date' => $date->format('Y-m-d'),
-            'display_date' => $date->format('F j, Y'),
+            'display_date' => ui_lang() === 'si' ? ui_format_date($date->getTimestamp()) : $date->format('F j, Y'),
             'price' => $pricing['price'],
             'status' => $pricing['is_tentative'] ? 'tentative' : 'confirmed',
             'is_within_window' => !$pricing['is_tentative'],
@@ -72,6 +73,6 @@ try {
 } catch (Throwable $error) {
     error_log('Annual price error: ' . $error->getMessage());
     http_response_code(500);
-    echo json_encode(['success' => false, 'error' => 'Unable to load annual pricing right now']);
+    echo json_encode(['success' => false, 'error' => t_msg('Unable to load annual pricing right now')]);
 }
 

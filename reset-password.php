@@ -54,11 +54,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['token'], $_POST['pass
 }
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<?php echo ui_html_open(); ?>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reset Password - Dāna Reservation System</title>
+    <title><?php echo te('Reset Password - Dāna Reservation System', 'මුරපදය යළි පිහිටුවන්න - දාන වෙන්කිරීමේ පද්ධතිය'); ?></title>
     <?php include 'includes/favicon.php'; ?>
     <link rel="stylesheet" href="assets/css/style.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -221,39 +221,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['token'], $_POST['pass
 <body class="login-page">
     <div class="reset-password-card">
         <div class="reset-password-header">
-            <h1><i class="fas fa-lock"></i> Reset Password</h1>
-            <p>Create a new password for your account</p>
+            <?php ui_lang_switch(); ?>
+            <h1><i class="fas fa-lock"></i> <?php echo te('Reset Password', 'මුරපදය යළි පිහිටුවන්න'); ?></h1>
+            <p><?php echo te('Create a new password for your account', 'ගිණුම සඳහා නව මුරපදයක් සාදන්න'); ?></p>
         </div>
 
         <div class="reset-password-content">
             <?php if ($successMessage): ?>
                 <div class="success-message">
                     <i class="fas fa-check-circle"></i>
-                    <?php echo htmlspecialchars($successMessage); ?>
+                    <?php echo te_msg($successMessage); ?>
                 </div>
                 <div class="back-link">
-                    <a href="index.php"><i class="fas fa-sign-in-alt"></i> Go to Login</a>
+                    <a href="index.php"><i class="fas fa-sign-in-alt"></i> <?php echo te('Go to Login', 'පිවිසීමට යන්න'); ?></a>
                 </div>
             <?php elseif (!$tokenValid): ?>
                 <div class="error-message">
                     <i class="fas fa-exclamation-circle"></i>
-                    <?php echo htmlspecialchars($errorMessage); ?>
+                    <?php echo te_msg($errorMessage); ?>
                 </div>
                 <div class="back-link">
-                    <a href="forgot-password.php"><i class="fas fa-redo"></i> Request New Reset Link</a>
+                    <a href="forgot-password.php"><i class="fas fa-redo"></i> <?php echo te('Request New Reset Link', 'නව සබැඳියක් ඉල්ලන්න'); ?></a>
                 </div>
             <?php else: ?>
                 <?php if ($userData): ?>
                     <div class="user-info">
                         <i class="fas fa-user"></i>
-                        Resetting password for: <strong><?php echo htmlspecialchars($userData['email']); ?></strong>
+                        <?php echo te('Resetting password for:', 'මුරපදය යළි පිහිටුවන්නේ:'); ?> <strong><?php echo htmlspecialchars($userData['email']); ?></strong>
                     </div>
                 <?php endif; ?>
 
                 <?php if ($errorMessage): ?>
                     <div class="error-message">
                         <i class="fas fa-exclamation-circle"></i>
-                        <?php echo htmlspecialchars($errorMessage); ?>
+                        <?php echo te_msg($errorMessage); ?>
                     </div>
                 <?php endif; ?>
 
@@ -263,36 +264,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['token'], $_POST['pass
 
                     <div class="form-group">
                         <label for="password">
-                            <i class="fas fa-lock"></i> New Password
+                            <i class="fas fa-lock"></i> <?php echo te('New Password', 'නව මුරපදය'); ?>
                         </label>
                         <div class="password-toggle">
                             <input type="password" id="password" name="password" autocomplete="new-password" required
-                                   placeholder="Enter new password">
+                                   placeholder="<?php echo te('Enter new password', 'නව මුරපදය ඇතුළත් කරන්න'); ?>">
                             <i class="fas fa-eye toggle-icon" onclick="togglePassword('password')"></i>
                         </div>
                         <div class="password-requirements">
-                            Minimum <?php echo PASSWORD_MIN_LENGTH; ?> characters required
+                            <?php echo te('Minimum ' . PASSWORD_MIN_LENGTH . ' characters required', 'අවම අකුරු ' . PASSWORD_MIN_LENGTH . ' ක් අවශ්‍යයි'); ?>
                         </div>
                     </div>
 
                     <div class="form-group">
                         <label for="confirm_password">
-                            <i class="fas fa-lock"></i> Confirm New Password
+                            <i class="fas fa-lock"></i> <?php echo te('Confirm New Password', 'නව මුරපදය තහවුරු කරන්න'); ?>
                         </label>
                         <div class="password-toggle">
                             <input type="password" id="confirm_password" name="confirm_password" autocomplete="new-password" required
-                                   placeholder="Confirm new password">
+                                   placeholder="<?php echo te('Confirm new password', 'නව මුරපදය තහවුරු කරන්න'); ?>">
                             <i class="fas fa-eye toggle-icon" onclick="togglePassword('confirm_password')"></i>
                         </div>
                     </div>
 
                     <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-check"></i> Reset Password
+                        <i class="fas fa-check"></i> <?php echo te('Reset Password', 'මුරපදය යළි පිහිටුවන්න'); ?>
                     </button>
                 </form>
 
                 <div class="back-link">
-                    <a href="index.php"><i class="fas fa-arrow-left"></i> Back to Login</a>
+                    <a href="index.php"><i class="fas fa-arrow-left"></i> <?php echo te('Back to Login', 'පිවිසීමට ආපසු'); ?></a>
                 </div>
             <?php endif; ?>
         </div>
@@ -327,7 +328,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['token'], $_POST['pass
             
             if (password.length < <?php echo PASSWORD_MIN_LENGTH; ?>) {
                 e.preventDefault();
-                alert('Password must be at least <?php echo PASSWORD_MIN_LENGTH; ?> characters!');
+                alert(<?php echo json_encode(t('Password must be at least ' . PASSWORD_MIN_LENGTH . ' characters!', 'මුරපදය අවම වශයෙන් අකුරු ' . PASSWORD_MIN_LENGTH . ' ක් විය යුතුය.'), JSON_UNESCAPED_UNICODE); ?>);
                 return false;
             }
         });

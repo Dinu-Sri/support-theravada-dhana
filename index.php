@@ -56,11 +56,11 @@ if (isset($_POST['action']) && $_POST['action'] === 'register') {
 }
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<?php echo ui_html_open(); ?>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dāna Reservation System - Login</title>
+    <title><?php echo te('Dāna Reservation System - Login', 'දාන වෙන්කිරීමේ පද්ධතිය - පිවිසීම'); ?></title>
     <?php include 'includes/favicon.php'; ?>
     <link rel="stylesheet" href="assets/css/style.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -258,8 +258,9 @@ if (isset($_POST['action']) && $_POST['action'] === 'register') {
     <div class="login-container">
         <div class="login-card">
             <div class="login-header">
-                <h1><i class="fas fa-lotus"></i> Dāna Reservation</h1>
-                <p>Welcome to our sacred reservation system</p>
+                <?php ui_lang_switch(); ?>
+                <h1><i class="fas fa-lotus"></i> <?php echo te('Dāna Reservation', 'දාන වෙන්කිරීම'); ?></h1>
+                <p><?php echo te('Welcome to our sacred reservation system', 'අපගේ පූජනීය වෙන්කිරීමේ පද්ධතියට සාදරයෙන් පිළිගනිමු'); ?></p>
             </div>
 
             <!-- Login Form -->
@@ -267,19 +268,19 @@ if (isset($_POST['action']) && $_POST['action'] === 'register') {
                 <?php echo csrfInput(); ?>
                 <input type="hidden" name="action" value="login">
 
-                <h2>Sign In</h2>
+                <h2><?php echo te('Sign In', 'පිවිසෙන්න'); ?></h2>
 
                 <?php if (isset($loginError)): ?>
                     <div class="error-message">
                         <i class="fas fa-exclamation-circle"></i>
-                        <?php echo htmlspecialchars($loginError); ?>
+                        <?php echo te_msg($loginError); ?>
                     </div>
                 <?php endif; ?>
                 
                 <div class="form-group">
                     <label for="loginEmail">
                         <i class="fas fa-envelope"></i>
-                        Email Address
+                        <?php echo te('Email Address', 'විද්‍යුත් තැපැල් ලිපිනය'); ?>
                     </label>
                     <input type="email" id="loginEmail" name="email" autocomplete="email" maxlength="100" required>
                 </div>
@@ -287,25 +288,25 @@ if (isset($_POST['action']) && $_POST['action'] === 'register') {
                 <div class="form-group">
                     <label for="loginPassword">
                         <i class="fas fa-lock"></i>
-                        Password
+                        <?php echo te('Password', 'මුරපදය'); ?>
                     </label>
                     <input type="password" id="loginPassword" name="password" autocomplete="current-password" required>
                 </div>
 
                 <div style="text-align: right; margin-bottom: 15px;">
                     <a href="forgot-password.php" style="color: #ff9800; text-decoration: none; font-size: 14px;">
-                        <i class="fas fa-key"></i> Forgot Password?
+                        <i class="fas fa-key"></i> <?php echo te('Forgot Password?', 'මුරපදය අමතකද?'); ?>
                     </a>
                 </div>
 
                 <button type="submit" class="btn btn-primary">
                     <i class="fas fa-sign-in-alt"></i>
-                    Sign In
+                    <?php echo te('Sign In', 'පිවිසෙන්න'); ?>
                 </button>
 
                 <p class="auth-switch">
-                    Don't have an account?
-                    <a href="#registerForm" onclick="showRegisterForm(); return false;">Create Account</a>
+                    <?php echo te("Don't have an account?", 'ගිණුමක් නැද්ද?'); ?>
+                    <a href="#registerForm" onclick="showRegisterForm(); return false;"><?php echo te('Create Account', 'ගිණුමක් සාදන්න'); ?></a>
                 </p>
             </form>
 
@@ -314,14 +315,14 @@ if (isset($_POST['action']) && $_POST['action'] === 'register') {
                 <?php echo csrfInput(); ?>
                 <input type="hidden" name="action" value="register">
 
-                <h2>Create Account</h2>
+                <h2><?php echo te('Create Account', 'ගිණුමක් සාදන්න'); ?></h2>
 
                 <?php if (isset($registerErrors)): ?>
                     <div class="error-message">
                         <i class="fas fa-exclamation-circle"></i>
                         <ul>
                             <?php foreach ($registerErrors as $error): ?>
-                                <li><?php echo htmlspecialchars($error); ?></li>
+                                <li><?php echo te_msg($error); ?></li>
                             <?php endforeach; ?>
                         </ul>
                     </div>
@@ -331,7 +332,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'register') {
                     <div class="form-group">
                         <label for="firstName">
                             <i class="fas fa-user"></i>
-                            First Name
+                            <?php echo te('First Name', 'මුල් නම'); ?>
                         </label>
                         <input type="text" id="firstName" name="first_name" autocomplete="given-name" maxlength="50" required>
                     </div>
@@ -339,7 +340,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'register') {
                     <div class="form-group">
                         <label for="lastName">
                             <i class="fas fa-user"></i>
-                            Last Name
+                            <?php echo te('Last Name', 'අවසන් නම'); ?>
                         </label>
                         <input type="text" id="lastName" name="last_name" autocomplete="family-name" maxlength="50" required>
                     </div>
@@ -348,7 +349,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'register') {
                 <div class="form-group">
                     <label for="registerEmail">
                         <i class="fas fa-envelope"></i>
-                        Email Address
+                        <?php echo te('Email Address', 'විද්‍යුත් තැපැල් ලිපිනය'); ?>
                     </label>
                     <input type="email" id="registerEmail" name="email" autocomplete="email" maxlength="100" required>
                 </div>
@@ -356,7 +357,7 @@ if (isset($_POST['action']) && $_POST['action'] === 'register') {
                 <div class="form-group">
                     <label for="contactNumber">
                         <i class="fas fa-phone"></i>
-                        Contact Number
+                        <?php echo te('Contact Number', 'දුරකථන අංකය'); ?>
                     </label>
                     <input type="tel" id="contactNumber" name="contact_number" autocomplete="tel" inputmode="tel" maxlength="20" required>
                 </div>
@@ -364,13 +365,13 @@ if (isset($_POST['action']) && $_POST['action'] === 'register') {
                 <div class="form-group">
                     <label for="registerPassword">
                         <i class="fas fa-lock"></i>
-                        Password
+                        <?php echo te('Password', 'මුරපදය'); ?>
                     </label>
                     <input type="password" id="registerPassword" name="password" autocomplete="new-password" minlength="<?php echo PASSWORD_MIN_LENGTH; ?>" required>
                 </div>
 
                 <div class="form-group">
-                    <label for="confirmPassword"><i class="fas fa-lock"></i> Confirm Password</label>
+                    <label for="confirmPassword"><i class="fas fa-lock"></i> <?php echo te('Confirm Password', 'මුරපදය තහවුරු කරන්න'); ?></label>
                     <input type="password" id="confirmPassword" name="confirm_password" autocomplete="new-password" minlength="<?php echo PASSWORD_MIN_LENGTH; ?>" required>
                 </div>
                 
@@ -381,22 +382,22 @@ if (isset($_POST['action']) && $_POST['action'] === 'register') {
                         <input type="hidden" id="vinayaAccepted" name="vinaya_accepted" value="0">
                         <label for="isMonk" class="checkbox-label">
                             <i class="fas fa-temple"></i>
-                            I am a monk (Bhikkhu)
+                            <?php echo te('I am a monk (Bhikkhu)', 'මම භික්ෂුවක් වෙමි'); ?>
                         </label>
                     </div>
                     <p class="checkbox-help">
-                        Please check this box if you are a Buddhist monk. Special Vinaya guidelines apply.
+                        <?php echo te('Please check this box if you are a Buddhist monk. Special Vinaya guidelines apply.', 'ඔබ බෞද්ධ භික්ෂුවක් නම් මෙය සලකුණු කරන්න. විශේෂ විනය නීති අදාළ වේ.'); ?>
                     </p>
                 </div>
                 
                 <button type="submit" class="btn btn-primary">
                     <i class="fas fa-user-plus"></i>
-                    Create Account
+                    <?php echo te('Create Account', 'ගිණුමක් සාදන්න'); ?>
                 </button>
                 
                 <p class="auth-switch">
-                    Already have an account? 
-                    <a href="#loginForm" onclick="showLoginForm(); return false;">Sign In</a>
+                    <?php echo te('Already have an account?', 'දැනටමත් ගිණුමක් තිබේද?'); ?>
+                    <a href="#loginForm" onclick="showLoginForm(); return false;"><?php echo te('Sign In', 'පිවිසෙන්න'); ?></a>
                 </p>
             </form>
         </div>
@@ -406,39 +407,39 @@ if (isset($_POST['action']) && $_POST['action'] === 'register') {
     <div id="monkModal" class="modal-overlay" style="display: none;" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="monkModalTitle">
         <div class="modal-container">
             <div class="modal-header">
-                <h3 id="monkModalTitle"><i class="fas fa-temple"></i> Important Vinaya Disclosure</h3>
+                <h3 id="monkModalTitle"><i class="fas fa-temple"></i> <?php echo te('Important Vinaya Disclosure', 'වැදගත් විනය දැනුම්දීම'); ?></h3>
             </div>
             <div class="modal-content">
                 <div class="vinaya-text">
-                    <p>In accordance with the <strong>Theravāda Vinaya discipline</strong>, bhikkhus (monks) are strictly prohibited from handling money or engaging in financial transactions.</p>
+                    <p><?php echo t('In accordance with the <strong>Theravāda Vinaya discipline</strong>, bhikkhus (monks) are strictly prohibited from handling money or engaging in financial transactions.', '<strong>ථේරවාද විනය</strong> අනුව, භික්ෂූන් වහන්සේලාට මුදල් පරිහරණය කිරීම හෝ මූල්‍ය ගනුදෙනුවල යෙදීම සපුරා තහනම් ය.'); ?></p>
                     
                     <ul>
-                        <li>A monk is not permitted to give or receive donations in the form of money or to manage personal funds.</li>
-                        <li>A monk may not initiate or conduct financial transactions on his own behalf, either directly or indirectly.</li>
-                        <li>All acts of dāna (almsgiving or offerings) must be carried out solely through lay supporters who arrange and manage such contributions in a manner consistent with the Vinaya.</li>
-                        <li>If a monk is to arrange a donation to the International Institute of Theravada, he can only do it through his blood relatives (ñātaka) or devotees who have invited him with four requisites (pavārita dāyaka).</li>
+                        <li><?php echo te('A monk is not permitted to give or receive donations in the form of money or to manage personal funds.', 'භික්ෂුවකට මුදල් ලෙස පරිත්‍යාග දීමට හෝ ලැබීමට, හෝ පෞද්ගලික අරමුදල් කළමනාකරණය කිරීමට අවසර නැත.'); ?></li>
+                        <li><?php echo te('A monk may not initiate or conduct financial transactions on his own behalf, either directly or indirectly.', 'භික්ෂුවකට තමන් වෙනුවෙන් සෘජුව හෝ වක්‍රව මූල්‍ය ගනුදෙනු ආරම්භ කිරීමට හෝ පැවැත්වීමට නොහැක.'); ?></li>
+                        <li><?php echo te('All acts of dāna (almsgiving or offerings) must be carried out solely through lay supporters who arrange and manage such contributions in a manner consistent with the Vinaya.', 'සියලු දාන ක්‍රියා විනයට ගැළපෙන පරිදි ගිහි උපකාරකයන් හරහා පමණක් සිදු කළ යුතුය.'); ?></li>
+                        <li><?php echo te('If a monk is to arrange a donation to the International Institute of Theravada, he can only do it through his blood relatives (ñātaka) or devotees who have invited him with four requisites (pavārita dāyaka).', 'භික්ෂුවකට ජාත්‍යන්තර ථේරවාද ආයතනයට පරිත්‍යාගයක් සංවිධානය කිරීමට අවශ්‍ය නම්, එය ඥාතීන් (ඤාතක) හරහා හෝ පිරිකර සතරෙන් ආරාධනා කළ දායකයන් (පවාරිත දායක) හරහා පමණක් කළ හැක.'); ?></li>
                     </ul>
                     
-                    <p>This guideline exists to safeguard the purity of the Saṅgha and to maintain the original discipline established by the Buddha.</p>
+                    <p><?php echo te('This guideline exists to safeguard the purity of the Saṅgha and to maintain the original discipline established by the Buddha.', 'මෙම නියමය සංඝයාගේ පිරිසිදුභාවය රැක ගැනීමට සහ බුදුන් වහන්සේ පැනවූ මුල් විනය පවත්වා ගැනීමට ය.'); ?></p>
                     
-                    <p>Therefore, any offerings intended for the support of bhikkhus should be organized only through lay stewards or appointed representatives, ensuring that monastics remain fully in compliance with the Vinaya.</p>
+                    <p><?php echo te('Therefore, any offerings intended for the support of bhikkhus should be organized only through lay stewards or appointed representatives, ensuring that monastics remain fully in compliance with the Vinaya.', 'එබැවින් භික්ෂූන් වහන්සේලාට අදහස් කළ පූජා ගිහි භාරකරුවන් හෝ පත් කළ නියෝජිතයන් හරහා පමණක් සංවිධානය කළ යුතුය.'); ?></p>
                 </div>
             </div>
             <div class="modal-footer">
                 <div style="display: flex; width: 100%; gap: 15px; justify-content: center;">
                     <button type="button" onclick="cancelMonkRegistration()" style="flex: 1; max-width: 180px; min-width: 180px; width: 180px; height: 45px; padding: 0; margin: 0; box-sizing: border-box; text-align: center; font-size: 14px; border: none; border-radius: 4px; background: #6c757d; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-family: inherit; font-weight: normal; text-decoration: none; outline: none;">
                         <i class="fas fa-times"></i>
-                        <span>Cancel</span>
+                        <span><?php echo te('Cancel', 'අවලංගු කරන්න'); ?></span>
                     </button>
                     <button type="button" onclick="acceptMonkTerms()" style="flex: 1; max-width: 180px; min-width: 180px; width: 180px; height: 45px; padding: 0; margin: 0; box-sizing: border-box; text-align: center; font-size: 14px; border: none; border-radius: 4px; background: #ff9800; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-family: inherit; font-weight: normal; text-decoration: none; outline: none;">
                         <i class="fas fa-check"></i>
-                        <span>I Accept & Understand</span>
+                        <span><?php echo te('I Accept & Understand', 'මම පිළිගනිමි'); ?></span>
                     </button>
                 </div>
             </div>
         </div>
     </div>
 
-    <script src="assets/js/auth.js?v=20260913"></script>
+    <script src="assets/js/auth.js?v=20261111"></script>
 </body>
 </html>

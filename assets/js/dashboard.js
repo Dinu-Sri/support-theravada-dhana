@@ -124,7 +124,7 @@ function addStepProgressIndicator() {
         <div class="progress-bar">
             <div class="progress-fill"></div>
         </div>
-        <div class="progress-text">Follow these steps to complete your booking</div>
+        <div class="progress-text">${window.uiText ? window.uiText('Follow these steps to complete your booking') : 'Follow these steps to complete your booking'}</div>
     `;
     
     // Add CSS for progress bar
@@ -189,7 +189,7 @@ function addQuickStats() {
     const statsContainer = document.createElement('div');
     statsContainer.className = 'booking-stats';
     statsContainer.innerHTML = `
-        <h4><i class="fas fa-chart-pie"></i> Quick Stats</h4>
+        <h4><i class="fas fa-chart-pie"></i> ${window.uiText ? window.uiText('Quick Stats') : 'Quick Stats'}</h4>
         <div class="stats-grid">
             ${Object.entries(stats).map(([status, count]) => `
                 <div class="stat-item">

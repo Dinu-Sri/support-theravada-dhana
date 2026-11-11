@@ -5,6 +5,7 @@ header('Cache-Control: no-store');
 ini_set('display_errors', '0');
 
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../includes/i18n.php';
 require_once __DIR__ . '/../includes/booking-rules.php';
 
 try {
@@ -12,14 +13,14 @@ try {
     $date = parseBookingDate($_GET['date'] ?? '');
     if (!$date || $typeId <= 0) {
         http_response_code(400);
-        echo json_encode(['success' => false, 'error' => 'Invalid date or dāna type']);
+        echo json_encode(['success' => false, 'error' => t_msg('Invalid date or dāna type')]);
         exit;
     }
     $db = getDB();
     $type = getBookableDhanaType($db, $typeId);
     if (!$type) {
         http_response_code(404);
-        echo json_encode(['success' => false, 'error' => 'Dāna type is not available']);
+        echo json_encode(['success' => false, 'error' => t_msg('Dāna type is not available')]);
         exit;
     }
     $pricing = getEffectiveBookingPrice($db, $type, $date);
@@ -36,6 +37,6 @@ try {
 } catch (Throwable $error) {
     error_log('Monthly price error: ' . $error->getMessage());
     http_response_code(500);
-    echo json_encode(['success' => false, 'error' => 'Unable to load pricing right now']);
+    echo json_encode(['success' => false, 'error' => t_msg('Unable to load pricing right now')]);
 }
 

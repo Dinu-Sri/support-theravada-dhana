@@ -31,11 +31,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'])) {
 }
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<?php echo ui_html_open(); ?>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Forgot Password - Dāna Reservation System</title>
+    <title><?php echo te('Forgot Password - Dāna Reservation System', 'මුරපදය අමතකයි - දාන වෙන්කිරීමේ පද්ධතිය'); ?></title>
     <?php include 'includes/favicon.php'; ?>
     <link rel="stylesheet" href="assets/css/style.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -175,29 +175,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'])) {
 <body class="login-page">
     <div class="forgot-password-card">
         <div class="forgot-password-header">
-            <h1><i class="fas fa-key"></i> Forgot Password</h1>
-            <p>Reset your account password</p>
+            <?php ui_lang_switch(); ?>
+            <h1><i class="fas fa-key"></i> <?php echo te('Forgot Password', 'මුරපදය අමතකයි'); ?></h1>
+            <p><?php echo te('Reset your account password', 'ගිණුමේ මුරපදය යළි පිහිටුවන්න'); ?></p>
         </div>
 
         <div class="forgot-password-content">
             <?php if ($successMessage): ?>
                 <div class="success-message">
                     <i class="fas fa-check-circle"></i>
-                    <?php echo htmlspecialchars($successMessage); ?>
+                    <?php echo te_msg($successMessage); ?>
                 </div>
                 <div class="back-link">
-                    <a href="index.php"><i class="fas fa-arrow-left"></i> Back to Login</a>
+                    <a href="index.php"><i class="fas fa-arrow-left"></i> <?php echo te('Back to Login', 'පිවිසීමට ආපසු'); ?></a>
                 </div>
             <?php else: ?>
                 <div class="info-box">
                     <i class="fas fa-info-circle"></i>
-                    Enter your email address and we'll send you a link to reset your password.
+                    <?php echo te("Enter your email address and we'll send you a link to reset your password.", 'ඔබගේ විද්‍යුත් තැපැල් ලිපිනය ඇතුළත් කරන්න. මුරපදය යළි පිහිටුවීමේ සබැඳියක් යවන්නෙමු.'); ?>
                 </div>
 
                 <?php if ($errorMessage): ?>
                     <div class="error-message">
                         <i class="fas fa-exclamation-circle"></i>
-                        <?php echo htmlspecialchars($errorMessage); ?>
+                        <?php echo te_msg($errorMessage); ?>
                     </div>
                 <?php endif; ?>
 
@@ -205,20 +206,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'])) {
                     <?php echo csrfInput(); ?>
                     <div class="form-group">
                         <label for="email">
-                            <i class="fas fa-envelope"></i> Email Address
+                            <i class="fas fa-envelope"></i> <?php echo te('Email Address', 'විද්‍යුත් තැපැල් ලිපිනය'); ?>
                         </label>
                         <input type="email" id="email" name="email" required 
-                               placeholder="Enter your registered email"
+                               placeholder="<?php echo te('Enter your registered email', 'ලියාපදිංචි විද්‍යුත් තැපෑල ඇතුළත් කරන්න'); ?>"
                                value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>">
                     </div>
 
                     <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-paper-plane"></i> Send Reset Link
+                        <i class="fas fa-paper-plane"></i> <?php echo te('Send Reset Link', 'යළි පිහිටුවීමේ සබැඳිය යවන්න'); ?>
                     </button>
                 </form>
 
                 <div class="back-link">
-                    <a href="index.php"><i class="fas fa-arrow-left"></i> Back to Login</a>
+                    <a href="index.php"><i class="fas fa-arrow-left"></i> <?php echo te('Back to Login', 'පිවිසීමට ආපසු'); ?></a>
                 </div>
             <?php endif; ?>
         </div>
