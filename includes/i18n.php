@@ -81,7 +81,9 @@ function ui_lang_switch(string $class = 'ui-lang-switch'): void {
     static $scriptSent = false;
     if (!$scriptSent) {
         $scriptSent = true;
-        echo '<script>(function(){if(document.cookie.indexOf("ui_lang=")!==-1)return;try{var saved=localStorage.getItem("preferredLanguage");if(saved==="si"||saved==="en"){var url=new URL(location.href);url.searchParams.set("lang",saved);location.replace(url.toString());}}catch(e){}})();</script>';
+        // ui_lang is HttpOnly, so script cannot see it. Clear the old
+        // dashboard preference before redirecting, or the next page loops.
+        echo '<script>(function(){try{var saved=localStorage.getItem("preferredLanguage");localStorage.removeItem("preferredLanguage");if(saved!=="si"&&saved!=="en")return;var url=new URL(location.href);if(url.searchParams.get("lang")===saved)return;url.searchParams.set("lang",saved);location.replace(url.toString());}catch(e){}})();</script>';
     }
     ui_client_boot();
 }
