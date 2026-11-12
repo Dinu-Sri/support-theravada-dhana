@@ -341,6 +341,6 @@ $nextMonth = (clone $requestedMonth)->modify('+1 month');
         const currentMonth = <?php echo $currentMonth; ?>;
         const currentYear = <?php echo $currentYear; ?>;
     </script>
-    <script src="assets/js/calendar.js?v=20261111"></script>
+    <script src="assets/js/calendar.js?v=20261112"></script>
 </body>
 </html>

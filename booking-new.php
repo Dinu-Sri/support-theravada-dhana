@@ -1677,6 +1677,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
             }
         });
     </script>
-    <script src="assets/js/booking-steps.js?v=20261111"></script>
+    <script src="assets/js/booking-steps.js?v=20261112"></script>
 </body>
 </html>

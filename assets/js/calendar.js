@@ -4,13 +4,10 @@
 
 let calendarReturnFocus = null;
 
-function uiText(key) {
-    return window.uiText ? window.uiText(key) : key;
-}
-
-function uiDhana(name) {
-    return window.uiDhana ? window.uiDhana(name) : name;
-}
+// const, not function: a function declaration replaces window.uiText and then
+// calls itself until the page stops building.
+const uiText = window.uiText || function (key) { return key; };
+const uiDhana = window.uiDhana || function (name) { return name; };
 
 function openCalendarModal(modal) {
     modal.style.display = 'block';

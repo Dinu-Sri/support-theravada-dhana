@@ -14,17 +14,11 @@ const additionalInfoStep = Number(bookingFlow.additionalInfoStep) || 3;
 const reviewStep = Number(bookingFlow.reviewStep) || totalSteps;
 let stepTransitionPending = false;
 
-function uiText(key) {
-    return window.uiText ? window.uiText(key) : key;
-}
-
-function uiDhana(name) {
-    return window.uiDhana ? window.uiDhana(name) : name;
-}
-
-function uiDesc(text) {
-    return window.uiDesc ? window.uiDesc(text) : text;
-}
+// const, not function: a function declaration replaces window.uiText and then
+// calls itself until the offering list stops building.
+const uiText = window.uiText || function (key) { return key; };
+const uiDhana = window.uiDhana || function (name) { return name; };
+const uiDesc = window.uiDesc || function (text) { return text; };
 
 // Safe function to check if element exists before accessing
 function safeGetElement(id) {
